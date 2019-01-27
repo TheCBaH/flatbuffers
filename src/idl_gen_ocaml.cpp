@@ -31,7 +31,54 @@ namespace ocaml {
 // Hardcode spaces per indentation.
 const std::string Indent = "    ";
 
+const std::string kGeneratedFileNamePostfix = "_generated";
+
+static std::string GeneratedFileName(const std::string &path,
+                                     const std::string &file_name) {
+  return path + file_name + kGeneratedFileNamePostfix + ".ml";
+}
+
+
+class Module {
+private:
+  std::vector<std::string> enums;
+public:
+  Module() {}
+  void addEnum(const std::string &_enum) {
+    enums.push_back(_enum);
+  }
+  void printEnums(std::string *code_ptr) {
+    for(auto it = enums.begin(); it != enums.end(); it++) {
+      *code_ptr += *it;
+    }
+  }
+};
+
+class Modules {
+private:
+  std::map<std::vector<std::string>, Module> map;
+public:
+  Modules () {}
+  Module &get(const flatbuffers::Namespace *ns) {
+    return map[ns->components];
+  }
+  void generate(std::string *code_ptr) {
+    for(auto it = map.begin(); it != map.end(); it++) {
+      auto ns = it->first;
+      for (auto m = ns.begin(); m != ns.end(); ++m) {
+	*code_ptr += "module " + *m + " = struct\n";
+      }
+      it->second.printEnums(code_ptr);
+      for (auto m = ns.begin(); m != ns.end(); ++m) {
+	*code_ptr += "end\n";
+      }
+    }
+  }
+};
+
 class OcamlGenerator : public BaseGenerator {
+ private:
+  Modules modules;
  public:
   OcamlGenerator(const Parser &parser, const std::string &path,
                   const std::string &file_name)
@@ -590,8 +637,10 @@ class OcamlGenerator : public BaseGenerator {
     if (enum_def.generated) return;
     std::string type, of_int, to_int;
 
-    GenComment(enum_def.doc_comment, code_ptr);
-    BeginEnum(NormalizedName(enum_def), code_ptr);
+    std::string code;
+
+    GenComment(enum_def.doc_comment, &code);
+    BeginEnum(NormalizedName(enum_def), &code);
     for (auto it = enum_def.vals.vec.begin(); it != enum_def.vals.vec.end();
         ++it) {
       auto &ev = **it;
@@ -599,7 +648,6 @@ class OcamlGenerator : public BaseGenerator {
       EnumMember(ev, type, of_int, to_int);
     }
     of_int += Indent + Indent + "| _ -> failwith \"Invalid value\"\n";
-    std::string &code = *code_ptr;
     code += Indent + " type t =\n";
     code += type;
     code += "\n";
@@ -610,7 +658,12 @@ class OcamlGenerator : public BaseGenerator {
     code += to_int;
     code += "\n";
 
-    EndEnum(code_ptr);
+    EndEnum(&code);
+
+    auto &m = modules.get(enum_def.defined_namespace);
+    m.addEnum(code);
+
+    *code_ptr += code;
   }
 
   // Returns the function name that is able to read a value of the given type.
@@ -680,7 +733,10 @@ class OcamlGenerator : public BaseGenerator {
     #if 0
     if (!generateStructs()) return false;
     #endif
-    return true;
+    std::string code;
+    modules.generate(&code);
+    return SaveFile(GeneratedFileName(path_, file_name_).c_str(), code,
+                    false);
   }
 
  private:
@@ -714,7 +770,6 @@ class OcamlGenerator : public BaseGenerator {
       auto &enum_def = **it;
       std::string enumcode;
       GenEnum(enum_def, &enumcode);
-      if (!SaveType(enum_def, enumcode, false)) return false;
     }
     return true;
   }
