@@ -86,7 +86,7 @@ int main(int argc, const char *argv[]) {
     { flatbuffers::GeneratePhp, nullptr, "--php", "PHP", true, nullptr,
       flatbuffers::IDLOptions::kPhp, "Generate PHP files for tables/structs",
       flatbuffers::GeneralMakeRule },
-    { flatbuffers::GenerateOcaml, "-p", "--ocaml", "Ocaml", true, nullptr,
+    { flatbuffers::GenerateOcaml, nullptr, "--ocaml", "Ocaml", true, nullptr,
       flatbuffers::IDLOptions::kOcaml,
       "Generate Ocaml files for tables/structs",
       flatbuffers::GeneralMakeRule },

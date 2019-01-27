@@ -96,7 +96,7 @@ class OcamlGenerator : public BaseGenerator {
   // Begin enum code with a class declaration.
   void BeginEnum(const std::string class_name, std::string *code_ptr) {
     std::string &code = *code_ptr;
-    code += "class " + class_name + "(object):\n";
+    code += "module " + class_name + " = struct\n";
   }
 
   std::string EscapeKeyword(const std::string &name) const {
@@ -112,18 +112,20 @@ class OcamlGenerator : public BaseGenerator {
   }
 
   // A single enum member.
-  void EnumMember(const EnumVal ev, std::string *code_ptr) {
-    std::string &code = *code_ptr;
-    code += Indent;
-    code += NormalizedName(ev);
-    code += " = ";
-    code += NumToString(ev.value) + "\n";
+  void EnumMember(const EnumVal ev, std::string &type, std::string &of_int, std::string &to_int) {
+    std::string name = NormalizedName(ev);
+    std::string value = NumToString(ev.value);
+    type += Indent + Indent + "| " + name + "\n";
+    // code += NumToString(ev.value) + "\n";
+    of_int += Indent + Indent + "| " + value + " -> " + name + "\n";
+    to_int += Indent + Indent + "| " + name + " -> " + value + "\n";
+    return;
   }
 
   // End enum code.
   void EndEnum(std::string *code_ptr) {
     std::string &code = *code_ptr;
-    code += "\n";
+    code += "end\n";
   }
 
   // Initialize a new struct or table from existing data.
@@ -496,7 +498,7 @@ class OcamlGenerator : public BaseGenerator {
   // Generate a struct field, conditioned on its child type(s).
   void GenStructAccessor(const StructDef &struct_def,
                          const FieldDef &field, std::string *code_ptr) {
-    GenComment(field.doc_comment, code_ptr, nullptr, "# ");
+    GenComment(field.doc_comment, code_ptr);
     if (IsScalar(field.value.type.base_type)) {
       if (struct_def.fixed) {
         GetScalarFieldOfStruct(struct_def, field, code_ptr);
@@ -556,7 +558,7 @@ class OcamlGenerator : public BaseGenerator {
   void GenStruct(const StructDef &struct_def, std::string *code_ptr) {
     if (struct_def.generated) return;
 
-    GenComment(struct_def.doc_comment, code_ptr, nullptr, "# ");
+    GenComment(struct_def.doc_comment, code_ptr);
     BeginClass(struct_def, code_ptr);
     if (!struct_def.fixed) {
       // Generate a special accessor for the table that has been declared as
@@ -586,15 +588,28 @@ class OcamlGenerator : public BaseGenerator {
   // Generate enum declarations.
   void GenEnum(const EnumDef &enum_def, std::string *code_ptr) {
     if (enum_def.generated) return;
+    std::string type, of_int, to_int;
 
-    GenComment(enum_def.doc_comment, code_ptr, nullptr, "# ");
+    GenComment(enum_def.doc_comment, code_ptr);
     BeginEnum(NormalizedName(enum_def), code_ptr);
     for (auto it = enum_def.vals.vec.begin(); it != enum_def.vals.vec.end();
         ++it) {
       auto &ev = **it;
-      GenComment(ev.doc_comment, code_ptr, nullptr, "# ");
-      EnumMember(ev, code_ptr);
+      GenComment(ev.doc_comment, &type);
+      EnumMember(ev, type, of_int, to_int);
     }
+    of_int += Indent + Indent + "| _ -> failwith \"Invalid value\"\n";
+    std::string &code = *code_ptr;
+    code += Indent + " type t =\n";
+    code += type;
+    code += "\n";
+    code += Indent + "let of_int = function\n";
+    code += of_int;
+    code += "\n";
+    code += Indent + "let to_int = function\n";
+    code += to_int;
+    code += "\n";
+
     EndEnum(code_ptr);
   }
 
@@ -662,11 +677,37 @@ class OcamlGenerator : public BaseGenerator {
 
   bool generate() {
     if (!generateEnums()) return false;
+    #if 0
     if (!generateStructs()) return false;
+    #endif
     return true;
   }
 
  private:
+
+  void GenComment(const std::vector<std::string> &dc, std::string *code_ptr)
+  {
+    if (dc.begin() == dc.end()) {
+      // Don't output empty comment blocks with 0 lines of comment content.
+      return;
+    }
+    std::string &code = *code_ptr;
+    if(dc.size() == 1) {
+      code += "(* ";
+      for (auto it = dc.begin(); it != dc.end(); ++it) {
+	code += *it;
+      }
+      code += "*)\n";
+    } else {
+      code += "(*\n";
+      for (auto it = dc.begin(); it != dc.end(); ++it) {
+	code += *it + "\n";
+      }
+      code += "\n*)\n";
+    }
+  }
+
+
   bool generateEnums() {
     for (auto it = parser_.enums_.vec.begin(); it != parser_.enums_.vec.end();
          ++it) {
@@ -693,8 +734,8 @@ class OcamlGenerator : public BaseGenerator {
   void BeginFile(const std::string name_space_name, const bool needs_imports,
                  std::string *code_ptr) {
     std::string &code = *code_ptr;
-    code = code + "# " + FlatBuffersGeneratedWarning() + "\n\n";
-    code += "# namespace: " + name_space_name + "\n\n";
+    code = code + "(* " + FlatBuffersGeneratedWarning() + " *)\n\n";
+    code += "(* namespace: " + name_space_name + " *)\n\n";
     if (needs_imports) { code += "import flatbuffers\n\n"; }
   }
 
@@ -716,7 +757,7 @@ class OcamlGenerator : public BaseGenerator {
     BeginFile(LastNamespacePart(*def.defined_namespace), needs_imports, &code);
     code += classcode;
     std::string filename =
-        NamespaceDir(*def.defined_namespace) + NormalizedName(def) + ".py";
+      NamespaceDir(*def.defined_namespace) + NormalizedName(def) + ".ml";
     return SaveFile(filename.c_str(), code, false);
   }
  private:
