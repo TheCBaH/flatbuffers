@@ -444,6 +444,7 @@ struct IDLOptions {
     kLua = 1 << 12,
     kLobster = 1 << 13,
     kRust = 1 << 14,
+    kOcaml = 1 << 15,
     kMAX
   };
 
@@ -887,6 +888,12 @@ extern bool GenerateLua(const Parser &parser,
 extern bool GenerateRust(const Parser &parser,
                          const std::string &path,
                          const std::string &file_name);
+
+// Generate Ocaml files from the definitions in the Parser object.
+// See idl_gen_ocaml.cpp.
+extern bool GenerateOcaml(const Parser &parser,
+                           const std::string &path,
+                           const std::string &file_name);
 
 // Generate Json schema file
 // See idl_gen_json_schema.cpp.

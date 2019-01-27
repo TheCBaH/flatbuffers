@@ -94,6 +94,7 @@ cc_binary(
         "src/idl_gen_lua.cpp",
         "src/idl_gen_php.cpp",
         "src/idl_gen_python.cpp",
+        "src/idl_gen_ocaml.cpp",
         "src/idl_gen_rust.cpp",
         "src/idl_gen_text.cpp",
     ],
