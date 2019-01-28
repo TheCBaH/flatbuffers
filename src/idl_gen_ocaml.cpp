@@ -157,7 +157,7 @@ class OcamlGenerator : public BaseGenerator {
     *code_ptr += Indent + Indent + "pos: int;\n";
     *code_ptr += Indent + "}\n";
     *code_ptr += "\n";
-    *code_ptr += Indent + "let init b pos = {b;pos}\n";
+    *code_ptr += Indent + "let init b pos = {b;pos}\n\n";
   }
 
   void BeginEnum(const std::string class_name, std::string *code_ptr) {
@@ -250,12 +250,21 @@ class OcamlGenerator : public BaseGenerator {
     return MakeCamel(GenTypeBasic(type));
   }
 
-  std::string GetScalarGetter(const StructDef &struct_def, const FieldDef &field, const std::string &offset)
+  std::string GetScalarReceiver(const StructDef &struct_def, const FieldDef &field)
   {
     std::string code;
     code += "ByteBuffer.";
-    code += "read" + GetScalarAccessorType(struct_def, field);
-    code += " t.b " + offset;
+    code += "read" + GetScalarAccessorType(struct_def, field) + " t.b offset";
+    return code;
+  }
+
+  std::string GetStructReceiver(const StructDef &struct_def, const FieldDef &field)
+  {
+    std::string code;
+    if(0 && &struct_def) {
+      return std::string("not_supported");
+    }
+    code += MakeCamel(TypeName(field)) + ".init t.b offset";
     return code;
   }
 
@@ -267,11 +276,8 @@ class OcamlGenerator : public BaseGenerator {
     code += Indent + "let ";
     code += NormalizedName(field);
     code += " t =\n";
-    std::string offset;
-    offset += "(t.pos + ";
-    offset += NumToString(field.value.offset) + ")";
-
-    code += Indent + Indent + GetScalarGetter(struct_def, field, offset) + "\n";
+    code += Indent + Indent + "let offset = t.pos + " + NumToString(field.value.offset) + " in\n";
+    code += Indent + Indent + GetScalarReceiver(struct_def, field) + "\n";
   }
 
   // Get the value of a table's scalar.
@@ -292,31 +298,9 @@ class OcamlGenerator : public BaseGenerator {
                           ? float_const_gen_.GenFloatConstant(field)
                           : field.value.constant;
     }
-    code += Indent + Indent + "if(offset!=0) then " + GetScalarGetter(struct_def, field, "offset") + "\n";
+    code += Indent + Indent + "if(offset!=0) then " + GetScalarReceiver(struct_def, field) + "\n";
     code += Indent + Indent + "else " + default_value + "\n";
 
-    #if 0
-    std::string getter = GenGetter(field.value.type);
-    GenReceiver(struct_def, code_ptr);
-    code += MakeCamel(NormalizedName(field));
-    code += "(self):";
-    code += OffsetPrefix(field);
-    getter += "o + self._tab.Pos)";
-    auto is_bool = IsBool(field.value.type.base_type);
-    if (is_bool) {
-      getter = "bool(" + getter + ")";
-    }
-    code += Indent + Indent + Indent + "return " + getter + "\n";
-    std::string default_value;
-    if (is_bool) {
-      default_value = field.value.constant == "0" ? "False" : "True";
-    } else {
-      default_value = IsFloat(field.value.type.base_type)
-                          ? float_const_gen_.GenFloatConstant(field)
-                          : field.value.constant;
-    }
-    code += Indent + Indent + "return " + default_value + "\n\n";
-    #endif
   }
 
   // Get a struct by initializing an existing struct.
@@ -325,12 +309,20 @@ class OcamlGenerator : public BaseGenerator {
                               const FieldDef &field,
                               std::string *code_ptr) {
     std::string &code = *code_ptr;
+    code += Indent + "let ";
+    code += NormalizedName(field);
+    code += " t =\n";
+    code += Indent + Indent + "let offset = t.pos +" +  NumToString(field.value.offset) + " in\n";
+    code += Indent + Indent + GetStructReceiver(struct_def, field) + "\n";
+
+ #if 0
     GenReceiver(struct_def, code_ptr);
     code += NormalizedName(field);
     code += "(self, obj):\n";
     code += Indent + Indent + "obj.Init(self._tab.Bytes, self._tab.Pos + ";
     code += NumToString(field.value.offset) + ")";
     code += "\n" + Indent + Indent + "return obj\n\n";
+#endif
   }
 
   // Get a struct by initializing an existing struct.
@@ -339,6 +331,21 @@ class OcamlGenerator : public BaseGenerator {
                              const FieldDef &field,
                              std::string *code_ptr) {
     std::string &code = *code_ptr;
+
+    code += Indent + "let ";
+    code += NormalizedName(field);
+    code += " t =\n";
+    code += Indent + Indent + "let offset = ";
+    if (field.value.type.struct_def->fixed) {
+      code += "ByteBuffer.__offset t.b t.pos " + NumToString(field.value.offset);
+    } else {
+      code += "t.pos + (ByteBuffer.__indirect t.b " + NumToString(field.value.offset) + ")";
+    }
+    code += " in\n";
+    code += Indent + Indent + "if(offset!=0) then Some (" + GetStructReceiver(struct_def, field) + ")\n";
+    code += Indent + Indent + "else None\n";
+
+    #if 0
     GenReceiver(struct_def, code_ptr);
     code += MakeCamel(NormalizedName(field));
     code += "(self):";
@@ -355,6 +362,7 @@ class OcamlGenerator : public BaseGenerator {
     code += Indent + Indent + Indent + "obj.Init(self._tab.Bytes, x)\n";
     code += Indent + Indent + Indent + "return obj\n";
     code += Indent + Indent + "return None\n\n";
+    #endif
   }
 
   // Get the value of a string.
@@ -616,7 +624,6 @@ class OcamlGenerator : public BaseGenerator {
       }
       *code_ptr += "\n";
     }
-    #if 0
     else {
       switch (field.value.type.base_type) {
         case BASE_TYPE_STRUCT:
@@ -626,6 +633,7 @@ class OcamlGenerator : public BaseGenerator {
             GetStructFieldOfTable(struct_def, field, code_ptr);
           }
           break;
+	  #if 0
         case BASE_TYPE_STRING: GetStringField(struct_def, field, code_ptr); break;
         case BASE_TYPE_VECTOR: {
           auto vectortype = field.value.type.VectorType();
@@ -638,10 +646,14 @@ class OcamlGenerator : public BaseGenerator {
           break;
         }
         case BASE_TYPE_UNION: GetUnionField(struct_def, field, code_ptr); break;
-        default: FLATBUFFERS_ASSERT(0);
+	  #endif
+        default:
+	  #if 0
+	  FLATBUFFERS_ASSERT(0);
+	  #endif
+	  break;
       }
     }
-    #endif
     #if 0
     if (field.value.type.base_type == BASE_TYPE_VECTOR) {
       GetVectorLen(struct_def, field, code_ptr);
