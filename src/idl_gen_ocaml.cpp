@@ -268,14 +268,19 @@ class OcamlGenerator : public BaseGenerator {
     return code;
   }
 
-  // Get the value of a struct's scalar.
-  void GetScalarFieldOfStruct(const StructDef &struct_def,
-                              const FieldDef &field,
-                              std::string *code_ptr) {
+  void GenOcamlReceiver(const FieldDef &field, std::string *code_ptr) {
     std::string &code = *code_ptr;
     code += Indent + "let ";
     code += NormalizedName(field);
     code += " t =\n";
+}
+
+  // Get the value of a struct's scalar.
+  void GetScalarFieldOfStruct(const StructDef &struct_def,
+                              const FieldDef &field,
+                              std::string *code_ptr) {
+    GenOcamlReceiver(field, code_ptr);
+    std::string &code = *code_ptr;
     code += Indent + Indent + "let offset = t.pos + " + NumToString(field.value.offset) + " in\n";
     code += Indent + Indent + GetScalarReceiver(struct_def, field) + "\n";
   }
@@ -284,10 +289,8 @@ class OcamlGenerator : public BaseGenerator {
   void GetScalarFieldOfTable(const StructDef &struct_def,
                              const FieldDef &field,
                              std::string *code_ptr) {
+    GenOcamlReceiver(field, code_ptr);
     std::string &code = *code_ptr;
-    code += Indent + "let ";
-    code += NormalizedName(field);
-    code += " t =\n";
     code += Indent + Indent + "let offset = ByteBuffer.__offset t.b t.pos " + NumToString(field.value.offset) + " in\n";
     std::string default_value;
     auto is_bool = IsBool(field.value.type.base_type);
@@ -298,9 +301,17 @@ class OcamlGenerator : public BaseGenerator {
                           ? float_const_gen_.GenFloatConstant(field)
                           : field.value.constant;
     }
-    code += Indent + Indent + "if(offset!=0) then " + GetScalarReceiver(struct_def, field) + "\n";
+    std::string field_value;
+    field_value = GetScalarReceiver(struct_def, field) ;
+    if(field.value.type.enum_def) {
+      auto module_name = NormalizedName(*field.value.type.enum_def);
+      field_value = module_name + ".of_int (" + field_value + ")";
+      if (auto val = field.value.type.enum_def->ReverseLookup(StringToInt(field.value.constant.c_str()), false)) {
+          default_value = module_name + "." + val->name;
+      }
+    }
+    code += Indent + Indent + "if(offset!=0) then " + field_value + "\n";
     code += Indent + Indent + "else " + default_value + "\n";
-
   }
 
   // Get a struct by initializing an existing struct.
@@ -308,10 +319,8 @@ class OcamlGenerator : public BaseGenerator {
   void GetStructFieldOfStruct(const StructDef &struct_def,
                               const FieldDef &field,
                               std::string *code_ptr) {
+    GenOcamlReceiver(field, code_ptr);
     std::string &code = *code_ptr;
-    code += Indent + "let ";
-    code += NormalizedName(field);
-    code += " t =\n";
     code += Indent + Indent + "let offset = t.pos +" +  NumToString(field.value.offset) + " in\n";
     code += Indent + Indent + GetStructReceiver(struct_def, field) + "\n";
 
@@ -330,11 +339,8 @@ class OcamlGenerator : public BaseGenerator {
   void GetStructFieldOfTable(const StructDef &struct_def,
                              const FieldDef &field,
                              std::string *code_ptr) {
+    GenOcamlReceiver(field, code_ptr);
     std::string &code = *code_ptr;
-
-    code += Indent + "let ";
-    code += NormalizedName(field);
-    code += " t =\n";
     code += Indent + Indent + "let offset = ";
     if (field.value.type.struct_def->fixed) {
       code += "ByteBuffer.__offset t.b t.pos " + NumToString(field.value.offset);
@@ -344,44 +350,34 @@ class OcamlGenerator : public BaseGenerator {
     code += " in\n";
     code += Indent + Indent + "if(offset!=0) then Some (" + GetStructReceiver(struct_def, field) + ")\n";
     code += Indent + Indent + "else None\n";
-
-    #if 0
-    GenReceiver(struct_def, code_ptr);
-    code += MakeCamel(NormalizedName(field));
-    code += "(self):";
-    code += OffsetPrefix(field);
-    if (field.value.type.struct_def->fixed) {
-      code += Indent + Indent + Indent + "x = o + self._tab.Pos\n";
-    } else {
-      code += Indent + Indent + Indent;
-      code += "x = self._tab.Indirect(o + self._tab.Pos)\n";
-    }
-    code += Indent + Indent + Indent;
-    code += "from ." + TypeName(field) + " import " + TypeName(field) + "\n";
-    code += Indent + Indent + Indent + "obj = " + TypeName(field) + "()\n";
-    code += Indent + Indent + Indent + "obj.Init(self._tab.Bytes, x)\n";
-    code += Indent + Indent + Indent + "return obj\n";
-    code += Indent + Indent + "return None\n\n";
-    #endif
   }
 
   // Get the value of a string.
   void GetStringField(const StructDef &struct_def, const FieldDef &field,
                       std::string *code_ptr) {
+    if(0 && &struct_def) {}
+    GenOcamlReceiver(field, code_ptr);
     std::string &code = *code_ptr;
-    GenReceiver(struct_def, code_ptr);
-    code += MakeCamel(NormalizedName(field));
-    code += "(self):";
-    code += OffsetPrefix(field);
-    code += Indent + Indent + Indent + "return " + GenGetter(field.value.type);
-    code += "o + self._tab.Pos)\n";
-    code += Indent + Indent + "return None\n\n";
+    code += Indent + Indent + "let offset = ByteBuffer.__offset t.b t.pos " + NumToString(field.value.offset) + " in\n";
+    code += Indent + Indent + "if(offset!=0) then Some (ByteBuffer.__string t.b offset)\n";
+    code += Indent + Indent + "else None\n";
   }
 
   // Get the value of a union from an object.
   void GetUnionField(const StructDef &struct_def, const FieldDef &field,
                      std::string *code_ptr) {
+
+    if(0 && &struct_def) {}
+    GenOcamlReceiver(field, code_ptr);
     std::string &code = *code_ptr;
+    code += Indent + Indent + "let offset = ByteBuffer.__offset t.b t.pos " + NumToString(field.value.offset) + " in\n";
+    code += Indent + Indent + "if(offset!=0) then ";
+    code += MakeCamel(TypeName(field)) + ".of_int (ByteBuffer.readUint8 t.b offset)\n";
+    std::string default_value;
+    default_value = field.value.constant;
+    code += Indent + Indent + "else " + default_value + "\n";
+
+    #if 0
     GenReceiver(struct_def, code_ptr);
     code += MakeCamel(NormalizedName(field)) + "(self):";
     code += OffsetPrefix(field);
@@ -398,6 +394,7 @@ class OcamlGenerator : public BaseGenerator {
     code += Indent + Indent + Indent + GenGetter(field.value.type);
     code += "obj, o)\n" + Indent + Indent + Indent + "return obj\n";
     code += Indent + Indent + "return None\n\n";
+    #endif
   }
 
   // Get the value of a vector's struct member.
@@ -622,7 +619,6 @@ class OcamlGenerator : public BaseGenerator {
       } else {
         GetScalarFieldOfTable(struct_def, field, code_ptr);
       }
-      *code_ptr += "\n";
     }
     else {
       switch (field.value.type.base_type) {
@@ -633,8 +629,8 @@ class OcamlGenerator : public BaseGenerator {
             GetStructFieldOfTable(struct_def, field, code_ptr);
           }
           break;
-	  #if 0
         case BASE_TYPE_STRING: GetStringField(struct_def, field, code_ptr); break;
+	  #if 0
         case BASE_TYPE_VECTOR: {
           auto vectortype = field.value.type.VectorType();
           if (vectortype.base_type == BASE_TYPE_STRUCT) {
@@ -659,6 +655,7 @@ class OcamlGenerator : public BaseGenerator {
       GetVectorLen(struct_def, field, code_ptr);
     }
     #endif
+    *code_ptr += "\n";
   }
 
   // Generate table constructors, conditioned on its members' types.
