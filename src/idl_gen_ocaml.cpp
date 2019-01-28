@@ -152,6 +152,12 @@ class OcamlGenerator : public BaseGenerator {
 
   void BeginStruct(const StructDef &struct_def, std::string *code_ptr) {
     BeginModule(NormalizedName(struct_def), code_ptr);
+    *code_ptr += Indent + "type t = {\n";
+    *code_ptr += Indent + Indent + "b: ByteBuffer.t;\n";
+    *code_ptr += Indent + Indent + "pos: int;\n";
+    *code_ptr += Indent + "}\n";
+    *code_ptr += "\n";
+    *code_ptr += Indent + "let init b pos = {b;pos}\n";
   }
 
   void BeginEnum(const std::string class_name, std::string *code_ptr) {
@@ -235,17 +241,24 @@ class OcamlGenerator : public BaseGenerator {
     code += Indent + Indent + "return 0\n\n";
   }
 
+  std::string GetScalarAccessorType(const StructDef &struct_def,
+					   const FieldDef &field) {
+    if(0 && &struct_def && &field) {
+      return std::string("not_supported");
+    }
+    return std::string("Int16");
+  }
   // Get the value of a struct's scalar.
   void GetScalarFieldOfStruct(const StructDef &struct_def,
                               const FieldDef &field,
                               std::string *code_ptr) {
     std::string &code = *code_ptr;
-    std::string getter = GenGetter(field.value.type);
-    GenReceiver(struct_def, code_ptr);
-    code += MakeCamel(NormalizedName(field));
-    code += "(self): return " + getter;
-    code += "self._tab.Pos + flatbuffers.number_types.UOffsetTFlags.py_type(";
-    code += NumToString(field.value.offset) + "))\n";
+    code += Indent + "let ";
+    code += NormalizedName(field);
+    code += " t = ByteBuffer.";
+    code += "read" + GetScalarAccessorType(struct_def, field);
+    code += " t.b (t.pos + ";
+    code += NumToString(field.value.offset) + ")\n";
   }
 
   // Get the value of a table's scalar.
@@ -282,7 +295,7 @@ class OcamlGenerator : public BaseGenerator {
                               std::string *code_ptr) {
     std::string &code = *code_ptr;
     GenReceiver(struct_def, code_ptr);
-    code += MakeCamel(NormalizedName(field));
+    code += NormalizedName(field);
     code += "(self, obj):\n";
     code += Indent + Indent + "obj.Init(self._tab.Bytes, self._tab.Pos + ";
     code += NumToString(field.value.offset) + ")";
@@ -568,9 +581,13 @@ class OcamlGenerator : public BaseGenerator {
       if (struct_def.fixed) {
         GetScalarFieldOfStruct(struct_def, field, code_ptr);
       } else {
+	#if 0
         GetScalarFieldOfTable(struct_def, field, code_ptr);
+	#endif
       }
-    } else {
+    }
+    #if 0
+    else {
       switch (field.value.type.base_type) {
         case BASE_TYPE_STRUCT:
           if (struct_def.fixed) {
@@ -594,9 +611,12 @@ class OcamlGenerator : public BaseGenerator {
         default: FLATBUFFERS_ASSERT(0);
       }
     }
+    #endif
+    #if 0
     if (field.value.type.base_type == BASE_TYPE_VECTOR) {
       GetVectorLen(struct_def, field, code_ptr);
     }
+    #endif
   }
 
   // Generate table constructors, conditioned on its members' types.
@@ -626,7 +646,7 @@ class OcamlGenerator : public BaseGenerator {
 
     GenComment(struct_def.doc_comment, &code);
     BeginStruct(struct_def, &code);
-    #if 0
+#if 0
     if (!struct_def.fixed) {
       // Generate a special accessor for the table that has been declared as
       // the root type.
@@ -635,13 +655,15 @@ class OcamlGenerator : public BaseGenerator {
     // Generate the Init method that sets the field in a pre-existing
     // accessor object. This is to allow object reuse.
     InitializeExisting(struct_def, code_ptr);
+#endif
     for (auto it = struct_def.fields.vec.begin();
         it != struct_def.fields.vec.end(); ++it) {
       auto &field = **it;
       if (field.deprecated) continue;
 
-      GenStructAccessor(struct_def, field, code_ptr);
+      GenStructAccessor(struct_def, field, &code);
     }
+#if 0
 
     if (struct_def.fixed) {
       // create a struct constructor function

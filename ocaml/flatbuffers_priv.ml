@@ -1,4 +1,6 @@
 
+let _ = print_endline "flatbuffers"
+
 let sizeof_short = 2
 
 let sizeof_int = 4
