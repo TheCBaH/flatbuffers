@@ -844,7 +844,6 @@ flatbuffers.Builder.prototype.endVector = function() {
  * Encode the string `s` in the buffer using UTF-8. If a Uint8Array is passed
  * instead of a string, it is assumed to contain valid UTF-8 encoded data.
  *
- * @param {string|Uint8Array} s The string to encode
  * @return {flatbuffers.Offset} The offset in the buffer where the encoded string starts
  */
 flatbuffers.Builder.prototype.createString = function(s) {
@@ -945,9 +944,7 @@ this.flatbuffers = flatbuffers;
 
 /// @endcond
 /// @}
- *)
 
-      (*
 /**
  * @type {Int32Array}
  * @const
@@ -968,11 +965,8 @@ flatbuffers.float64 = new Float64Array(flatbuffers.int32.buffer);
 
 ////////////////////////////////////////////////////////////////////////////////
 
-       *)
-(*
 /**
  * @param {number} offset
- * @param {number|boolean} value
  */
 flatbuffers.ByteBuffer.prototype.writeInt8 = function(offset, value) {
   this.bytes_[offset] = /** @type {number} */(value);

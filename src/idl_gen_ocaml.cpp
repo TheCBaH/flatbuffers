@@ -41,16 +41,29 @@ static std::string GeneratedFileName(const std::string &path,
 
 class Module {
 private:
+  void print(const std::vector<std::string> defs, std::string *code_ptr) {
+    for(auto it = defs.begin(); it != defs.end(); it++) {
+      *code_ptr += *it;
+    }
+  }
+  void add(std::vector<std::string> &defs, const std::string &def) {
+    defs.push_back(def);
+  }
   std::vector<std::string> enums;
+  std::vector<std::string> structs;
 public:
   Module() {}
   void addEnum(const std::string &_enum) {
-    enums.push_back(_enum);
+    add(enums, _enum);
+  }
+  void addStruct(const std::string &_struct) {
+    add(structs, _struct);
   }
   void printEnums(std::string *code_ptr) {
-    for(auto it = enums.begin(); it != enums.end(); it++) {
-      *code_ptr += *it;
-    }
+    print(enums, code_ptr);
+  }
+  void printStructs(std::string *code_ptr) {
+    print(structs, code_ptr);
   }
 };
 
@@ -69,6 +82,7 @@ public:
 	*code_ptr += "module " + *m + " = struct\n";
       }
       it->second.printEnums(code_ptr);
+      it->second.printStructs(code_ptr);
       for (auto m = ns.begin(); m != ns.end(); ++m) {
 	*code_ptr += "end\n";
       }
@@ -132,18 +146,16 @@ class OcamlGenerator : public BaseGenerator {
           Indent + Indent + "if o != 0:\n";
   }
 
-  // Begin a class declaration.
-  void BeginClass(const StructDef &struct_def, std::string *code_ptr) {
-    std::string &code = *code_ptr;
-    code += "class " + NormalizedName(struct_def) + "(object):\n";
-    code += Indent + "__slots__ = ['_tab']";
-    code += "\n\n";
+  void BeginModule(const std::string class_name, std::string *code_ptr) {
+    *code_ptr += "module " + class_name + " = struct\n";
   }
 
-  // Begin enum code with a class declaration.
+  void BeginStruct(const StructDef &struct_def, std::string *code_ptr) {
+    BeginModule(NormalizedName(struct_def), code_ptr);
+  }
+
   void BeginEnum(const std::string class_name, std::string *code_ptr) {
-    std::string &code = *code_ptr;
-    code += "module " + class_name + " = struct\n";
+    BeginModule(class_name, code_ptr);
   }
 
   std::string EscapeKeyword(const std::string &name) const {
@@ -169,10 +181,16 @@ class OcamlGenerator : public BaseGenerator {
     return;
   }
 
-  // End enum code.
+  void EndModule(std::string *code_ptr) {
+    *code_ptr += "end\n";
+  }
+
   void EndEnum(std::string *code_ptr) {
-    std::string &code = *code_ptr;
-    code += "end\n";
+    EndModule(code_ptr);
+  }
+
+  void EndStruct(std::string *code_ptr) {
+    EndModule(code_ptr);
   }
 
   // Initialize a new struct or table from existing data.
@@ -602,11 +620,13 @@ class OcamlGenerator : public BaseGenerator {
   }
 
   // Generate struct or table methods.
-  void GenStruct(const StructDef &struct_def, std::string *code_ptr) {
+  void GenStruct(const StructDef &struct_def) {
     if (struct_def.generated) return;
+    std::string code;
 
-    GenComment(struct_def.doc_comment, code_ptr);
-    BeginClass(struct_def, code_ptr);
+    GenComment(struct_def.doc_comment, &code);
+    BeginStruct(struct_def, &code);
+    #if 0
     if (!struct_def.fixed) {
       // Generate a special accessor for the table that has been declared as
       // the root type.
@@ -630,10 +650,15 @@ class OcamlGenerator : public BaseGenerator {
       // Create a set of functions that allow table construction.
       GenTableBuilders(struct_def, code_ptr);
     }
+#endif
+    EndStruct(&code);
+
+    auto &m = modules.get(struct_def.defined_namespace);
+    m.addStruct(code);
   }
 
   // Generate enum declarations.
-  void GenEnum(const EnumDef &enum_def, std::string *code_ptr) {
+  void GenEnum(const EnumDef &enum_def) {
     if (enum_def.generated) return;
     std::string type, of_int, to_int;
 
@@ -662,8 +687,6 @@ class OcamlGenerator : public BaseGenerator {
 
     auto &m = modules.get(enum_def.defined_namespace);
     m.addEnum(code);
-
-    *code_ptr += code;
   }
 
   // Returns the function name that is able to read a value of the given type.
@@ -730,9 +753,7 @@ class OcamlGenerator : public BaseGenerator {
 
   bool generate() {
     if (!generateEnums()) return false;
-    #if 0
     if (!generateStructs()) return false;
-    #endif
     std::string code;
     modules.generate(&code);
     return SaveFile(GeneratedFileName(path_, file_name_).c_str(), code,
@@ -768,8 +789,7 @@ class OcamlGenerator : public BaseGenerator {
     for (auto it = parser_.enums_.vec.begin(); it != parser_.enums_.vec.end();
          ++it) {
       auto &enum_def = **it;
-      std::string enumcode;
-      GenEnum(enum_def, &enumcode);
+      GenEnum(enum_def);
     }
     return true;
   }
@@ -778,9 +798,7 @@ class OcamlGenerator : public BaseGenerator {
     for (auto it = parser_.structs_.vec.begin();
          it != parser_.structs_.vec.end(); ++it) {
       auto &struct_def = **it;
-      std::string declcode;
-      GenStruct(struct_def, &declcode);
-      if (!SaveType(struct_def, declcode, true)) return false;
+      GenStruct(struct_def);
     }
     return true;
   }
