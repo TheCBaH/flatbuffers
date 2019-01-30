@@ -390,7 +390,7 @@ class OcamlGenerator : public BaseGenerator {
     GenOcamlReceiver(field, code_ptr);
     std::string &code = *code_ptr;
     code += Indent + Indent + "let offset = ByteBuffer.__offset t.b t.pos " + NumToString(field.value.offset) + " in\n";
-    code += Indent + Indent + "if(offset!=0) then Some (ByteBuffer.__string t.b offset)\n";
+    code += Indent + Indent + "if(offset!=0) then Some (ByteBuffer.__string t.b (t.pos + offset))\n";
     code += Indent + Indent + "else None\n";
   }
 

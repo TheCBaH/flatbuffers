@@ -17,17 +17,20 @@ open MyGame.Sample
 
 let monster = Monster.getRootAsMonster fb
 
-let _ = (ByteBuffer.__offset fb monster.Monster.pos 8) + monster.Monster.pos
 
 
 
 let _ = Monster.hp monster
+let _ = Monster.mana monster
+let _ = (ByteBuffer.__offset fb monster.Monster.pos 4) + monster.Monster.pos
+let _ = ByteBuffer.__offset fb monster.Monster.pos 10
+
 let _ = Monster.name monster
-let v = Monster.pos monster
 let _opt  = function Some v -> v | None -> failwith "Empty"
 
-let _ = _opt v |> Vec3.x
+let v = Monster.pos monster |> _opt
 
+let _ = Vec3.x v
 let _ = Vec3.y v
 let _ = Vec3.z v
 
