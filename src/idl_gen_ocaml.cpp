@@ -299,7 +299,7 @@ class OcamlGenerator : public BaseGenerator {
     }
     std::string module = MakeCamel(TypeName(field));
     dependencies->insert(module);
-    code += module + ".init t.b (t.pos + offset)";
+    code += module + ".init t.b offset";
     return code;
   }
 
@@ -308,7 +308,11 @@ class OcamlGenerator : public BaseGenerator {
     code += Indent + "let ";
     code += NormalizedName(field);
     code += " t =\n";
-}
+  }
+
+  std::string GetRelativeOffset(const std::string &offset) {
+    return "let offset = t.pos + " + offset + " in";
+  }
 
   // Get the value of a struct's scalar.
   void GetScalarFieldOfStruct(const StructDef &struct_def,
@@ -316,7 +320,7 @@ class OcamlGenerator : public BaseGenerator {
                               std::string *code_ptr) {
     GenOcamlReceiver(field, code_ptr);
     std::string &code = *code_ptr;
-    code += Indent + Indent + "let offset = t.pos + " + NumToString(field.value.offset) + " in\n";
+    code += Indent + Indent + GetRelativeOffset(NumToString(field.value.offset)) + "\n";
     code += Indent + Indent + GetScalarReceiver(struct_def, field.value.type) + "\n";
   }
 
@@ -338,8 +342,7 @@ class OcamlGenerator : public BaseGenerator {
                           : field.value.constant;
     }
     std::string field_value;
-    field_value = Indent + Indent + Indent + "let offset = offset + t.pos in ";
-    field_value += Indent + Indent + Indent + GetScalarReceiver(struct_def, field.value.type) ;
+    field_value = GetRelativeOffset("offset") + " " + GetScalarReceiver(struct_def, field.value.type);
     if(field.value.type.enum_def) {
       auto module_name = NormalizedName(*field.value.type.enum_def);
       field_value = module_name + ".of_int (" + field_value + ")";
@@ -360,7 +363,7 @@ class OcamlGenerator : public BaseGenerator {
 			      ) {
     GenOcamlReceiver(field, code_ptr);
     std::string &code = *code_ptr;
-    code += Indent + Indent + "let offset = t.pos +" +  NumToString(field.value.offset) + " in\n";
+    code += Indent + Indent + GetRelativeOffset(NumToString(field.value.offset)) + "n";
     code += Indent + Indent + GetStructReceiver(struct_def, field, dependencies) + "\n";
   }
 
@@ -380,7 +383,8 @@ class OcamlGenerator : public BaseGenerator {
       code += "t.pos + (ByteBuffer.__indirect t.b " + NumToString(field.value.offset) + ")";
     }
     code += " in\n";
-    code += Indent + Indent + "if(offset!=0) then Some (" + GetStructReceiver(struct_def, field, dependencies) + ")\n";
+    code += Indent + Indent + "if(offset!=0) then Some (";
+    code += GetRelativeOffset("offset") + " " + GetStructReceiver(struct_def, field, dependencies) + ")\n";
     code += Indent + Indent + "else None\n";
   }
 
@@ -476,7 +480,7 @@ class OcamlGenerator : public BaseGenerator {
     GenMemberOfVectorCommon(field, code_ptr);
 
     if (IsScalar(vectortype.base_type)) {
-      code += Indent + Indent + Indent + "let offset = offset + t.pos in\n";
+      code += Indent + Indent + Indent + GetRelativeOffset("offset") + "\n";
       code += Indent + Indent + Indent + GetScalarReceiver(struct_def, vectortype) + "\n";
       code += Indent + Indent + "else 0\n";
     } else if (vectortype.base_type == BASE_TYPE_STRING) {
