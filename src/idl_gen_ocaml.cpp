@@ -287,7 +287,7 @@ class OcamlGenerator : public BaseGenerator {
   {
     std::string code;
     code += "ByteBuffer.";
-    code += "read" + GetScalarAccessorType(struct_def, type) + " t.b (t.pos+offset)";
+    code += "read" + GetScalarAccessorType(struct_def, type) + " t.b offset";
     return code;
   }
 
@@ -299,7 +299,7 @@ class OcamlGenerator : public BaseGenerator {
     }
     std::string module = MakeCamel(TypeName(field));
     dependencies->insert(module);
-    code += module + ".init t.b offset";
+    code += module + ".init t.b (t.pos + offset)";
     return code;
   }
 
@@ -338,7 +338,8 @@ class OcamlGenerator : public BaseGenerator {
                           : field.value.constant;
     }
     std::string field_value;
-    field_value = GetScalarReceiver(struct_def, field.value.type) ;
+    field_value = Indent + Indent + Indent + "let offset = offset + t.pos in ";
+    field_value += Indent + Indent + Indent + GetScalarReceiver(struct_def, field.value.type) ;
     if(field.value.type.enum_def) {
       auto module_name = NormalizedName(*field.value.type.enum_def);
       field_value = module_name + ".of_int (" + field_value + ")";
@@ -475,6 +476,7 @@ class OcamlGenerator : public BaseGenerator {
     GenMemberOfVectorCommon(field, code_ptr);
 
     if (IsScalar(vectortype.base_type)) {
+      code += Indent + Indent + Indent + "let offset = offset + t.pos in\n";
       code += Indent + Indent + Indent + GetScalarReceiver(struct_def, vectortype) + "\n";
       code += Indent + Indent + "else 0\n";
     } else if (vectortype.base_type == BASE_TYPE_STRING) {
