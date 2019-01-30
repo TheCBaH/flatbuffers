@@ -257,29 +257,11 @@ class OcamlGenerator : public BaseGenerator {
                              std::string *code_ptr) {
     std::string &code = *code_ptr;
 
-    code += Indent + "@classmethod\n";
-    code += Indent + "def GetRootAs";
-    code += NormalizedName(struct_def);
-    code += "(cls, buf, offset):";
-    code += "\n";
-    code += Indent + Indent;
-    code += "n = flatbuffers.encode.Get";
-    code += "(flatbuffers.packer.uoffset, buf, offset)\n";
-    code += Indent + Indent + "x = " + NormalizedName(struct_def) + "()\n";
-    code += Indent + Indent + "x.Init(buf, n + offset)\n";
-    code += Indent + Indent + "return x\n";
-    code += "\n";
-  }
+    code += Indent + "let getRootAs" + NormalizedName(struct_def) + " b =\n";
+    code += Indent + Indent + "let offset = ";
+    code += "(ByteBuffer.read_ocaml_int32 b (ByteBuffer.position b)) + (ByteBuffer.position b) in\n";
+    code += Indent + Indent + "init b offset\n\n";
 
-  // Initialize an existing object with other data, to avoid an allocation.
-  void InitializeExisting(const StructDef &struct_def,
-                          std::string *code_ptr) {
-    std::string &code = *code_ptr;
-
-    GenReceiver(struct_def, code_ptr);
-    code += "Init(self, buf, pos):\n";
-    code += Indent + Indent + "self._tab = flatbuffers.table.Table(buf, pos)\n";
-    code += "\n";
   }
 
   // Get the length of a vector.
@@ -305,7 +287,7 @@ class OcamlGenerator : public BaseGenerator {
   {
     std::string code;
     code += "ByteBuffer.";
-    code += "read" + GetScalarAccessorType(struct_def, type) + " t.b offset";
+    code += "read" + GetScalarAccessorType(struct_def, type) + " t.b (t.pos+offset)";
     return code;
   }
 
@@ -711,16 +693,11 @@ class OcamlGenerator : public BaseGenerator {
 
     GenComment(struct_def.doc_comment, &code);
     BeginStruct(struct_def, &code);
-#if 0
     if (!struct_def.fixed) {
       // Generate a special accessor for the table that has been declared as
       // the root type.
-      NewRootTypeFromBuffer(struct_def, code_ptr);
+      NewRootTypeFromBuffer(struct_def, &code);
     }
-    // Generate the Init method that sets the field in a pre-existing
-    // accessor object. This is to allow object reuse.
-    InitializeExisting(struct_def, code_ptr);
-#endif
     for (auto it = struct_def.fields.vec.begin();
         it != struct_def.fields.vec.end(); ++it) {
       auto &field = **it;
