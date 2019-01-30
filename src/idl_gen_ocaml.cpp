@@ -24,6 +24,10 @@
 #include "flatbuffers/util.h"
 
 #include <unordered_set>
+#include <iterator>
+#include <algorithm>
+#include <iostream>
+
 
 namespace flatbuffers {
 namespace ocaml {
@@ -38,6 +42,7 @@ static std::string GeneratedFileName(const std::string &path,
   return path + file_name + kGeneratedFileNamePostfix + ".ml";
 }
 
+typedef std::unordered_set<std::string> ModuleSet;
 
 class Module {
 private:
@@ -49,21 +54,66 @@ private:
   void add(std::vector<std::string> &defs, const std::string &def) {
     defs.push_back(def);
   }
+  struct SubModule {
+    std::string name;
+    ModuleSet dependencies;
+    std::string code;
+    SubModule(const std::string &_name, const ModuleSet &_dependencies, const std::string &_code) : name(_name), dependencies(_dependencies), code(_code) {}
+  };
   std::vector<std::string> enums;
-  std::vector<std::string> structs;
+  std::vector<SubModule> structs;
 public:
   Module() {}
   void addEnum(const std::string &_enum) {
     add(enums, _enum);
   }
-  void addStruct(const std::string &_struct) {
-    add(structs, _struct);
+  void addStruct(const std::string &name, const ModuleSet &dependencies, const std::string &code) {
+    SubModule submodule(name, dependencies, code);
+    structs.push_back(submodule);
   }
   void printEnums(std::string *code_ptr) {
     print(enums, code_ptr);
   }
+  /* retruns true if all elements from set 'b' are present in the set 'a' */
+  bool setContains(const ModuleSet &a,  const ModuleSet &b) {
+    for(auto it = b.begin(); it != b.end(); it++) {
+      if(a.count(*it)==0) {
+	return false;
+      }
+    }
+    return true;
+  }
+
   void printStructs(std::string *code_ptr) {
-    print(structs, code_ptr);
+    ModuleSet printed;
+    for(;;) {
+      bool advanced = false;
+      ModuleSet skipped;
+      for(auto it = structs.begin(); it != structs.end(); it++) {
+	if(printed.count(it->name)) {
+	  continue;
+	}
+	if(setContains(printed, it->dependencies)) {
+	  advanced = true;
+	  printed.insert(it->name);
+	  *code_ptr += it->code;
+	} else {
+	  skipped.insert(it->name);
+	}
+      }
+      if(skipped.empty()) {
+	break;
+      }
+      if(!advanced ) {
+	std::cerr << "Failed";
+	std::copy(
+		  skipped.begin(),
+		  skipped.end(),
+		  std::ostream_iterator<std::string>(std::cerr, " ")
+		  );
+	std::cerr << std::endl;
+      }
+    }
   }
 };
 
@@ -89,6 +139,7 @@ public:
     }
   }
 };
+
 
 class OcamlGenerator : public BaseGenerator {
  private:
@@ -258,13 +309,15 @@ class OcamlGenerator : public BaseGenerator {
     return code;
   }
 
-  std::string GetStructReceiver(const StructDef &struct_def, const FieldDef &field)
+  std::string GetStructReceiver(const StructDef &struct_def, const FieldDef &field, ModuleSet *dependencies)
   {
     std::string code;
     if(0 && &struct_def) {
       return std::string("not_supported");
     }
-    code += MakeCamel(TypeName(field)) + ".init t.b offset";
+    std::string module = MakeCamel(TypeName(field));
+    dependencies->insert(module);
+    code += module + ".init t.b offset";
     return code;
   }
 
@@ -288,7 +341,8 @@ class OcamlGenerator : public BaseGenerator {
   // Get the value of a table's scalar.
   void GetScalarFieldOfTable(const StructDef &struct_def,
                              const FieldDef &field,
-                             std::string *code_ptr) {
+                             std::string *code_ptr
+			     ) {
     GenOcamlReceiver(field, code_ptr);
     std::string &code = *code_ptr;
     code += Indent + Indent + "let offset = ByteBuffer.__offset t.b t.pos " + NumToString(field.value.offset) + " in\n";
@@ -307,7 +361,7 @@ class OcamlGenerator : public BaseGenerator {
       auto module_name = NormalizedName(*field.value.type.enum_def);
       field_value = module_name + ".of_int (" + field_value + ")";
       if (auto val = field.value.type.enum_def->ReverseLookup(StringToInt(field.value.constant.c_str()), false)) {
-          default_value = module_name + "." + val->name;
+	default_value = module_name + "." + val->name;
       }
     }
     code += Indent + Indent + "if(offset!=0) then " + field_value + "\n";
@@ -318,18 +372,22 @@ class OcamlGenerator : public BaseGenerator {
   // Specific to Struct.
   void GetStructFieldOfStruct(const StructDef &struct_def,
                               const FieldDef &field,
-                              std::string *code_ptr) {
+                              std::string *code_ptr,
+			      ModuleSet *dependencies
+			      ) {
     GenOcamlReceiver(field, code_ptr);
     std::string &code = *code_ptr;
     code += Indent + Indent + "let offset = t.pos +" +  NumToString(field.value.offset) + " in\n";
-    code += Indent + Indent + GetStructReceiver(struct_def, field) + "\n";
+    code += Indent + Indent + GetStructReceiver(struct_def, field, dependencies) + "\n";
   }
 
   // Get a struct by initializing an existing struct.
   // Specific to Table.
   void GetStructFieldOfTable(const StructDef &struct_def,
                              const FieldDef &field,
-                             std::string *code_ptr) {
+                             std::string *code_ptr,
+			     ModuleSet *dependencies
+			     ) {
     GenOcamlReceiver(field, code_ptr);
     std::string &code = *code_ptr;
     code += Indent + Indent + "let offset = ";
@@ -339,7 +397,7 @@ class OcamlGenerator : public BaseGenerator {
       code += "t.pos + (ByteBuffer.__indirect t.b " + NumToString(field.value.offset) + ")";
     }
     code += " in\n";
-    code += Indent + Indent + "if(offset!=0) then Some (" + GetStructReceiver(struct_def, field) + ")\n";
+    code += Indent + Indent + "if(offset!=0) then Some (" + GetStructReceiver(struct_def, field, dependencies) + ")\n";
     code += Indent + Indent + "else None\n";
   }
 
@@ -392,7 +450,9 @@ class OcamlGenerator : public BaseGenerator {
   // Get the value of a vector's struct member.
   void GetMemberOfVectorOfStruct(const StructDef &struct_def,
                                  const FieldDef &field,
-                                 std::string *code_ptr) {
+                                 std::string *code_ptr,
+				 ModuleSet *dependencies
+				 ) {
     std::string &code = *code_ptr;
     auto vectortype = field.value.type.VectorType();
     std::string offset = Indent + Indent + "let offset = ByteBuffer.__offset t.b t.pos " + NumToString(field.value.offset) + " in\n";
@@ -411,7 +471,7 @@ class OcamlGenerator : public BaseGenerator {
       code += " * " + NumToString(inline_size);
     }
     code += ") in\n";
-    code += Indent + Indent + Indent + "Some (" + GetStructReceiver(struct_def, field) + ")\n";
+    code += Indent + Indent + Indent + "Some (" + GetStructReceiver(struct_def, field, dependencies) + ")\n";
     code += Indent + Indent + "else None\n";
 
  #if 0
@@ -623,7 +683,7 @@ class OcamlGenerator : public BaseGenerator {
 
   // Generate a struct field, conditioned on its child type(s).
   void GenStructAccessor(const StructDef &struct_def,
-                         const FieldDef &field, std::string *code_ptr) {
+                         const FieldDef &field, std::string *code_ptr, ModuleSet *dependencies) {
     GenComment(field.doc_comment, code_ptr);
     if (IsScalar(field.value.type.base_type)) {
       if (struct_def.fixed) {
@@ -636,16 +696,16 @@ class OcamlGenerator : public BaseGenerator {
       switch (field.value.type.base_type) {
         case BASE_TYPE_STRUCT:
           if (struct_def.fixed) {
-            GetStructFieldOfStruct(struct_def, field, code_ptr);
+            GetStructFieldOfStruct(struct_def, field, code_ptr, dependencies);
           } else {
-            GetStructFieldOfTable(struct_def, field, code_ptr);
+            GetStructFieldOfTable(struct_def, field, code_ptr, dependencies);
           }
           break;
         case BASE_TYPE_STRING: GetStringField(struct_def, field, code_ptr); break;
         case BASE_TYPE_VECTOR: {
           auto vectortype = field.value.type.VectorType();
           if (vectortype.base_type == BASE_TYPE_STRUCT) {
-            GetMemberOfVectorOfStruct(struct_def, field, code_ptr);
+            GetMemberOfVectorOfStruct(struct_def, field, code_ptr, dependencies);
           } else {
 	    #if 0
             GetMemberOfVectorOfNonStruct(struct_def, field, code_ptr);
@@ -696,6 +756,7 @@ class OcamlGenerator : public BaseGenerator {
   void GenStruct(const StructDef &struct_def) {
     if (struct_def.generated) return;
     std::string code;
+    ModuleSet dependencies;
 
     GenComment(struct_def.doc_comment, &code);
     BeginStruct(struct_def, &code);
@@ -714,7 +775,7 @@ class OcamlGenerator : public BaseGenerator {
       auto &field = **it;
       if (field.deprecated) continue;
 
-      GenStructAccessor(struct_def, field, &code);
+      GenStructAccessor(struct_def, field, &code, &dependencies);
     }
 #if 0
 
@@ -729,7 +790,7 @@ class OcamlGenerator : public BaseGenerator {
     EndStruct(&code);
 
     auto &m = modules.get(struct_def.defined_namespace);
-    m.addStruct(code);
+    m.addStruct(NormalizedName(struct_def),dependencies, code);
   }
 
   // Generate enum declarations.
