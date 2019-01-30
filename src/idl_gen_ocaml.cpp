@@ -24,6 +24,7 @@
 #include "flatbuffers/util.h"
 
 #include <unordered_set>
+#include <map>
 #include <iterator>
 #include <algorithm>
 #include <iostream>
@@ -112,6 +113,7 @@ public:
 		  std::ostream_iterator<std::string>(std::cerr, " ")
 		  );
 	std::cerr << std::endl;
+	FLATBUFFERS_ASSERT(0);
       }
     }
   }
@@ -292,20 +294,18 @@ class OcamlGenerator : public BaseGenerator {
     code += Indent + Indent + "return 0\n\n";
   }
 
-  std::string GetScalarAccessorType(const StructDef &struct_def,
-					   const FieldDef &field) {
-    auto type = field.value.type;
+  std::string GetScalarAccessorType(const StructDef &struct_def, const Type &type) {
     if(0 && &struct_def) {
       return std::string("not_supported");
     }
     return MakeCamel(GenTypeBasic(type));
   }
 
-  std::string GetScalarReceiver(const StructDef &struct_def, const FieldDef &field)
+  std::string GetScalarReceiver(const StructDef &struct_def, const Type &type)
   {
     std::string code;
     code += "ByteBuffer.";
-    code += "read" + GetScalarAccessorType(struct_def, field) + " t.b offset";
+    code += "read" + GetScalarAccessorType(struct_def, type) + " t.b offset";
     return code;
   }
 
@@ -335,7 +335,7 @@ class OcamlGenerator : public BaseGenerator {
     GenOcamlReceiver(field, code_ptr);
     std::string &code = *code_ptr;
     code += Indent + Indent + "let offset = t.pos + " + NumToString(field.value.offset) + " in\n";
-    code += Indent + Indent + GetScalarReceiver(struct_def, field) + "\n";
+    code += Indent + Indent + GetScalarReceiver(struct_def, field.value.type) + "\n";
   }
 
   // Get the value of a table's scalar.
@@ -356,7 +356,7 @@ class OcamlGenerator : public BaseGenerator {
                           : field.value.constant;
     }
     std::string field_value;
-    field_value = GetScalarReceiver(struct_def, field) ;
+    field_value = GetScalarReceiver(struct_def, field.value.type) ;
     if(field.value.type.enum_def) {
       auto module_name = NormalizedName(*field.value.type.enum_def);
       field_value = module_name + ".of_int (" + field_value + ")";
@@ -447,6 +447,29 @@ class OcamlGenerator : public BaseGenerator {
     #endif
   }
 
+
+ void GenMemberOfVectorCommon(const FieldDef &field,
+                                 std::string *code_ptr) {
+    std::string &code = *code_ptr;
+    std::string offset = Indent + Indent + "let offset = ByteBuffer.__offset t.b t.pos " + NumToString(field.value.offset) + " in\n";
+    code += Indent + "let " + NormalizedName(field) + "Length t =\n";
+    code += offset;
+    code += Indent + Indent + "if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)\n";
+    code += Indent + Indent + "else 0\n\n";
+    code += Indent + "let " + NormalizedName(field) + " t index =\n";
+    code += offset;
+    code += Indent + Indent + "if(offset!=0) then\n";
+
+    code += Indent + Indent + Indent + "let offset = ByteBuffer.__indirect t.b ((ByteBuffer.__vector t.b (t.pos + offset)) + index";
+    auto vectortype = field.value.type.VectorType();
+    auto inline_size = InlineSize(vectortype);
+    if(inline_size != 1) {
+      code += " * " + NumToString(inline_size);
+    }
+    code += ") in\n";
+}
+
+
   // Get the value of a vector's struct member.
   void GetMemberOfVectorOfStruct(const StructDef &struct_def,
                                  const FieldDef &field,
@@ -454,45 +477,10 @@ class OcamlGenerator : public BaseGenerator {
 				 ModuleSet *dependencies
 				 ) {
     std::string &code = *code_ptr;
-    auto vectortype = field.value.type.VectorType();
-    std::string offset = Indent + Indent + "let offset = ByteBuffer.__offset t.b t.pos " + NumToString(field.value.offset) + " in\n";
-
-    code += Indent + "let " + NormalizedName(field) + "Length t =\n";
-    code += offset;
-    code += Indent + Indent + "if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)\n";
-    code += Indent + Indent + "else 0\n\n";
-
-    code += Indent + "let " + NormalizedName(field) + " t index =\n";
-    code += offset;;
-    code += Indent + Indent + "if(offset!=0) then\n";
-    code += Indent + Indent + Indent + "let offset = ByteBuffer.__indirect t.b ((ByteBuffer.__vector t.b (t.pos + offset)) + index";
-    auto inline_size = InlineSize(vectortype);
-    if(inline_size != 1) {
-      code += " * " + NumToString(inline_size);
-    }
-    code += ") in\n";
+    GenMemberOfVectorCommon(field, code_ptr);
     code += Indent + Indent + Indent + "Some (" + GetStructReceiver(struct_def, field, dependencies) + ")\n";
     code += Indent + Indent + "else None\n";
-
- #if 0
-    GenReceiver(struct_def, code_ptr);
-    code += MakeCamel(NormalizedName(field));
-    code += "(self, j):" + OffsetPrefix(field);
-    code += Indent + Indent + Indent + "x = self._tab.Vector(o)\n";
-    code += Indent + Indent + Indent;
-    code += "x += flatbuffers.number_types.UOffsetTFlags.py_type(j) * ";
-    code += NumToString(InlineSize(vectortype)) + "\n";
-    if (!(vectortype.struct_def->fixed)) {
-      code += Indent + Indent + Indent + "x = self._tab.Indirect(x)\n";
-    }
-    code += Indent + Indent + Indent;
-    code += "from ." + TypeName(field) + " import " + TypeName(field) + "\n";
-    code += Indent + Indent + Indent + "obj = " + TypeName(field) + "()\n";
-    code += Indent + Indent + Indent + "obj.Init(self._tab.Bytes, x)\n";
-    code += Indent + Indent + Indent + "return obj\n";
-    code += Indent + Indent + "return None\n\n";
-  #endif
-  }
+   }
 
   // Get the value of a vector's non-struct member. Uses a named return
   // argument to conveniently set the zero value for the result.
@@ -502,51 +490,17 @@ class OcamlGenerator : public BaseGenerator {
     std::string &code = *code_ptr;
     auto vectortype = field.value.type.VectorType();
 
-    GenReceiver(struct_def, code_ptr);
-    code += MakeCamel(NormalizedName(field));
-    code += "(self, j):";
-    code += OffsetPrefix(field);
-    code += Indent + Indent + Indent + "a = self._tab.Vector(o)\n";
-    code += Indent + Indent + Indent;
-    code += "return " + GenGetter(field.value.type);
-    code += "a + flatbuffers.number_types.UOffsetTFlags.py_type(j * ";
-    code += NumToString(InlineSize(vectortype)) + "))\n";
-    if (vectortype.base_type == BASE_TYPE_STRING) {
-      code += Indent + Indent + "return \"\"\n";
+    GenMemberOfVectorCommon(field, code_ptr);
+
+    if (IsScalar(vectortype.base_type)) {
+      code += Indent + Indent + Indent + GetScalarReceiver(struct_def, vectortype) + "\n";
+      code += Indent + Indent + "else 0\n";
+    } else if (vectortype.base_type == BASE_TYPE_STRING) {
+      code += Indent + Indent + Indent + "then Some (ByteBuffer.__string t.b offset)\n";
+      code += Indent + Indent + "else None\n";
     } else {
-      code += Indent + Indent + "return 0\n";
+	FLATBUFFERS_ASSERT(0);
     }
-    code += "\n";
-  }
-
-  // Returns a non-struct vector as a numpy array. Much faster
-  // than iterating over the vector element by element.
-  void GetVectorOfNonStructAsNumpy(const StructDef &struct_def,
-                                   const FieldDef &field,
-                                   std::string *code_ptr) {
-    std::string &code = *code_ptr;
-    auto vectortype = field.value.type.VectorType();
-
-    // Currently, we only support accessing as numpy array if
-    // the vector type is a scalar.
-    if (!(IsScalar(vectortype.base_type))) { return; }
-
-    GenReceiver(struct_def, code_ptr);
-    code += MakeCamel(NormalizedName(field)) + "AsNumpy(self):";
-    code += OffsetPrefix(field);
-
-    code += Indent + Indent + Indent;
-    code += "return ";
-    code += "self._tab.GetVectorAsNumpy(flatbuffers.number_types.";
-    code += MakeCamel(GenTypeGet(field.value.type));
-    code += "Flags, o)\n";
-
-    if (vectortype.base_type == BASE_TYPE_STRING) {
-      code += Indent + Indent + "return \"\"\n";
-    } else {
-      code += Indent + Indent + "return 0\n";
-    }
-    code += "\n";
   }
 
   // Begin the creator function signature.
@@ -707,10 +661,7 @@ class OcamlGenerator : public BaseGenerator {
           if (vectortype.base_type == BASE_TYPE_STRUCT) {
             GetMemberOfVectorOfStruct(struct_def, field, code_ptr, dependencies);
           } else {
-	    #if 0
             GetMemberOfVectorOfNonStruct(struct_def, field, code_ptr);
-            GetVectorOfNonStructAsNumpy(struct_def, field, code_ptr);
-	    #endif
           }
           break;
         }
