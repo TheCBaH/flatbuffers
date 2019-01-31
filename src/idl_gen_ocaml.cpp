@@ -329,6 +329,7 @@ class OcamlGenerator : public BaseGenerator {
     case BASE_TYPE_INT: return "Int32.zero";
     case BASE_TYPE_DOUBLE:
     case BASE_TYPE_FLOAT: return "0.9";
+    case BASE_TYPE_BOOL: return "false";
     default: return "0";
     }
   }
@@ -348,12 +349,14 @@ class OcamlGenerator : public BaseGenerator {
   std::string GetStructReceiver(const StructDef &struct_def, const FieldDef &field, ModuleSet *dependencies)
   {
     std::string code;
-    if(0 && &struct_def) {
-      return std::string("not_supported");
+    if(struct_def.name.compare(TypeName(field))==0) {
+      code += "init";
+    } else {
+	std::string module = MakeCamel(TypeName(field));
+	dependencies->insert(module);
+	code += module + ".init";
     }
-    std::string module = MakeCamel(TypeName(field));
-    dependencies->insert(module);
-    code += module + ".init t.b offset";
+    code += " t.b offset";
     return code;
   }
 

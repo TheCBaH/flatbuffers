@@ -59,6 +59,9 @@ module ByteBuffer = struct
   let readUint8 t offset =
     Char.code (Bigarray.Array1.get t.bytes offset)
 
+  let readBool t offset =
+    readUint8 t offset != 0
+
   let sign_extend_int n bits =
     let shift = int_length - bits in
     (n lsl shift) asr shift
