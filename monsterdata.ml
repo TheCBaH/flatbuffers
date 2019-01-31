@@ -36,6 +36,8 @@ let _ = Vec3.x v
 let _ = Vec3.y v
 let _ = Vec3.z v
 
+let _ = Monster.inventoryLength monster
+
 let _ = Monster.weaponsLength monster
 
 let w = Monster.weapons monster 0 |> _opt
@@ -49,5 +51,8 @@ let _ = Weapon.damage w
 let _ = Weapon.name w
 
 let w = Monster.weapons monster 2 |> _opt
+
+let _ = Monster.equipped_type monster
+
 
 let _ = 1

@@ -87,6 +87,7 @@ public:
 
   void printStructs(std::string *code_ptr) {
     ModuleSet printed;
+    bool skip_dependencies=false;
     for(;;) {
       bool advanced = false;
       ModuleSet skipped;
@@ -94,10 +95,21 @@ public:
 	if(printed.count(it->name)) {
 	  continue;
 	}
-	if(setContains(printed, it->dependencies)) {
+	if(skip_dependencies || setContains(printed, it->dependencies)) {
 	  advanced = true;
 	  printed.insert(it->name);
 	  *code_ptr += it->code;
+	  if(skip_dependencies) {
+	    std::cerr << "Module: " << it->name << std::endl;
+	    std::cerr << "Dependencies: " << std::endl;
+	    for(auto d = it->dependencies.begin(); d != it->dependencies.end(); d++) {
+	      if(printed.count(*d)==0) {
+		std::cerr << *d << " ";
+	      }
+	    }
+	    std::cerr << std::endl;
+	    FLATBUFFERS_ASSERT(0);
+	  }
 	} else {
 	  skipped.insert(it->name);
 	}
@@ -105,15 +117,8 @@ public:
       if(skipped.empty()) {
 	break;
       }
-      if(!advanced ) {
-	std::cerr << "Failed";
-	std::copy(
-		  skipped.begin(),
-		  skipped.end(),
-		  std::ostream_iterator<std::string>(std::cerr, " ")
-		  );
-	std::cerr << std::endl;
-	FLATBUFFERS_ASSERT(0);
+      if(!advanced) {
+	skip_dependencies = true;
       }
     }
   }
@@ -153,39 +158,62 @@ class OcamlGenerator : public BaseGenerator {
                       "" /* not used */),
         float_const_gen_("float('nan')", "float('inf')", "float('-inf')") {
     static const char * const keywords[] = {
-      "False",
-      "None",
-      "True",
       "and",
       "as",
       "assert",
-      "break",
+      "asr",
+      "begin",
       "class",
-      "continue",
-      "def",
-      "del",
-      "elif",
+      "constraint",
+      "do",
+      "done",
+      "downto",
       "else",
-      "except",
-      "finally",
+      "end",
+      "exception",
+      "external",
+      "false",
       "for",
-      "from",
-      "global",
+      "fun",
+      "function",
+      "functor",
       "if",
-      "import",
       "in",
-      "is",
-      "lambda",
-      "nonlocal",
-      "not",
+      "include",
+      "inherit",
+      "initializer",
+      "land",
+      "lazy",
+      "let",
+      "lor",
+      "lsl",
+      "lsr",
+      "lxor",
+      "match",
+      "method",
+      "mod",
+      "module",
+      "mutable",
+      "new",
+      "nonrec",
+      "object",
+      "of",
+      "open",
       "or",
-      "pass",
-      "raise",
-      "return",
+      "private",
+      "rec",
+      "sig",
+      "struct",
+      "then",
+      "to",
+      "true",
       "try",
+      "type",
+      "val",
+      "virtual",
+      "when",
       "while",
-      "with",
-      "yield"
+      "with"
     };
     keywords_.insert(std::begin(keywords), std::end(keywords));
   }
@@ -278,7 +306,6 @@ class OcamlGenerator : public BaseGenerator {
 
   std::string GetScalarAccessorType(const StructDef &struct_def, const Type &type) {
     if(0 && &struct_def) {
-      return std::string("not_supported");
     }
     return MakeCamel(GenTypeBasic(type));
   }
@@ -289,6 +316,33 @@ class OcamlGenerator : public BaseGenerator {
     code += "ByteBuffer.";
     code += "read" + GetScalarAccessorType(struct_def, type) + " t.b offset";
     return code;
+  }
+
+  const char *GetScalarZero(const StructDef &struct_def, const Type &type)
+  {
+    if(0 && &struct_def) {
+    }
+    switch(type.base_type) {
+    case BASE_TYPE_UINT:
+    case BASE_TYPE_ULONG:
+    case BASE_TYPE_LONG: return "Int64.zero";
+    case BASE_TYPE_INT: return "Int32.zero";
+    case BASE_TYPE_DOUBLE:
+    case BASE_TYPE_FLOAT: return "0.9";
+    default: return "0";
+    }
+  }
+  std::string GetScalarConstant(const StructDef &struct_def, const Type &type, const std::string &value) {
+    if(value.compare("0")==0) {
+      return GetScalarZero(struct_def, type);
+    }
+    switch(type.base_type) {
+    case BASE_TYPE_UINT:
+    case BASE_TYPE_ULONG:
+    case BASE_TYPE_LONG: return value + "L";
+    case BASE_TYPE_INT: return value + "l";
+    default: return value;
+    }
   }
 
   std::string GetStructReceiver(const StructDef &struct_def, const FieldDef &field, ModuleSet *dependencies)
@@ -339,7 +393,7 @@ class OcamlGenerator : public BaseGenerator {
     } else {
       default_value = IsFloat(field.value.type.base_type)
                           ? float_const_gen_.GenFloatConstant(field)
-                          : field.value.constant;
+	: GetScalarConstant(struct_def, field.value.type, field.value.constant);
     }
     std::string field_value;
     field_value = GetRelativeOffset("offset") + " " + GetScalarReceiver(struct_def, field.value.type);
@@ -363,7 +417,7 @@ class OcamlGenerator : public BaseGenerator {
 			      ) {
     GenOcamlReceiver(field, code_ptr);
     std::string &code = *code_ptr;
-    code += Indent + Indent + GetRelativeOffset(NumToString(field.value.offset)) + "n";
+    code += Indent + Indent + GetRelativeOffset(NumToString(field.value.offset)) + "\n";
     code += Indent + Indent + GetStructReceiver(struct_def, field, dependencies) + "\n";
   }
 
@@ -446,14 +500,14 @@ class OcamlGenerator : public BaseGenerator {
     code += Indent + "let " + NormalizedName(field) + " t index =\n";
     code += offset;
     code += Indent + Indent + "if(offset!=0) then\n";
-
-    code += Indent + Indent + Indent + "let offset = ByteBuffer.__indirect t.b ((ByteBuffer.__vector t.b (t.pos + offset)) + index";
+    code += Indent + Indent + Indent + "let index = index";
     auto vectortype = field.value.type.VectorType();
     auto inline_size = InlineSize(vectortype);
     if(inline_size != 1) {
       code += " * " + NumToString(inline_size);
     }
-    code += ") in\n";
+    code += " in \n";
+    code += Indent + Indent + Indent + "let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in\n";
 }
 
 
@@ -465,6 +519,7 @@ class OcamlGenerator : public BaseGenerator {
 				 ) {
     std::string &code = *code_ptr;
     GenMemberOfVectorCommon(field, code_ptr);
+    code += Indent + Indent + Indent + "let offset = ByteBuffer.__indirect t.b offset in\n";
     code += Indent + Indent + Indent + "Some (" + GetStructReceiver(struct_def, field, dependencies) + ")\n";
     code += Indent + Indent + "else None\n";
    }
@@ -478,13 +533,11 @@ class OcamlGenerator : public BaseGenerator {
     auto vectortype = field.value.type.VectorType();
 
     GenMemberOfVectorCommon(field, code_ptr);
-
     if (IsScalar(vectortype.base_type)) {
-      code += Indent + Indent + Indent + GetRelativeOffset("offset") + "\n";
       code += Indent + Indent + Indent + GetScalarReceiver(struct_def, vectortype) + "\n";
-      code += Indent + Indent + "else 0\n";
+      code += Indent + Indent + "else " + GetScalarZero(struct_def, vectortype) + "\n";
     } else if (vectortype.base_type == BASE_TYPE_STRING) {
-      code += Indent + Indent + Indent + "then Some (ByteBuffer.__string t.b offset)\n";
+      code += Indent + Indent + Indent + "Some (ByteBuffer.__string t.b offset)\n";
       code += Indent + Indent + "else None\n";
     } else {
 	FLATBUFFERS_ASSERT(0);
