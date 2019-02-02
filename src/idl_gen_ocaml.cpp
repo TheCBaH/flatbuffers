@@ -87,9 +87,9 @@ private:
   Namespace &resolve(const flatbuffers::Namespace *ns) {
     Namespace *current = this;
     if(ns) {
-	for(auto it = ns->components.begin(); it != ns->components.end(); it++) {
-	  current = current->resolve_one(*it);
-	}
+        for(auto it = ns->components.begin(); it != ns->components.end(); it++) {
+          current = current->resolve_one(*it);
+        }
     }
     return *current;
   }
@@ -103,7 +103,7 @@ private:
   static bool setContains(const StringSet &a,  const StringSet &b) {
     for(auto it = b.begin(); it != b.end(); it++) {
       if(a.count(*it)==0) {
-	return false;
+        return false;
       }
     }
     return true;
@@ -116,35 +116,35 @@ private:
       bool advanced = false;
       StringSet skipped;
       for(auto it = structs.begin(); it != structs.end(); it++) {
-	const Struct &s = it->second;
-	if(printed.count(s.name)) {
-	  continue;
-	}
-	if(skip_dependencies || setContains(*known, s.dependencies)) {
-	  advanced = true;
-	  printed.insert(s.name);
-	  known->insert(s.name);
-	  *code_ptr += s.code;
-	  if(skip_dependencies) {
-	    std::cerr << "Module: " << s.name << std::endl;
-	    std::cerr << "Dependencies: " << std::endl;
-	    for(auto d = s.dependencies.begin(); d != s.dependencies.end(); d++) {
-	      if(printed.count(*d)==0) {
-		std::cerr << *d << " ";
-	      }
-	    }
-	    std::cerr << std::endl;
-	    FLATBUFFERS_ASSERT(0);
-	  }
-	} else {
-	  skipped.insert(s.name);
-	}
+        const Struct &s = it->second;
+        if(printed.count(s.name)) {
+          continue;
+        }
+        if(skip_dependencies || setContains(*known, s.dependencies)) {
+          advanced = true;
+          printed.insert(s.name);
+          known->insert(s.name);
+          *code_ptr += s.code;
+          if(skip_dependencies) {
+            std::cerr << "Module: " << s.name << std::endl;
+            std::cerr << "Dependencies: " << std::endl;
+            for(auto d = s.dependencies.begin(); d != s.dependencies.end(); d++) {
+              if(printed.count(*d)==0) {
+                std::cerr << *d << " ";
+              }
+            }
+            std::cerr << std::endl;
+            FLATBUFFERS_ASSERT(0);
+          }
+        } else {
+          skipped.insert(s.name);
+        }
       }
       if(skipped.empty()) {
-	break;
+        break;
       }
       if(!advanced) {
-	skip_dependencies = true;
+        skip_dependencies = true;
       }
     }
   }
@@ -167,14 +167,14 @@ private:
 public:
   Namespace() {}
   void addEnum(const flatbuffers::Namespace *ns, const std::string &_name,
-	       const std::string &code) {
+               const std::string &code) {
     Namespace &target = resolve(ns);
     Enum _enum(ns, _name, code);
     target.enums[_name]=_enum;
     return;
   }
   void addStruct(const flatbuffers::Namespace *ns, const std::string &_name,
-		 const StringSet &dependencies, const std::string &code) {
+                 const StringSet &dependencies, const std::string &code) {
     Namespace &target = resolve(ns);
     Struct _struct(ns, _name, code, dependencies);
     target.structs[_name]=_struct;
@@ -391,9 +391,9 @@ class OcamlGenerator : public BaseGenerator {
     if(struct_def.name.compare(TypeName(field))==0) {
       code += "init";
     } else {
-	std::string module = MakeCamel(TypeName(field));
-	dependencies->insert(module);
-	code += module + ".init";
+        std::string module = MakeCamel(TypeName(field));
+        dependencies->insert(module);
+        code += module + ".init";
     }
     code += " t.b offset";
     return code;
@@ -424,7 +424,7 @@ class OcamlGenerator : public BaseGenerator {
   void GetScalarFieldOfTable(const StructDef &struct_def,
                              const FieldDef &field,
                              std::string *code_ptr
-			     ) {
+                             ) {
     GenOcamlReceiver(field, code_ptr);
     std::string &code = *code_ptr;
     code += Indent + Indent + "let offset = ByteBuffer.__offset t.b t.pos " + NumToString(field.value.offset) + " in\n";
@@ -435,7 +435,7 @@ class OcamlGenerator : public BaseGenerator {
     } else {
       default_value = IsFloat(field.value.type.base_type)
                           ? float_const_gen_.GenFloatConstant(field)
-	: GetScalarConstant(struct_def, field.value.type, field.value.constant);
+        : GetScalarConstant(struct_def, field.value.type, field.value.constant);
     }
     std::string field_value;
     field_value = GetRelativeOffset("offset") + " " + GetScalarReceiver(struct_def, field.value.type);
@@ -443,7 +443,7 @@ class OcamlGenerator : public BaseGenerator {
       auto module_name = NormalizedName(*field.value.type.enum_def);
       field_value = module_name + ".of_int (" + field_value + ")";
       if (auto val = field.value.type.enum_def->ReverseLookup(StringToInt(field.value.constant.c_str()), false)) {
-	default_value = module_name + "." + val->name;
+        default_value = module_name + "." + val->name;
       }
     }
     code += Indent + Indent + "if(offset!=0) then " + field_value + "\n";
@@ -455,8 +455,8 @@ class OcamlGenerator : public BaseGenerator {
   void GetStructFieldOfStruct(const StructDef &struct_def,
                               const FieldDef &field,
                               std::string *code_ptr,
-			      StringSet *dependencies
-			      ) {
+                              StringSet *dependencies
+                              ) {
     GenOcamlReceiver(field, code_ptr);
     std::string &code = *code_ptr;
     code += Indent + Indent + GetRelativeOffset(NumToString(field.value.offset)) + "\n";
@@ -468,8 +468,8 @@ class OcamlGenerator : public BaseGenerator {
   void GetStructFieldOfTable(const StructDef &struct_def,
                              const FieldDef &field,
                              std::string *code_ptr,
-			     StringSet *dependencies
-			     ) {
+                             StringSet *dependencies
+                             ) {
     GenOcamlReceiver(field, code_ptr);
     std::string &code = *code_ptr;
     code += Indent + Indent + "let offset = ";
@@ -557,8 +557,8 @@ class OcamlGenerator : public BaseGenerator {
   void GetMemberOfVectorOfStruct(const StructDef &struct_def,
                                  const FieldDef &field,
                                  std::string *code_ptr,
-				 StringSet *dependencies
-				 ) {
+                                 StringSet *dependencies
+                                 ) {
     std::string &code = *code_ptr;
     GenMemberOfVectorCommon(field, code_ptr);
     code += Indent + Indent + Indent + "let offset = ByteBuffer.__indirect t.b offset in\n";
@@ -582,7 +582,7 @@ class OcamlGenerator : public BaseGenerator {
       code += Indent + Indent + Indent + "Some (ByteBuffer.__string t.b offset)\n";
       code += Indent + Indent + "else None\n";
     } else {
-	FLATBUFFERS_ASSERT(0);
+        FLATBUFFERS_ASSERT(0);
     }
   }
 
@@ -748,14 +748,14 @@ class OcamlGenerator : public BaseGenerator {
           }
           break;
         }
-	  #if 0
+          #if 0
         case BASE_TYPE_UNION: GetUnionField(struct_def, field, code_ptr); break;
-	  #endif
+          #endif
         default:
-	  #if 0
-	  FLATBUFFERS_ASSERT(0);
-	  #endif
-	  break;
+          #if 0
+          FLATBUFFERS_ASSERT(0);
+          #endif
+          break;
       }
     }
     #if 0
@@ -935,13 +935,13 @@ class OcamlGenerator : public BaseGenerator {
     if(dc.size() == 1) {
       code += "(* ";
       for (auto it = dc.begin(); it != dc.end(); ++it) {
-	code += *it;
+        code += *it;
       }
       code += "*)\n";
     } else {
       code += "(*\n";
       for (auto it = dc.begin(); it != dc.end(); ++it) {
-	code += *it + "\n";
+        code += *it + "\n";
       }
       code += "\n*)\n";
     }
