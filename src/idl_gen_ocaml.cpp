@@ -88,7 +88,7 @@ private:
     Namespace *current = this;
     if(ns) {
 	for(auto it = ns->components.begin(); it != ns->components.end(); it++) {
-	current = resolve_one(*it);
+	  current = current->resolve_one(*it);
 	}
     }
     return *current;
