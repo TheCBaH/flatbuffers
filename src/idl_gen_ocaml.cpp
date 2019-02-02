@@ -150,10 +150,17 @@ private:
   }
 
   void print_rec(std::string *code_ptr, StringSet *known_structures) {
+    if(!this->name.empty()) {
+      *code_ptr += "module " + this->name + " = struct\n\n";
+    }
+
     printEnums(code_ptr);
     printStucts(code_ptr, known_structures);
     for(auto it = namespaces.begin(); it != namespaces.end(); it++) {
       it->second.print_rec(code_ptr, known_structures);
+    }
+    if(!this->name.empty()) {
+      *code_ptr += "end (* " + this->name + " *)\n\n";
     }
   }
 
