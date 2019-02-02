@@ -25,6 +25,7 @@
 
 #include <unordered_set>
 #include <map>
+#include <unordered_map>
 #include <iterator>
 #include <algorithm>
 #include <iostream>
@@ -43,40 +44,63 @@ static std::string GeneratedFileName(const std::string &path,
   return path + file_name + kGeneratedFileNamePostfix + ".ml";
 }
 
-typedef std::unordered_set<std::string> ModuleSet;
+typedef std::unordered_set<std::string> StringSet;
 
-class Module {
+
+class Enum {
+public:
+  const flatbuffers::Namespace *ns;
+  std::string name;
+  std::string code;
+  Enum() {}
+
+  Enum(const flatbuffers::Namespace  *_ns, const std::string &_name, const std::string &_code) : ns(_ns), name(_name), code(_code) {}
+};
+
+class Struct {
+public:
+  const flatbuffers::Namespace *ns;
+  std::string name;
+  std::string code;
+  StringSet dependencies;
+  Struct() {}
+  Struct(const flatbuffers::Namespace  *_ns, const std::string &_name, const std::string &_code, const StringSet &_dependencies) : ns(_ns), name(_name), code(_code),dependencies(_dependencies) {}
+};
+
+class Namespace {
 private:
-  void print(const std::vector<std::string> defs, std::string *code_ptr) {
-    for(auto it = defs.begin(); it != defs.end(); it++) {
-      *code_ptr += *it;
+  std::string name;
+  std::unordered_map<std::string, Enum> enums;
+  std::unordered_map<std::string, Struct> structs;
+  std::map<std::string, Namespace> namespaces;
+
+  Namespace *resolve_one(const std::string &ns) {
+    if(this->namespaces.count(ns)==0) {
+      Namespace empty;
+      empty.name = ns;
+      this->namespaces.insert(std::pair<std::string, Namespace>(ns, empty));
+    }
+    auto it = this->namespaces.find(ns);
+    return &it->second;
+  }
+
+  Namespace &resolve(const flatbuffers::Namespace *ns) {
+    Namespace *current = this;
+    if(ns) {
+	for(auto it = ns->components.begin(); it != ns->components.end(); it++) {
+	current = resolve_one(*it);
+	}
+    }
+    return *current;
+  }
+
+  void printEnums(std::string *code_ptr) {
+    for(auto it = enums.begin(); it != enums.end(); it++) {
+      *code_ptr += it->second.code;
     }
   }
-  void add(std::vector<std::string> &defs, const std::string &def) {
-    defs.push_back(def);
-  }
-  struct SubModule {
-    std::string name;
-    ModuleSet dependencies;
-    std::string code;
-    SubModule(const std::string &_name, const ModuleSet &_dependencies, const std::string &_code) : name(_name), dependencies(_dependencies), code(_code) {}
-  };
-  std::vector<std::string> enums;
-  std::vector<SubModule> structs;
-public:
-  Module() {}
-  void addEnum(const std::string &_enum) {
-    add(enums, _enum);
-  }
-  void addStruct(const std::string &name, const ModuleSet &dependencies, const std::string &code) {
-    SubModule submodule(name, dependencies, code);
-    structs.push_back(submodule);
-  }
-  void printEnums(std::string *code_ptr) {
-    print(enums, code_ptr);
-  }
-  /* retruns true if all elements from set 'b' are present in the set 'a' */
-  bool setContains(const ModuleSet &a,  const ModuleSet &b) {
+
+  static bool setContains(const StringSet &a,  const StringSet &b) {
     for(auto it = b.begin(); it != b.end(); it++) {
       if(a.count(*it)==0) {
 	return false;
@@ -85,24 +109,26 @@ public:
     return true;
   }
 
-  void printStructs(std::string *code_ptr) {
-    ModuleSet printed;
+  void printStucts(std::string *code_ptr, StringSet *known) {
+    StringSet printed;
     bool skip_dependencies=false;
     for(;;) {
       bool advanced = false;
-      ModuleSet skipped;
+      StringSet skipped;
       for(auto it = structs.begin(); it != structs.end(); it++) {
-	if(printed.count(it->name)) {
+	const Struct &s = it->second;
+	if(printed.count(s.name)) {
 	  continue;
 	}
-	if(skip_dependencies || setContains(printed, it->dependencies)) {
+	if(skip_dependencies || setContains(*known, s.dependencies)) {
 	  advanced = true;
-	  printed.insert(it->name);
-	  *code_ptr += it->code;
+	  printed.insert(s.name);
+	  known->insert(s.name);
+	  *code_ptr += s.code;
 	  if(skip_dependencies) {
-	    std::cerr << "Module: " << it->name << std::endl;
+	    std::cerr << "Module: " << s.name << std::endl;
 	    std::cerr << "Dependencies: " << std::endl;
-	    for(auto d = it->dependencies.begin(); d != it->dependencies.end(); d++) {
+	    for(auto d = s.dependencies.begin(); d != s.dependencies.end(); d++) {
 	      if(printed.count(*d)==0) {
 		std::cerr << *d << " ";
 	      }
@@ -111,7 +137,7 @@ public:
 	    FLATBUFFERS_ASSERT(0);
 	  }
 	} else {
-	  skipped.insert(it->name);
+	  skipped.insert(s.name);
 	}
       }
       if(skipped.empty()) {
@@ -122,35 +148,41 @@ public:
       }
     }
   }
-};
 
-class Modules {
-private:
-  std::map<std::vector<std::string>, Module> map;
-public:
-  Modules () {}
-  Module &get(const flatbuffers::Namespace *ns) {
-    return map[ns->components];
-  }
-  void generate(std::string *code_ptr) {
-    for(auto it = map.begin(); it != map.end(); it++) {
-      auto ns = it->first;
-      for (auto m = ns.begin(); m != ns.end(); ++m) {
-	*code_ptr += "module " + *m + " = struct\n";
-      }
-      it->second.printEnums(code_ptr);
-      it->second.printStructs(code_ptr);
-      for (auto m = ns.begin(); m != ns.end(); ++m) {
-	*code_ptr += "end\n\n";
-      }
+  void print_rec(std::string *code_ptr, StringSet *known_structures) {
+    printEnums(code_ptr);
+    printStucts(code_ptr, known_structures);
+    for(auto it = namespaces.begin(); it != namespaces.end(); it++) {
+      it->second.print_rec(code_ptr, known_structures);
     }
+  }
+
+public:
+  Namespace() {}
+  void addEnum(const flatbuffers::Namespace *ns, const std::string &_name,
+	       const std::string &code) {
+    Namespace &target = resolve(ns);
+    Enum _enum(ns, _name, code);
+    target.enums[_name]=_enum;
+    return;
+  }
+  void addStruct(const flatbuffers::Namespace *ns, const std::string &_name,
+		 const StringSet &dependencies, const std::string &code) {
+    Namespace &target = resolve(ns);
+    Struct _struct(ns, _name, code, dependencies);
+    target.structs[_name]=_struct;
+    return;
+  }
+  void print(std::string *code_ptr) {
+    StringSet known;
+    print_rec(code_ptr, &known);
   }
 };
 
 
 class OcamlGenerator : public BaseGenerator {
- private:
-  Modules modules;
+ protected:
+  Namespace ns;
  public:
   OcamlGenerator(const Parser &parser, const std::string &path,
                   const std::string &file_name)
@@ -346,7 +378,7 @@ class OcamlGenerator : public BaseGenerator {
     }
   }
 
-  std::string GetStructReceiver(const StructDef &struct_def, const FieldDef &field, ModuleSet *dependencies)
+  std::string GetStructReceiver(const StructDef &struct_def, const FieldDef &field, StringSet *dependencies)
   {
     std::string code;
     if(struct_def.name.compare(TypeName(field))==0) {
@@ -416,7 +448,7 @@ class OcamlGenerator : public BaseGenerator {
   void GetStructFieldOfStruct(const StructDef &struct_def,
                               const FieldDef &field,
                               std::string *code_ptr,
-			      ModuleSet *dependencies
+			      StringSet *dependencies
 			      ) {
     GenOcamlReceiver(field, code_ptr);
     std::string &code = *code_ptr;
@@ -429,7 +461,7 @@ class OcamlGenerator : public BaseGenerator {
   void GetStructFieldOfTable(const StructDef &struct_def,
                              const FieldDef &field,
                              std::string *code_ptr,
-			     ModuleSet *dependencies
+			     StringSet *dependencies
 			     ) {
     GenOcamlReceiver(field, code_ptr);
     std::string &code = *code_ptr;
@@ -518,7 +550,7 @@ class OcamlGenerator : public BaseGenerator {
   void GetMemberOfVectorOfStruct(const StructDef &struct_def,
                                  const FieldDef &field,
                                  std::string *code_ptr,
-				 ModuleSet *dependencies
+				 StringSet *dependencies
 				 ) {
     std::string &code = *code_ptr;
     GenMemberOfVectorCommon(field, code_ptr);
@@ -681,7 +713,7 @@ class OcamlGenerator : public BaseGenerator {
 
   // Generate a struct field, conditioned on its child type(s).
   void GenStructAccessor(const StructDef &struct_def,
-                         const FieldDef &field, std::string *code_ptr, ModuleSet *dependencies) {
+                         const FieldDef &field, std::string *code_ptr, StringSet *dependencies) {
     GenComment(field.doc_comment, code_ptr);
     if (IsScalar(field.value.type.base_type)) {
       if (struct_def.fixed) {
@@ -751,7 +783,7 @@ class OcamlGenerator : public BaseGenerator {
   void GenStruct(const StructDef &struct_def) {
     if (struct_def.generated) return;
     std::string code;
-    ModuleSet dependencies;
+    StringSet dependencies;
 
     GenComment(struct_def.doc_comment, &code);
     BeginStruct(struct_def, &code);
@@ -768,7 +800,6 @@ class OcamlGenerator : public BaseGenerator {
       GenStructAccessor(struct_def, field, &code, &dependencies);
     }
 #if 0
-
     if (struct_def.fixed) {
       // create a struct constructor function
       GenStructBuilder(struct_def, code_ptr);
@@ -779,19 +810,19 @@ class OcamlGenerator : public BaseGenerator {
 #endif
     EndStruct(&code);
 
-    auto &m = modules.get(struct_def.defined_namespace);
-    m.addStruct(NormalizedName(struct_def),dependencies, code);
+    ns.addStruct(struct_def.defined_namespace, NormalizedName(struct_def),dependencies, code);
   }
 
   // Generate enum declarations.
   void GenEnum(const EnumDef &enum_def) {
     if (enum_def.generated) return;
     std::string type, of_int, to_int;
+    const std::string &name = NormalizedName(enum_def);
 
     std::string code;
 
     GenComment(enum_def.doc_comment, &code);
-    BeginEnum(NormalizedName(enum_def), &code);
+    BeginEnum(name, &code);
     for (auto it = enum_def.vals.vec.begin(); it != enum_def.vals.vec.end();
         ++it) {
       auto &ev = **it;
@@ -811,8 +842,7 @@ class OcamlGenerator : public BaseGenerator {
 
     EndEnum(&code);
 
-    auto &m = modules.get(enum_def.defined_namespace);
-    m.addEnum(code);
+    ns.addEnum(enum_def.defined_namespace, name, code);
   }
 
   // Returns the function name that is able to read a value of the given type.
@@ -881,7 +911,7 @@ class OcamlGenerator : public BaseGenerator {
     if (!generateEnums()) return false;
     if (!generateStructs()) return false;
     std::string code;
-    modules.generate(&code);
+    ns.print(&code);
     return SaveFile(GeneratedFileName(path_, file_name_).c_str(), code,
                     false);
   }
