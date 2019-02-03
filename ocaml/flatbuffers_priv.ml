@@ -267,33 +267,6 @@ let _ =  assert( do_test ByteBuffer.read_ocaml_int32 ByteBuffer.write_ocaml_int3
 
 let _ =  assert( do_test ByteBuffer.readUint64 ByteBuffer.writeUint64 0x0807060504030201L "\x01\x02\x03\x04\x05\x06\x07\x08")
 
-
-module Color = struct
-  type t =
-    Red
-  | Green
-  | Blue
-
-  let of_int = function
-      0 -> Red
-    | 1 -> Green
-    | 2 -> Blue
-    | _ -> failwith "Invalid value"
-
-  let to_int = function
-      Red -> 0
-    | Green  -> 1
-    | Blue -> 2
-
-end
-(*
-MyGame.Sample.Color = {
-  Red: 0, 0: 'Red',
-  Green: 1, 1: 'Green',
-  Blue: 2, 2: 'Blue'
-};
-*)
-
 module DIntArray = struct
   type t = {
       mutable len: int;
@@ -326,334 +299,331 @@ module DIntArray = struct
 end
 
 
-(* module Builder = struct *)
-type t= {
-    mutable bb: ByteBuffer.t;
-    mutable vtable: int array;
-    mutable vtables: DIntArray.t;
-    mutable space:int;
-    mutable minalign:int;
-    mutable vtable_in_use:int;
-    mutable isNested:bool;
-    mutable object_start:int;
-    mutable vector_num_elems:int;
-    mutable force_defaults:bool;
-(*
-  this.vtables = [];
- *)
-  }
+module Builder = struct
+
+  (* module Builder = struct *)
+  type t= {
+      mutable bb: ByteBuffer.t;
+      mutable vtable: int array;
+      mutable vtables: DIntArray.t;
+      mutable space:int;
+      mutable minalign:int;
+      mutable vtable_in_use:int;
+      mutable isNested:bool;
+      mutable object_start:int;
+      mutable vector_num_elems:int;
+      mutable force_defaults:bool;
+    }
 
 
-let create ?(initial_size=256)  () =
-  {
-    bb = ByteBuffer.allocate initial_size;
-    vtable = Array.make 0 0;
-    vtables = DIntArray.create ();
-    space = initial_size;
-    minalign = 1;
-    vtable_in_use = 0;
-    isNested = false;
-    object_start = 0;
-    vector_num_elems = 0;
-    force_defaults  = false
-  }
+  let create ?(initial_size=256)  () =
+    {
+      bb = ByteBuffer.allocate initial_size;
+      vtable = Array.make 0 0;
+      vtables = DIntArray.create ();
+      space = initial_size;
+      minalign = 1;
+      vtable_in_use = 0;
+      isNested = false;
+      object_start = 0;
+      vector_num_elems = 0;
+      force_defaults  = false
+    }
 
-  (*
-  this.vtable = null;
-  this.vtables = [];
-   *)
-let clear t =
-  ByteBuffer.clear t.bb;
-  t.vtable <- Array.make 0 0;
-  t.vtables <- DIntArray.create ();
-  t.space <- ByteBuffer.capacity t.bb;
-  t.minalign <- 1;
-  t.vtable_in_use <- 0;
-  t.isNested <- false;
-  t.object_start <- 0;
-  t.vector_num_elems <- 0;
-  t.force_defaults <- false
+  let clear t =
+    ByteBuffer.clear t.bb;
+    t.vtable <- Array.make 0 0;
+    t.vtables <- DIntArray.create ();
+    t.space <- ByteBuffer.capacity t.bb;
+    t.minalign <- 1;
+    t.vtable_in_use <- 0;
+    t.isNested <- false;
+    t.object_start <- 0;
+    t.vector_num_elems <- 0;
+    t.force_defaults <- false
 
 
-let forceDefaulta t forceDefaulta =
-  t.force_defaults <- forceDefaulta
+  let forceDefaulta t forceDefaulta =
+    t.force_defaults <- forceDefaulta
 
-let dataBuffer t = t.bb
+  let dataBuffer t = t.bb
 
-let offset t =
-  (ByteBuffer.capacity t.bb) - t.space
+  let offset t =
+    (ByteBuffer.capacity t.bb) - t.space
 
-let asByteArray t =
-  Bigarray.Array1.sub t.bb.ByteBuffer.bytes (ByteBuffer.position t.bb) (offset t)
+  let asByteArray t =
+    Bigarray.Array1.sub t.bb.ByteBuffer.bytes (ByteBuffer.position t.bb) (offset t)
 
-let growByteBuffer bb =
-  let old_buf_size = ByteBuffer.capacity bb in
-  if old_buf_size > (max_int / 2)  then
-    failwith "FlatBuffers: cannot grow buffer beyond its limits";
-  let new_buf_size = old_buf_size * 2 in
-  let nbb = ByteBuffer.allocate new_buf_size in
-  ByteBuffer.setPosition nbb (new_buf_size - old_buf_size);
-  let sub = Bigarray.Array1.sub nbb.ByteBuffer.bytes (new_buf_size - old_buf_size) old_buf_size in
-  Bigarray.Array1.blit bb.ByteBuffer.bytes sub;
-  nbb
+  let growByteBuffer bb =
+    let old_buf_size = ByteBuffer.capacity bb in
+    if old_buf_size > (max_int / 2)  then
+      failwith "FlatBuffers: cannot grow buffer beyond its limits";
+    let new_buf_size = old_buf_size * 2 in
+    let nbb = ByteBuffer.allocate new_buf_size in
+    ByteBuffer.setPosition nbb (new_buf_size - old_buf_size);
+    let sub = Bigarray.Array1.sub nbb.ByteBuffer.bytes (new_buf_size - old_buf_size) old_buf_size in
+    Bigarray.Array1.blit bb.ByteBuffer.bytes sub;
+    nbb
 
-let rec pad t byte_size =
-  if byte_size > 0 then begin
-    t.space <- t.space - 1 ;
-    ByteBuffer.write_byte t.bb t.space 0;
-    pad t (byte_size - 1)
-  end
-
-let prep t ?(additional_bytes=0) size =
-  if size > t.minalign then
-    t.minalign <- size;
-  let align_size =
-    (lnot (( ((ByteBuffer.capacity t.bb) - t.space + additional_bytes)) + 1)) land (size - 1) in
-  let rec grow t align_size size additional_bytes =
-    if t.space < align_size + size + additional_bytes then begin
-        let old_buf_size = ByteBuffer.capacity t.bb in
-        t.bb <- growByteBuffer t.bb;
-        t.space <- t.space + ((ByteBuffer.capacity t.bb) - old_buf_size);
-        grow t align_size size additional_bytes
+  let rec pad t byte_size =
+    if byte_size > 0 then begin
+        t.space <- t.space - 1 ;
+        ByteBuffer.write_byte t.bb t.space 0;
+        pad t (byte_size - 1)
       end
-    else () in
-  grow t align_size size additional_bytes;
-  pad t align_size
 
-let writeInt8 t value =
-  t.space <- t.space - 1;
-  ByteBuffer.writeInt8 t.bb t.space value
+  let prep t ?(additional_bytes=0) size =
+    if size > t.minalign then
+      t.minalign <- size;
+    let align_size =
+      (lnot (( ((ByteBuffer.capacity t.bb) - t.space + additional_bytes)) + 1)) land (size - 1) in
+    let rec grow t align_size size additional_bytes =
+      if t.space < align_size + size + additional_bytes then begin
+          let old_buf_size = ByteBuffer.capacity t.bb in
+          t.bb <- growByteBuffer t.bb;
+          t.space <- t.space + ((ByteBuffer.capacity t.bb) - old_buf_size);
+          grow t align_size size additional_bytes
+        end
+      else () in
+    grow t align_size size additional_bytes;
+    pad t align_size
 
-let writeUint8 t value =
-  t.space <- t.space - 1;
-  ByteBuffer.writeUint8 t.bb t.space value
+  let writeInt8 t value =
+    t.space <- t.space - 1;
+    ByteBuffer.writeInt8 t.bb t.space value
 
-let writeInt16 t value =
-  t.space <- t.space - 2;
-  ByteBuffer.writeInt16 t.bb t.space value
+  let writeUint8 t value =
+    t.space <- t.space - 1;
+    ByteBuffer.writeUint8 t.bb t.space value
 
-let writeInt32 t value =
-  t.space <- t.space - 4;
-  ByteBuffer.writeInt32 t.bb t.space value
+  let writeInt16 t value =
+    t.space <- t.space - 2;
+    ByteBuffer.writeInt16 t.bb t.space value
 
-let write_ocaml_int32 t value =
-  t.space <- t.space - 4;
-  ByteBuffer.write_ocaml_int32 t.bb t.space value
+  let writeInt32 t value =
+    t.space <- t.space - 4;
+    ByteBuffer.writeInt32 t.bb t.space value
 
-let writeInt64 t value =
-  t.space <- t.space - 8;
-  ByteBuffer.writeInt64 t.bb t.space value
+  let write_ocaml_int32 t value =
+    t.space <- t.space - 4;
+    ByteBuffer.write_ocaml_int32 t.bb t.space value
 
-let writeFloat32 t value =
-  t.space <- t.space - 4;
-  ByteBuffer.writeFloat32 t.bb t.space value
+  let writeInt64 t value =
+    t.space <- t.space - 8;
+    ByteBuffer.writeInt64 t.bb t.space value
 
-let writeFloat64 t value =
-  t.space <- t.space - 8;
-  ByteBuffer.writeFloat64 t.bb t.space value
+  let writeFloat32 t value =
+    t.space <- t.space - 4;
+    ByteBuffer.writeFloat32 t.bb t.space value
 
-let addInt8 t value =
-  prep t 1;
-  writeInt8 t value
+  let writeFloat64 t value =
+    t.space <- t.space - 8;
+    ByteBuffer.writeFloat64 t.bb t.space value
 
-let addInt16 t value =
-  prep t 2;
-  writeInt16 t value
+  let addInt8 t value =
+    prep t 1;
+    writeInt8 t value
 
-let addInt32 t value =
-  prep t 4;
-  writeInt32 t value
+  let addInt16 t value =
+    prep t 2;
+    writeInt16 t value
 
-let add_ocaml_int32 t value =
-  prep t 4;
-  write_ocaml_int32 t value
+  let addInt32 t value =
+    prep t 4;
+    writeInt32 t value
 
-let addInt64 t value =
-  prep t 8;
-  writeInt64 t value
+  let add_ocaml_int32 t value =
+    prep t 4;
+    write_ocaml_int32 t value
 
-let addFloat32 t value =
-  prep t 4;
-  writeFloat32 t value
+  let addInt64 t value =
+    prep t 8;
+    writeInt64 t value
 
-let addFloat64 t value =
-  prep t 8;
-  writeFloat64 t value
+  let addFloat32 t value =
+    prep t 4;
+    writeFloat32 t value
 
-let slot t voffset =
-  t.vtable.(voffset) <- offset t
+  let addFloat64 t value =
+    prep t 8;
+    writeFloat64 t value
 
-let addFieldInt8 t voffset value defaultValue =
-  if (t.force_defaults || value != defaultValue) then begin
-      addInt8 t value;
-      slot t voffset;
-  end
+  let slot t voffset =
+    t.vtable.(voffset) <- offset t
 
-let addFieldInt16 t voffset value defaultValue =
-  if (t.force_defaults || value != defaultValue) then begin
-      addInt16 t value;
-      slot t voffset;
-  end
+  let addFieldInt8 t voffset value defaultValue =
+    if (t.force_defaults || value != defaultValue) then begin
+        addInt8 t value;
+        slot t voffset;
+      end
 
-let addFieldInt32 t voffset value defaultValue =
-  if (t.force_defaults || value != defaultValue) then begin
-      addInt32 t value;
-      slot t voffset;
-    end
+  let addFieldInt16 t voffset value defaultValue =
+    if (t.force_defaults || value != defaultValue) then begin
+        addInt16 t value;
+        slot t voffset;
+      end
 
-let addFieldInt64 t voffset value defaultValue =
-  if (t.force_defaults || value != defaultValue) then begin
-      addInt64 t value;
-      slot t voffset;
-  end
+  let addFieldInt32 t voffset value defaultValue =
+    if (t.force_defaults || value != defaultValue) then begin
+        addInt32 t value;
+        slot t voffset;
+      end
 
-let addFieldFloat32 t voffset value defaultValue =
-  if (t.force_defaults || value != defaultValue) then begin
-      addFloat32 t value;
-      slot t voffset;
-  end
+  let addFieldInt64 t voffset value defaultValue =
+    if (t.force_defaults || value != defaultValue) then begin
+        addInt64 t value;
+        slot t voffset;
+      end
 
-let addFieldFloat64 t voffset value defaultValue =
-  if (t.force_defaults || value != defaultValue) then begin
-      addFloat64 t value;
-      slot t voffset;
-  end
+  let addFieldFloat32 t voffset value defaultValue =
+    if (t.force_defaults || value != defaultValue) then begin
+        addFloat32 t value;
+        slot t voffset;
+      end
 
-let addOffset t _offset =
-  prep t _SIZEOF_INT;
-  write_ocaml_int32 t ((offset t) - _offset + _SIZEOF_INT)
+  let addFieldFloat64 t voffset value defaultValue =
+    if (t.force_defaults || value != defaultValue) then begin
+        addFloat64 t value;
+        slot t voffset;
+      end
 
-let addFieldOffset t voffset value defaultValue =
-  if t.force_defaults || value != defaultValue then begin
-    addOffset t value;
-    slot t voffset;
-  end
+  let addOffset t _offset =
+    prep t _SIZEOF_INT;
+    write_ocaml_int32 t ((offset t) - _offset + _SIZEOF_INT)
 
-let nested t obj =
-  if obj != (offset t) then
-    failwith "FlatBuffers: struct must be serialized inline."
+  let addFieldOffset t voffset value defaultValue =
+    if t.force_defaults || value != defaultValue then begin
+        addOffset t value;
+        slot t voffset;
+      end
 
-let notNested t  =
-  if t.isNested then
-    failwith "FlatBuffers: object serialization must not be nested."
+  let nested t obj =
+    if obj != (offset t) then
+      failwith "FlatBuffers: struct must be serialized inline."
 
-let addFieldStruct t voffset value defaultValue =
-  if value != defaultValue then begin
-    nested t value;
-    slot t voffset;
-  end
+  let notNested t  =
+    if t.isNested then
+      failwith "FlatBuffers: object serialization must not be nested."
 
-let startObject t numfields =
-  notNested t;
-  if Array.length t.vtable < numfields then
-    t.vtable <- Array.make numfields 0
-  else
-    for i = 0 to numfields - 1 do
-      t.vtable.(i) <- 0
-    done;
-  t.vtable_in_use <- numfields;
-  t.isNested <- true;
-  t.object_start <- offset t
+  let addFieldStruct t voffset value defaultValue =
+    if value != defaultValue then begin
+        nested t value;
+        slot t voffset;
+      end
 
-let endObject t =
-  if Array.length t.vtable == 0 || not t.isNested then
-    failwith "FlatBuffers: endObject called without startObject";
-
-  add_ocaml_int32 t 0;
-  let vtableloc = offset t in
-  (* Trim trailing zeroes. *)
-  let rec trim_trailing_zeros t i =
-    if i >= 0 && t.vtable.(i) == 0 then
-      trim_trailing_zeros t (i-1)
-    else i in
-  let i = trim_trailing_zeros t (t.vtable_in_use - 1) in
-  let trimmed_size = i + 1 in
-  (* Writ^e out the current vtable. *)
-  let rec write_current_vtable t vtableloc i =
-    if i >= 0 then begin
-      (* Offset relative to the start of the table *)
-      let offset = if t.vtable.(i) != 0  then vtableloc - t.vtable.(i) else 0 in
-      addInt16 t offset;
-      write_current_vtable t vtableloc (i-1)
-      end in
-  write_current_vtable t vtableloc i;
-  let standard_fields = 2 in (* The fields below: *)
-  addInt16 t (vtableloc - t.object_start);
-  let len = (trimmed_size + standard_fields) * _SIZEOF_SHORT in
-  addInt16 t len;
-
-  (* Search for an existing vtable that matches the current one. *)
-  let vt1 = t.space in
-  let rec search_existing_vtables t vt1 i =
-    if i < DIntArray.length t.vtables then
-      let vt2 = ByteBuffer.capacity t.bb - DIntArray.get t.vtables i in
-      if len = ByteBuffer.readInt16 t.bb vt2 then
-        search_vtable t vt1 vt2 len _SIZEOF_SHORT
-      else 0
-    else 0
-  and search_vtable t len vt1 vt2 j =
-    if j < len then
-      if ByteBuffer.readInt16 t.bb (vt1 + j) != ByteBuffer.readInt16 t.bb (vt2 + j) then
-        search_existing_vtables t vt1 (i+1)
-      else
-        search_vtable t len vt1 vt2 (j+1)
+  let startObject t numfields =
+    notNested t;
+    if Array.length t.vtable < numfields then
+      t.vtable <- Array.make numfields 0
     else
-      let existing_vtable = DIntArray.get t.vtables i in
-      existing_vtable
-  in
-  let existing_vtable = search_existing_vtables t vt1 0 in
-  if existing_vtable != 0 then begin
-    (* Found a match:
-       Remove the current vtable. *)
-      t.space <- (ByteBuffer.capacity t.bb) - vtableloc;
-      ByteBuffer.write_ocaml_int32 t.bb t.space (existing_vtable - vtableloc)
-    end else begin
-     (* No match
-        Add the location of the current vtable to the list of vtables. *)
-      DIntArray.push t.vtables (offset t);
-      ByteBuffer.write_ocaml_int32 t.bb ((ByteBuffer.capacity t.bb) - vtableloc) ((offset t) - vtableloc)
-    end;
-  t.isNested <- false;
-  vtableloc
+      for i = 0 to numfields - 1 do
+        t.vtable.(i) <- 0
+      done;
+    t.vtable_in_use <- numfields;
+    t.isNested <- true;
+    t.object_start <- offset t
 
-let finish t ?(file_identifier="") root_table =
-  if String.length file_identifier > 0 then
-    prep t t.minalign ~additional_bytes:(_SIZEOF_INT + _FILE_IDENTIFIER_LENGTH);
+  let endObject t =
+    if Array.length t.vtable == 0 || not t.isNested then
+      failwith "FlatBuffers: endObject called without startObject";
+
+    add_ocaml_int32 t 0;
+    let vtableloc = offset t in
+    (* Trim trailing zeroes. *)
+    let rec trim_trailing_zeros t i =
+      if i >= 0 && t.vtable.(i) == 0 then
+        trim_trailing_zeros t (i-1)
+      else i in
+    let i = trim_trailing_zeros t (t.vtable_in_use - 1) in
+    let trimmed_size = i + 1 in
+    (* Writ^e out the current vtable. *)
+    let rec write_current_vtable t vtableloc i =
+      if i >= 0 then begin
+          (* Offset relative to the start of the table *)
+          let offset = if t.vtable.(i) != 0  then vtableloc - t.vtable.(i) else 0 in
+          addInt16 t offset;
+          write_current_vtable t vtableloc (i-1)
+        end in
+    write_current_vtable t vtableloc i;
+    let standard_fields = 2 in (* The fields below: *)
+    addInt16 t (vtableloc - t.object_start);
+    let len = (trimmed_size + standard_fields) * _SIZEOF_SHORT in
+    addInt16 t len;
+
+    (* Search for an existing vtable that matches the current one. *)
+    let vt1 = t.space in
+    let rec search_existing_vtables t vt1 i =
+      if i < DIntArray.length t.vtables then
+        let vt2 = ByteBuffer.capacity t.bb - DIntArray.get t.vtables i in
+        if len = ByteBuffer.readInt16 t.bb vt2 then
+          search_vtable t vt1 vt2 len _SIZEOF_SHORT
+        else 0
+      else 0
+    and search_vtable t len vt1 vt2 j =
+      if j < len then
+        if ByteBuffer.readInt16 t.bb (vt1 + j) != ByteBuffer.readInt16 t.bb (vt2 + j) then
+          search_existing_vtables t vt1 (i+1)
+        else
+          search_vtable t len vt1 vt2 (j+1)
+      else
+        let existing_vtable = DIntArray.get t.vtables i in
+        existing_vtable
+    in
+    let existing_vtable = search_existing_vtables t vt1 0 in
+    if existing_vtable != 0 then begin
+        (* Found a match:
+       Remove the current vtable. *)
+        t.space <- (ByteBuffer.capacity t.bb) - vtableloc;
+        ByteBuffer.write_ocaml_int32 t.bb t.space (existing_vtable - vtableloc)
+      end else begin
+        (* No match
+        Add the location of the current vtable to the list of vtables. *)
+        DIntArray.push t.vtables (offset t);
+        ByteBuffer.write_ocaml_int32 t.bb ((ByteBuffer.capacity t.bb) - vtableloc) ((offset t) - vtableloc)
+      end;
+    t.isNested <- false;
+    vtableloc
+
+  let finish t ?(file_identifier="") root_table =
+    if String.length file_identifier > 0 then
+      prep t t.minalign ~additional_bytes:(_SIZEOF_INT + _FILE_IDENTIFIER_LENGTH);
     if (String.length file_identifier) != _FILE_IDENTIFIER_LENGTH then
       invalid_arg ("FlatBuffers: file identifier must be length "  ^ (string_of_int _FILE_IDENTIFIER_LENGTH));
-  for i = _FILE_IDENTIFIER_LENGTH - 1 downto 0  do
-    writeUint8 t (Char.code (String.get file_identifier i))
-  done;
-  prep t t.minalign ~additional_bytes:_SIZEOF_INT;
-  addOffset t root_table;
-  ByteBuffer.setPosition t.bb t.space
+    for i = _FILE_IDENTIFIER_LENGTH - 1 downto 0  do
+      writeUint8 t (Char.code (String.get file_identifier i))
+    done;
+    prep t t.minalign ~additional_bytes:_SIZEOF_INT;
+    addOffset t root_table;
+    ByteBuffer.setPosition t.bb t.space
 
-let requiredField t table field =
-  let table_start = (ByteBuffer.capacity t.bb) - table in
-  let vtable_start = table_start - (ByteBuffer.read_ocaml_int32 t.bb table_start) in
-  let ok = (ByteBuffer.readInt16 t.bb (vtable_start + field)) != 0 in
+  let requiredField t table field =
+    let table_start = (ByteBuffer.capacity t.bb) - table in
+    let vtable_start = table_start - (ByteBuffer.read_ocaml_int32 t.bb table_start) in
+    let ok = (ByteBuffer.readInt16 t.bb (vtable_start + field)) != 0 in
 
-  if not ok then
-    failwith ("FlatBuffers: field " ^ (string_of_int field) ^ " must be set")
+    if not ok then
+      failwith ("FlatBuffers: field " ^ (string_of_int field) ^ " must be set")
 
-let startVector t elem_size num_elems alignment =
-  notNested t;
-  t.vector_num_elems <- num_elems;
-  prep t _SIZEOF_INT ~additional_bytes:(elem_size * num_elems);
-  prep t alignment ~additional_bytes:(elem_size * num_elems)
+  let startVector t elem_size num_elems alignment =
+    notNested t;
+    t.vector_num_elems <- num_elems;
+    prep t _SIZEOF_INT ~additional_bytes:(elem_size * num_elems);
+    prep t alignment ~additional_bytes:(elem_size * num_elems)
 
-let endVector t =
-  write_ocaml_int32 t  t.vector_num_elems;
-  offset t
+  let endVector t =
+    write_ocaml_int32 t  t.vector_num_elems;
+    offset t
 
-let createString t s =
-  addInt8 t 0;
-  let len = String.length s in
-  startVector t 1 len 1;
-  t.space <- t.space - len;
-  ByteBuffer.setPosition t.bb t.space;
-  ByteBuffer.write_string t.bb s t.space;
-  endVector t
+  let createString t s =
+    addInt8 t 0;
+    let len = String.length s in
+    startVector t 1 len 1;
+    t.space <- t.space - len;
+    ByteBuffer.setPosition t.bb t.space;
+    ByteBuffer.write_string t.bb s t.space;
+    endVector t
+
+end
 
 
 let _ = 1
