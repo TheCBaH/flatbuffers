@@ -296,11 +296,43 @@ MyGame.Sample.Color = {
 };
 *)
 
+module DIntArray = struct
+  type t = {
+      mutable len: int;
+      mutable table: int array;
+    }
+
+  let create () =
+    { len = 0; table = Array.make 1 0;}
+
+  let length t = t.len
+
+  let get t o =
+    if o < t.len then t.table.(o)
+    else invalid_arg "index out of bounds"
+
+  let set t o v =
+    if o < t.len then t.table.(o) <- v
+    else invalid_arg "index out of bounds"
+
+  let push t v =
+    let o = t.len + 1 in
+    if o >= Array.length t.table then begin
+      let len =  2 * (Array.length t.table) in
+      let table = Array.make len 0 in
+      Array.blit t.table 0 table 0 t.len;
+      t.table <- table
+      end;
+    t.len <- o;
+    set t o v
+end
 
 
 (* module Builder = struct *)
 type t= {
     mutable bb: ByteBuffer.t;
+    mutable vtable: int array;
+    mutable vtables: DIntArray.t;
     mutable space:int;
     mutable minalign:int;
     mutable vtable_in_use:int;
@@ -308,27 +340,17 @@ type t= {
     mutable object_start:int;
     mutable vector_num_elems:int;
     mutable force_defaults:bool;
-    mutable vtable: int array;
 (*
   this.vtables = [];
  *)
   }
 
-let clear t =
-  ByteBuffer.clear t.bb;
-  t.vtable <- Array.make 0 0;
-  t.space <- ByteBuffer.capacity t.bb;
-  t.minalign <- 1;
-  t.vtable_in_use <- 0;
-  t.isNested <- false;
-  t.object_start <- 0;
-  t.vector_num_elems <- 0;
-  t.force_defaults <- false
 
 let create ?(initial_size=256)  () =
   {
     bb = ByteBuffer.allocate initial_size;
     vtable = Array.make 0 0;
+    vtables = DIntArray.create ();
     space = initial_size;
     minalign = 1;
     vtable_in_use = 0;
@@ -337,10 +359,22 @@ let create ?(initial_size=256)  () =
     vector_num_elems = 0;
     force_defaults  = false
   }
+
   (*
   this.vtable = null;
   this.vtables = [];
    *)
+let clear t =
+  ByteBuffer.clear t.bb;
+  t.vtable <- Array.make 0 0;
+  t.vtables <- DIntArray.create ();
+  t.space <- ByteBuffer.capacity t.bb;
+  t.minalign <- 1;
+  t.vtable_in_use <- 0;
+  t.isNested <- false;
+  t.object_start <- 0;
+  t.vector_num_elems <- 0;
+  t.force_defaults <- false
 
 
 let forceDefaulta t forceDefaulta =
@@ -414,7 +448,7 @@ let writeFloat32 t value =
 
 let writeFloat64 t value =
   t.space <- t.space - 8;
-  ByteBuffer.writeFloat64 t.bb t.soace value
+  ByteBuffer.writeFloat64 t.bb t.space value
 
 let addInt8 t value =
   prep t 1;
@@ -427,6 +461,10 @@ let addInt16 t value =
 let addInt32 t value =
   prep t 4;
   writeInt32 t value
+
+let add_ocaml_int32 t value =
+  prep t 4;
+  write_ocaml_int32 t value
 
 let addInt64 t value =
   prep t 8;
@@ -515,7 +553,66 @@ let startObject t numfields =
   t.isNested <- true;
   t.object_start <- offset t
 
+let endObject t =
+  if Array.length t.vtable == 0 || not t.isNested then
+    failwith "FlatBuffers: endObject called without startObject";
 
+  add_ocaml_int32 t 0;
+  let vtableloc = offset t in
+  (* Trim trailing zeroes. *)
+  let rec trim_trailing_zeros t i =
+    if i >= 0 && t.vtable.(i) == 0 then
+      trim_trailing_zeros t (i-1)
+    else i in
+  let i = trim_trailing_zeros t (t.vtable_in_use - 1) in
+  let trimmed_size = i + 1 in
+  (* Writ^e out the current vtable. *)
+  let rec write_current_vtable t vtableloc i =
+    if i >= 0 then begin
+      (* Offset relative to the start of the table *)
+      let offset = if t.vtable.(i) != 0  then vtableloc - t.vtable.(i) else 0 in
+      addInt16 t offset;
+      write_current_vtable t vtableloc (i-1)
+      end in
+  write_current_vtable t vtableloc i;
+  let standard_fields = 2 in (* The fields below: *)
+  addInt16 t (vtableloc - t.object_start);
+  let len = (trimmed_size + standard_fields) * _SIZEOF_SHORT in
+  addInt16 t len;
+
+  (* Search for an existing vtable that matches the current one. *)
+  let vt1 = t.space in
+  let rec search_existing_vtables t vt1 i =
+    if i < DIntArray.length t.vtables then
+      let vt2 = ByteBuffer.capacity t.bb - DIntArray.get t.vtables i in
+      if len = ByteBuffer.readInt16 t.bb vt2 then
+        search_vtable t vt1 vt2 len _SIZEOF_SHORT
+      else 0
+    else 0
+  and search_vtable t len vt1 vt2 j =
+    if j < len then
+      if ByteBuffer.readInt16 t.bb (vt1 + j) != ByteBuffer.readInt16 t.bb (vt2 + j) then
+        search_existing_vtables t vt1 (i+1)
+      else
+        search_vtable t len vt1 vt2 (j+1)
+    else
+      let existing_vtable = DIntArray.get t.vtables i in
+      existing_vtable
+  in
+  let existing_vtable = search_existing_vtables t vt1 0 in
+  if existing_vtable != 0 then begin
+    (* Found a match:
+       Remove the current vtable. *)
+      t.space <- (ByteBuffer.capacity t.bb) - vtableloc;
+      ByteBuffer.write_ocaml_int32 t.bb t.space (existing_vtable - vtableloc)
+    end else begin
+     (* No match
+        Add the location of the current vtable to the list of vtables. *)
+      DIntArray.push t.vtables (offset t);
+      ByteBuffer.write_ocaml_int32 t.bb ((ByteBuffer.capacity t.bb) - vtableloc) ((offset t) - vtableloc)
+    end;
+  t.isNested <- false;
+  vtableloc
 
 let _ = 1
 
