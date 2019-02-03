@@ -25,7 +25,10 @@ let long_toFloat64 t = Int64.bits_of_float t
 
 let long_equals t1 t2 = Int64.equal t1 t2
 
-let log_zero = Int64.zero
+let long_zero = Int64.zero
+
+let _ = -1 lsr (24+32)
+
 
 
 module ByteBuffer = struct
@@ -59,6 +62,13 @@ module ByteBuffer = struct
   let readUint8 t offset =
     Char.code (Bigarray.Array1.get t.bytes offset)
 
+  let write_byte t offset value =
+    let b = value land 0xFF in
+    Bigarray.Array1.set t.bytes offset (Char.chr b)
+
+  let writeUint8 t offset value =
+    Bigarray.Array1.set t.bytes offset (Char.chr value)
+
   let readBool t offset =
     readUint8 t offset != 0
 
@@ -70,12 +80,29 @@ module ByteBuffer = struct
     let uint8 = readUint8 t offset in
     sign_extend_int uint8 8
 
+  let writeInt8 t offset value =
+    if value > 0x7F || value < -0x80 then
+      raise (Invalid_argument "Builder.writeUint16");
+    write_byte t offset value
+
   let readUint16 t offset =
     (readUint8 t offset) lor ((readUint8 t (offset+1)) lsl 8 )
+
+  let writeUint15 t offset value =
+    if value > 0xFFFF || value < 0 then
+      raise (Invalid_argument "ByteBuffer.writeUint16");
+    write_byte t offset value;
+    write_byte t (offset+1) (value lsr 8)
 
   let readInt16 t offset =
     let uint16  = readUint16 t offset in
     sign_extend_int uint16 16
+
+  let writeInt16 t offset value =
+    if value > 0x7FFF || value < -0x8000 then
+      raise (Invalid_argument "ByteBuffer.writeInt16");
+    write_byte t offset value;
+    write_byte t (offset+1) (value lsr 8)
 
   let readUint32 t offset =
     Int64.logor
@@ -83,6 +110,19 @@ module ByteBuffer = struct
       ((Int64.shift_left
       (Int64.of_int (readUint16 t (offset+2)))
       16))
+
+  let write_uint24 t offset value =
+    write_byte t offset value;
+    write_byte t (offset+1) (value lsr 8);
+    write_byte t (offset+2) (value lsr 16)
+
+  let writeUint32 t offset value =
+    if Int64.compare value 0xFFFFFFFL > 0
+       || Int64.compare value 0L < 0 then
+      raise (Invalid_argument "ByteBuffer.writeInt16");
+    let b012 = Int64.to_int (Int64.logand value 0xFFFFFFL) in
+    write_uint24 t offset b012;
+    write_byte t (offset+3) (Int64.to_int (Int64.shift_right_logical value 24))
 
   let read_ocaml_int32 t offset =
     let lo = readUint16 t offset
@@ -97,6 +137,14 @@ module ByteBuffer = struct
       else
         failwith "FlatBuffers: read_int overflow"
 
+  let write_ocaml_int32 t offset value =
+    write_uint24 t offset value;
+    let b = value lsr 24 in
+    let b =
+      if int_length = 31 then
+        sign_extend_int b 7
+      else b in
+    write_byte t (offset+3) b
 
   let readInt32 t offset =
     Int32.logor
@@ -105,18 +153,40 @@ module ByteBuffer = struct
       (Int32.of_int (readUint16 t (offset+2)))
       16))
 
+  let writeInt32 t offset value =
+    let b012 = Int32.to_int (Int32.logand value 0xFFFFFFl) in
+    write_uint24 t offset b012;
+    write_byte t (offset+3) (Int32.to_int (Int32.shift_right_logical value 24))
+
   let readInt64 t offset =
     Int64.logor
       (readUint32 t offset)
       (Int64.shift_left (readUint32 t (offset+4)) 32)
 
+  let writeInt64 t offset value =
+    let b012 = Int64.to_int (Int64.logand value 0xFFFFFFL) in
+    write_uint24 t offset b012;
+    let b345 = Int64.to_int (Int64.logand (Int64.shift_right_logical value 24) 0xFFFFFFL) in
+    write_uint24 t (offset+3) b345;
+    let b67 = Int64.to_int (Int64.logand (Int64.shift_right_logical value 48) 0xFFFFFFL) in
+    write_byte t (offset+6) b67;
+    write_byte t (offset+7) (b67 lsr 8)
+
   let readUint64 = readInt64
+
+  let writeUint64 = writeInt64
 
   let readFloat32 t offset =
     Int32.float_of_bits (readInt32 t offset)
 
+  let wrteFloat32 t offset value =
+    writeInt32 t offset (Int32.bits_of_float value)
+
   let readFloat64 t offset =
     Int64.float_of_bits (readInt64 t offset)
+
+  let wrteFloat64 t offset value =
+    writeInt64 t offset (Int64.bits_of_float value)
 
   let get_string t ~offset ~length =
     let str = Bytes.create length in
@@ -227,190 +297,118 @@ MyGame.Sample.Color = {
 *)
 
 
+
+(* module Builder = struct *)
+type t= {
+    mutable bb: ByteBuffer.t;
+    mutable space:int;
+    mutable minalign:int;
+    mutable vtable_in_use:int;
+    mutable isNested:bool;
+    mutable object_start:int;
+    mutable vector_num_elems:int;
+    mutable force_defaults:bool;
+(*
+  this.vtable = null;
+  this.vtables = [];
+ *)
+  }
+
+let clear t =
+  ByteBuffer.clear t.bb;
+  t.space <- ByteBuffer.capacity t.bb;
+  t.minalign <- 1;
+  t.vtable_in_use <- 0;
+  t.isNested <- false;
+  t.object_start <- 0;
+  t.vector_num_elems <- 0;
+  t.force_defaults <- false
+
+let create ?(initial_size=256)  () =
+  {
+    bb = ByteBuffer.allocate initial_size;
+    space = initial_size;
+    minalign = 1;
+    vtable_in_use = 0;
+    isNested = false;
+    object_start = 0;
+    vector_num_elems = 0;
+    force_defaults  = false
+  }
+  (*
+  this.vtable = null;
+  this.vtables = [];
+   *)
+
+
+let forceDefaulta t forceDefaulta =
+  t.force_defaults <- forceDefaulta
+
+let dataBuffer t = t.bb
+
+let offset t =
+  (ByteBuffer.capacity t.bb) - t.space
+
+let asByteArray t =
+  Bigarray.Array1.sub t.bb.ByteBuffer.bytes (ByteBuffer.position t.bb) (offset t)
+
+let growByteBuffer bb =
+  let old_buf_size = ByteBuffer.capacity bb in
+  if old_buf_size > (max_int / 2)  then
+    failwith "FlatBuffers: cannot grow buffer beyond its limits";
+  let new_buf_size = old_buf_size * 2 in
+  let nbb = ByteBuffer.allocate new_buf_size in
+  ByteBuffer.set_position nbb (new_buf_size - old_buf_size);
+  let sub = Bigarray.Array1.sub nbb.ByteBuffer.bytes (new_buf_size - old_buf_size) old_buf_size in
+  Bigarray.Array1.blit bb.ByteBuffer.bytes sub;
+  nbb
+
+let rec pad t byte_size =
+  if byte_size > 0 then begin
+    t.space <- t.space - 1 ;
+    ByteBuffer.writeUint8 t.bb t.space 0;
+    pad t (byte_size - 1)
+  end
+
+let prep t size additional_bytes =
+  if size > t.minalign then
+    t.minalign <- size;
+  let align_size =
+    (lnot (( ((ByteBuffer.capacity t.bb) - t.space + additional_bytes)) + 1)) land (size - 1) in
+  let rec grow t align_size size additional_bytes =
+    if t.space < align_size + size + additional_bytes then begin
+        let old_buf_size = ByteBuffer.capacity t.bb in
+        t.bb <- growByteBuffer t.bb;
+        t.space <- t.space + ((ByteBuffer.capacity t.bb) - old_buf_size);
+        grow t align_size size additional_bytes
+      end
+    else () in
+  grow t align_size size additional_bytes;
+  pad t align_size
+
+let writeInt8 t value =
+  t.space <- t.space - 1 ;
+  if value > 127 || value < -128 then raise (Invalid_argument "Builder.writeInt8");
+  ByteBuffer.writeUint8 t.bb (value land 0xFF)
+
+flatbuffers.Builder.prototype.writeInt16 = function(value) {
+  this.bb.writeInt16(this.space -= 2, value);
+};
+
+
 let _ = 1
 
+let _ = 1
 
+ let _ = 1 lor 2
+
+
+let _ = 1
 
 (*
 
-
-/// @endcond
-////////////////////////////////////////////////////////////////////////////////
-/**
- * Create a FlatBufferBuilder.
- *
- * @constructor
- * @param {number=} opt_initial_size
- */
-flatbuffers.Builder = function(opt_initial_size) {
-  if (!opt_initial_size) {
-    var initial_size = 1024;
-  } else {
-    var initial_size = opt_initial_size;
-  }
-
-  /**
-   * @type {flatbuffers.ByteBuffer}
-   * @private
-   */
-  this.bb = flatbuffers.ByteBuffer.allocate(initial_size);
-
-  /**
-   * Remaining space in the ByteBuffer.
-   *
-   * @type {number}
-   * @private
-   */
-  this.space = initial_size;
-
-  /**
-   * Minimum alignment encountered so far.
-   *
-   * @type {number}
-   * @private
-   */
-  this.minalign = 1;
-
-  /**
-   * The vtable for the current table.
-   *
-   * @type {Array.<number>}
-   * @private
-   */
-  this.vtable = null;
-
-  /**
-   * The amount of fields we're actually using.
-   *
-   * @type {number}
-   * @private
-   */
-  this.vtable_in_use = 0;
-
-  /**
-   * Whether we are currently serializing a table.
-   *
-   * @type {boolean}
-   * @private
-   */
-  this.isNested = false;
-
-  /**
-   * Starting offset of the current struct/table.
-   *
-   * @type {number}
-   * @private
-   */
-  this.object_start = 0;
-
-  /**
-   * List of offsets of all vtables.
-   *
-   * @type {Array.<number>}
-   * @private
-   */
-  this.vtables = [];
-
-  /**
-   * For the current vector being built.
-   *
-   * @type {number}
-   * @private
-   */
-  this.vector_num_elems = 0;
-
-  /**
-   * False omits default values from the serialized data
-   *
-   * @type {boolean}
-   * @private
-   */
-  this.force_defaults = false;
-};
-
-flatbuffers.Builder.prototype.clear = function() {
-  this.bb.clear();
-  this.space = this.bb.capacity();
-  this.minalign = 1;
-  this.vtable = null;
-  this.vtable_in_use = 0;
-  this.isNested = false;
-  this.object_start = 0;
-  this.vtables = [];
-  this.vector_num_elems = 0;
-  this.force_defaults = false;
-};
-
-/**
- * In order to save space, fields that are set to their default value
- * don't get serialized into the buffer. Forcing defaults provides a
- * way to manually disable this optimization.
- *
- * @param {boolean} forceDefaults true always serializes default values
- */
-flatbuffers.Builder.prototype.forceDefaults = function(forceDefaults) {
-  this.force_defaults = forceDefaults;
-};
-
-/**
- * Get the ByteBuffer representing the FlatBuffer. Only call this after you've
- * called finish(). The actual data starts at the ByteBuffer's current position,
- * not necessarily at 0.
- *
- * @returns {flatbuffers.ByteBuffer}
- */
-flatbuffers.Builder.prototype.dataBuffer = function() {
-  return this.bb;
-};
-
-/**
- * Get the bytes representing the FlatBuffer. Only call this after you've
- * called finish().
- *
- * @returns {Uint8Array}
- */
-flatbuffers.Builder.prototype.asUint8Array = function() {
-  return this.bb.bytes().subarray(this.bb.position(), this.bb.position() + this.offset());
-};
-
 /// @cond FLATBUFFERS_INTERNAL
-/**
- * Prepare to write an element of `size` after `additional_bytes` have been
- * written, e.g. if you write a string, you need to align such the int length
- * field is aligned to 4 bytes, and the string data follows it directly. If all
- * you need to do is alignment, `additional_bytes` will be 0.
- *
- * @param {number} size This is the of the new element to write
- * @param {number} additional_bytes The padding size
- */
-flatbuffers.Builder.prototype.prep = function(size, additional_bytes) {
-  // Track the biggest thing we've ever aligned to.
-  if (size > this.minalign) {
-    this.minalign = size;
-  }
-
-  // Find the amount of alignment needed such that `size` is properly
-  // aligned after `additional_bytes`
-  var align_size = ((~(this.bb.capacity() - this.space + additional_bytes)) + 1) & (size - 1);
-
-  // Reallocate the buffer if needed.
-  while (this.space < align_size + size + additional_bytes) {
-    var old_buf_size = this.bb.capacity();
-    this.bb = flatbuffers.Builder.growByteBuffer(this.bb);
-    this.space += this.bb.capacity() - old_buf_size;
-  }
-
-  this.pad(align_size);
-};
-
-/**
- * @param {number} byte_size
- */
-flatbuffers.Builder.prototype.pad = function(byte_size) {
-  for (var i = 0; i < byte_size; i++) {
-    this.bb.writeInt8(--this.space, 0);
-  }
-};
+;
 
 /**
  * @param {number} value
