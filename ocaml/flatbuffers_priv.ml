@@ -5,8 +5,7 @@ let _SIZEOF_SHORT = 2
 
 let _SIZEOF_INT = 4
 
-let file_identifier_length = 4
-
+let _FILE_IDENTIFIER_LENGTH = 4
 
 let encoding_utf8_bytes  = 1
 
@@ -82,7 +81,7 @@ module ByteBuffer = struct
 
   let writeInt8 t offset value =
     if value > 0x7F || value < -0x80 then
-      raise (Invalid_argument "Builder.writeUint16");
+      invalid_arg "Builder.writeUint16";
     write_byte t offset value
 
   let readUint16 t offset =
@@ -90,7 +89,7 @@ module ByteBuffer = struct
 
   let writeUint15 t offset value =
     if value > 0xFFFF || value < 0 then
-      raise (Invalid_argument "ByteBuffer.writeUint16");
+      invalid_arg "ByteBuffer.writeUint16";
     write_byte t offset value;
     write_byte t (offset+1) (value lsr 8)
 
@@ -100,7 +99,7 @@ module ByteBuffer = struct
 
   let writeInt16 t offset value =
     if value > 0x7FFF || value < -0x8000 then
-      raise (Invalid_argument "ByteBuffer.writeInt16");
+      invalid_arg  "ByteBuffer.writeInt16";
     write_byte t offset value;
     write_byte t (offset+1) (value lsr 8)
 
@@ -119,7 +118,7 @@ module ByteBuffer = struct
   let writeUint32 t offset value =
     if Int64.compare value 0xFFFFFFFL > 0
        || Int64.compare value 0L < 0 then
-      raise (Invalid_argument "ByteBuffer.writeInt16");
+      invalid_arg "ByteBuffer.writeInt16";
     let b012 = Int64.to_int (Int64.logand value 0xFFFFFFL) in
     write_uint24 t offset b012;
     write_byte t (offset+3) (Int64.to_int (Int64.shift_right_logical value 24))
@@ -197,9 +196,9 @@ module ByteBuffer = struct
     Bytes.to_string str
 
   let getBufferIndentifier t =
-    if (capacity t) < t.position + sizeof_int + file_identifier_length  then
+    if (capacity t) < t.position + _SIZEOF_INT + _FILE_IDENTIFIER_LENGTH then
       failwith "FlatBuffers: ByteBuffer is too short to contain an identifier"
-    else get_string t ~offset:(t.position + sizeof_int) ~length:file_identifier_length
+    else get_string t ~offset:(t.position + _SIZEOF_INT) ~length:_FILE_IDENTIFIER_LENGTH
 
   let __offset t bb_pos vtable_offset =
     let vtable = bb_pos - (read_ocaml_int32 t bb_pos) in
@@ -214,25 +213,25 @@ module ByteBuffer = struct
   let __string t offset =
     let offset = offset + (read_ocaml_int32 t offset) in
     let length = read_ocaml_int32 t offset in
-    let offset = offset + sizeof_int in
+    let offset = offset + _SIZEOF_INT in
     get_string t ~offset ~length
 
   let __indirect t offset =
     offset + (read_ocaml_int32 t offset)
 
   let __vector t offset =
-    offset + (read_ocaml_int32 t offset) + sizeof_int
+    offset + (read_ocaml_int32 t offset) + _SIZEOF_INT
 
   let __vector_len t offset =
     read_ocaml_int32 t (offset + (read_ocaml_int32 t offset))
 
   let __has_identifier t ident =
-    if String.length ident != file_identifier_length then
+    if String.length ident != _FILE_IDENTIFIER_LENGTH  then
       failwith "FlatBuffers: file identifier invalid"
     else
       let rec loop t ident i =
-        if i == file_identifier_length then true
-        else if Char.code (String.get ident i) == readUint8 t (t.position + sizeof_int + i) then
+        if i == _FILE_IDENTIFIER_LENGTH then true
+        else if Char.code (String.get ident i) == readUint8 t (t.position + _SIZEOF_INT + i) then
           loop t ident (i+1)
         else false in
       loop t ident 0
@@ -426,6 +425,10 @@ let writeInt8 t value =
   t.space <- t.space - 1;
   ByteBuffer.writeInt8 t.bb t.space value
 
+let writeUint8 t value =
+  t.space <- t.space - 1;
+  ByteBuffer.writeUint8 t.bb t.space value
+
 let writeInt16 t value =
   t.space <- t.space - 2;
   ByteBuffer.writeInt16 t.bb t.space value
@@ -614,12 +617,37 @@ let endObject t =
   t.isNested <- false;
   vtableloc
 
-let _ = 1
+let finish t ?(file_identifier="") root_table =
+  if String.length file_identifier > 0 then
+    prep t t.minalign ~additional_bytes:(_SIZEOF_INT + _FILE_IDENTIFIER_LENGTH);
+    if (String.length file_identifier) != _FILE_IDENTIFIER_LENGTH then
+      invalid_arg ("FlatBuffers: file identifier must be length "  ^ (string_of_int _FILE_IDENTIFIER_LENGTH));
+  for i = _FILE_IDENTIFIER_LENGTH - 1 downto 0  do
+    writeUint8 t (Char.code (String.get file_identifier i))
+  done;
+  prep t t.minalign ~additional_bytes:_SIZEOF_INT;
+  addOffset t root_table;
+  ByteBuffer.set_position t.bb t.space
+
+let requiredField t table field =
+  let table_start = (ByteBuffer.capacity t.bb) - table in
+  let vtable_start = table_start - (ByteBuffer.read_ocaml_int32 t.bb table_start) in
+  let ok = (ByteBuffer.readInt16 t.bb (vtable_start + field)) != 0 in
+
+  if not ok then
+    failwith ("FlatBuffers: field " ^ (string_of_int field) ^ " must be set")
+
+let startVector t elem_size num_elems alignment =
+  notNested t;
+  t.vector_num_elems <- num_elems;
+  prep t _SIZEOF_INT ~additional_bytes:(elem_size * num_elems);
+  prep t alignment ~additional_bytes:(elem_size * num_elems)
 
 let _ = 1
 
- let _ = 1 lor 2
+let _ = 1
 
+let _ = 1 lor 2
 
 let _ = 1
 
@@ -634,115 +662,7 @@ let _ = 1
 
 /// @cond FLATBUFFERS_INTERNAL
 
-/**
- * Finish off writing the object that is under construction.
- *
- * @returns {flatbuffers.Offset} The offset to the object inside `dataBuffer`
- */
-flatbuffers.Builder.prototype.endObject = function() {
-  if (this.vtable == null || !this.isNested) {
-    throw new Error('FlatBuffers: endObject called without startObject');
-  }
-
-  this.addInt32(0);
-  var vtableloc = this.offset();
-
-  // Trim trailing zeroes.
-  var i = this.vtable_in_use - 1;
-  for (; i >= 0 && this.vtable[i] == 0; i--) {}
-  var trimmed_size = i + 1;
-
-  // Write out the current vtable.
-  for (; i >= 0; i--) {
-    // Offset relative to the start of the table.
-    this.addInt16(this.vtable[i] != 0 ? vtableloc - this.vtable[i] : 0);
-  }
-
-  var standard_fields = 2; // The fields below:
-  this.addInt16(vtableloc - this.object_start);
-  var len = (trimmed_size + standard_fields) * flatbuffers.SIZEOF_SHORT;
-  this.addInt16(len);
-
-  // Search for an existing vtable that matches the current one.
-  var existing_vtable = 0;
-  var vt1 = this.space;
-outer_loop:
-  for (i = 0; i < this.vtables.length; i++) {
-    var vt2 = this.bb.capacity() - this.vtables[i];
-    if (len == this.bb.readInt16(vt2)) {
-      for (var j = flatbuffers.SIZEOF_SHORT; j < len; j += flatbuffers.SIZEOF_SHORT) {
-        if (this.bb.readInt16(vt1 + j) != this.bb.readInt16(vt2 + j)) {
-          continue outer_loop;
-        }
-      }
-      existing_vtable = this.vtables[i];
-      break;
-    }
-  }
-
-  if (existing_vtable) {
-    // Found a match:
-    // Remove the current vtable.
-    this.space = this.bb.capacity() - vtableloc;
-
-    // Point table to existing vtable.
-    this.bb.writeInt32(this.space, existing_vtable - vtableloc);
-  } else {
-    // No match:
-    // Add the location of the current vtable to the list of vtables.
-    this.vtables.push(this.offset());
-
-    // Point table to current vtable.
-    this.bb.writeInt32(this.bb.capacity() - vtableloc, this.offset() - vtableloc);
-  }
-
-  this.isNested = false;
-  return vtableloc;
-};
-/// @endcond
-
-/**
- * Finalize a buffer, poiting to the given `root_table`.
- *
- * @param {flatbuffers.Offset} root_table
- * @param {string=} opt_file_identifier
- */
-flatbuffers.Builder.prototype.finish = function(root_table, opt_file_identifier) {
-  if (opt_file_identifier) {
-    var file_identifier = opt_file_identifier;
-    this.prep(this.minalign, flatbuffers.SIZEOF_INT +
-      flatbuffers.FILE_IDENTIFIER_LENGTH);
-    if (file_identifier.length != flatbuffers.FILE_IDENTIFIER_LENGTH) {
-      throw new Error('FlatBuffers: file identifier must be length ' +
-        flatbuffers.FILE_IDENTIFIER_LENGTH);
-    }
-    for (var i = flatbuffers.FILE_IDENTIFIER_LENGTH - 1; i >= 0; i--) {
-      this.writeInt8(file_identifier.charCodeAt(i));
-    }
-  }
-  this.prep(this.minalign, flatbuffers.SIZEOF_INT);
-  this.addOffset(root_table);
-  this.bb.setPosition(this.space);
-};
-
-/// @cond FLATBUFFERS_INTERNAL
-/**
- * This checks a required field has been set in a given table that has
- * just been constructed.
- *
- * @param {flatbuffers.Offset} table
- * @param {number} field
- */
-flatbuffers.Builder.prototype.requiredField = function(table, field) {
-  var table_start = this.bb.capacity() - table;
-  var vtable_start = table_start - this.bb.readInt32(table_start);
-  var ok = this.bb.readInt16(vtable_start + field) != 0;
-
-  // If this fails, the caller will show what field needs to be set.
-  if (!ok) {
-    throw new Error('FlatBuffers: field ' + field + ' must be set');
-  }
-};
+// @endcond
 
 /**
  * Start a new array/vector of objects.  Users usually will not call
