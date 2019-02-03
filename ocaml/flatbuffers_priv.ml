@@ -50,12 +50,19 @@ module ByteBuffer = struct
                 o+len
               ) 0 sl);
     t
+
   let of_string s  = of_strings [s]
+
   let clear t =  t.position <- 0
+
   let bytes t = t.bytes
+
   let position t = t.position
-  let set_position t position = t.position <- position
+
+  let setPosition t position = t.position <- position
+
   let capacity t = Bigarray.Array1.dim t.bytes
+
   let int_length = if max_int == 1073741823 then 31 else 63
 
   let readUint8 t offset =
@@ -187,7 +194,7 @@ module ByteBuffer = struct
   let writeFloat64 t offset value =
     writeInt64 t offset (Int64.bits_of_float value)
 
-  let get_string t ~offset ~length =
+  let read_string t ~offset ~length =
     let str = Bytes.create length in
     for i=0 to length-1 do
       Bytes.set str i
@@ -195,10 +202,16 @@ module ByteBuffer = struct
     done;
     Bytes.to_string str
 
+  let write_string t s offset =
+    let length = String.length s in
+    for i=0 to length-1 do
+      writeUint8 t (offset + i) (Char.code (String.get s i))
+    done
+
   let getBufferIndentifier t =
     if (capacity t) < t.position + _SIZEOF_INT + _FILE_IDENTIFIER_LENGTH then
       failwith "FlatBuffers: ByteBuffer is too short to contain an identifier"
-    else get_string t ~offset:(t.position + _SIZEOF_INT) ~length:_FILE_IDENTIFIER_LENGTH
+    else read_string t ~offset:(t.position + _SIZEOF_INT) ~length:_FILE_IDENTIFIER_LENGTH
 
   let __offset t bb_pos vtable_offset =
     let vtable = bb_pos - (read_ocaml_int32 t bb_pos) in
@@ -214,7 +227,7 @@ module ByteBuffer = struct
     let offset = offset + (read_ocaml_int32 t offset) in
     let length = read_ocaml_int32 t offset in
     let offset = offset + _SIZEOF_INT in
-    get_string t ~offset ~length
+    read_string t ~offset ~length
 
   let __indirect t offset =
     offset + (read_ocaml_int32 t offset)
@@ -393,7 +406,7 @@ let growByteBuffer bb =
     failwith "FlatBuffers: cannot grow buffer beyond its limits";
   let new_buf_size = old_buf_size * 2 in
   let nbb = ByteBuffer.allocate new_buf_size in
-  ByteBuffer.set_position nbb (new_buf_size - old_buf_size);
+  ByteBuffer.setPosition nbb (new_buf_size - old_buf_size);
   let sub = Bigarray.Array1.sub nbb.ByteBuffer.bytes (new_buf_size - old_buf_size) old_buf_size in
   Bigarray.Array1.blit bb.ByteBuffer.bytes sub;
   nbb
@@ -627,7 +640,7 @@ let finish t ?(file_identifier="") root_table =
   done;
   prep t t.minalign ~additional_bytes:_SIZEOF_INT;
   addOffset t root_table;
-  ByteBuffer.set_position t.bb t.space
+  ByteBuffer.setPosition t.bb t.space
 
 let requiredField t table field =
   let table_start = (ByteBuffer.capacity t.bb) - table in
@@ -643,6 +656,20 @@ let startVector t elem_size num_elems alignment =
   prep t _SIZEOF_INT ~additional_bytes:(elem_size * num_elems);
   prep t alignment ~additional_bytes:(elem_size * num_elems)
 
+let endVector t =
+  write_ocaml_int32 t  t.vector_num_elems;
+  offset t
+
+let createString t s =
+  addInt8 t 0;
+  let len = String.length s in
+  startVector t 1 len 1;
+  t.space <- t.space - len;
+  ByteBuffer.setPosition t.bb t.space;
+  ByteBuffer.write_string t.bb s t.space;
+  endVector t
+
+
 let _ = 1
 
 let _ = 1
@@ -650,264 +677,3 @@ let _ = 1
 let _ = 1 lor 2
 
 let _ = 1
-
-(*
-
-/// @cond FLATBUFFERS_INTERNAL
-;
-
-
-
-/// @cond FLATBUFFERS_INTERNAL
-
-/// @cond FLATBUFFERS_INTERNAL
-
-// @endcond
-
-/**
- * Start a new array/vector of objects.  Users usually will not call
- * this directly. The FlatBuffers compiler will create a start/end
- * method for vector types in generated code.
- *
- * @param {number} elem_size The size of each element in the array
- * @param {number} num_elems The number of elements in the array
- * @param {number} alignment The alignment of the array
- */
-flatbuffers.Builder.prototype.startVector = function(elem_size, num_elems, alignment) {
-  this.notNested();
-  this.vector_num_elems = num_elems;
-  this.prep(flatbuffers.SIZEOF_INT, elem_size * num_elems);
-  this.prep(alignment, elem_size * num_elems); // Just in case alignment > int.
-};
-
-/**
- * Finish off the creation of an array and all its elements. The array must be
- * created with `startVector`.
- *
- * @returns {flatbuffers.Offset} The offset at which the newly created array
- * starts.
- */
-flatbuffers.Builder.prototype.endVector = function() {
-  this.writeInt32(this.vector_num_elems);
-  return this.offset();
-};
-/// @endcond
-
-/**
- * Encode the string `s` in the buffer using UTF-8. If a Uint8Array is passed
- * instead of a string, it is assumed to contain valid UTF-8 encoded data.
- *
- * @return {flatbuffers.Offset} The offset in the buffer where the encoded string starts
- */
-flatbuffers.Builder.prototype.createString = function(s) {
-  if (s instanceof Uint8Array) {
-    var utf8 = s;
-  } else {
-    var utf8 = [];
-    var i = 0;
-
-    while (i < s.length) {
-      var codePoint;
-
-      // Decode UTF-16
-      var a = s.charCodeAt(i++);
-      if (a < 0xD800 || a >= 0xDC00) {
-        codePoint = a;
-      } else {
-        var b = s.charCodeAt(i++);
-        codePoint = (a << 10) + b + (0x10000 - (0xD800 << 10) - 0xDC00);
-      }
-
-      // Encode UTF-8
-      if (codePoint < 0x80) {
-        utf8.push(codePoint);
-      } else {
-        if (codePoint < 0x800) {
-          utf8.push(((codePoint >> 6) & 0x1F) | 0xC0);
-        } else {
-          if (codePoint < 0x10000) {
-            utf8.push(((codePoint >> 12) & 0x0F) | 0xE0);
-          } else {
-            utf8.push(
-              ((codePoint >> 18) & 0x07) | 0xF0,
-              ((codePoint >> 12) & 0x3F) | 0x80);
-          }
-          utf8.push(((codePoint >> 6) & 0x3F) | 0x80);
-        }
-        utf8.push((codePoint & 0x3F) | 0x80);
-      }
-    }
-  }
-
-  this.addInt8(0);
-  this.startVector(1, utf8.length, 1);
-  this.bb.setPosition(this.space -= utf8.length);
-  for (var i = 0, offset = this.space, bytes = this.bb.bytes(); i < utf8.length; i++) {
-    bytes[offset++] = utf8[i];
-  }
-  return this.endVector();
-};
-
-/**
- * A helper function to avoid generated code depending on this file directly.
- *
- * @param {number} low
- * @param {number} high
- * @returns {flatbuffers.Long}
- */
-flatbuffers.Builder.prototype.createLong = function(low, high) {
-  return flatbuffers.Long.create(low, high);
-};
-////////////////////////////////////////////////////////////////////////////////
-/// @cond FLATBUFFERS_INTERNAL
-/**
- * Create a new ByteBuffer with a given array of bytes (`Uint8Array`).
- *
- * @constructor
- * @param {Uint8Array} bytes
- */
-flatbuffers.ByteBuffer = function(bytes) {
-  /**
-   * @type {Uint8Array}
-   * @private
-   */
-  this.bytes_ = bytes;
-
-  /**
-   * @type {number}
-   * @private
-   */
-  this.position_ = 0;
-
-};
-
-/**
- * A helper function to avoid generated code depending on this file directly.
- *
- * @param {number} low
- * @param {number} high
- * @returns {flatbuffers.Long}
- */
-flatbuffers.ByteBuffer.prototype.createLong = function(low, high) {
-  return flatbuffers.Long.create(low, high);
-};
-
-// Exports for Node.js and RequireJS
-this.flatbuffers = flatbuffers;
-
-/// @endcond
-/// @}
-
-/**
- * @type {Int32Array}
- * @const
- */
-flatbuffers.int32 = new Int32Array(2);
-
-/**
- * @type {Float32Array}
- * @const
- */
-flatbuffers.float32 = new Float32Array(flatbuffers.int32.buffer);
-
-/**
- * @type {Float64Array}
- * @const
- */
-flatbuffers.float64 = new Float64Array(flatbuffers.int32.buffer);
-
-////////////////////////////////////////////////////////////////////////////////
-
-/**
- * @param {number} offset
- */
-flatbuffers.ByteBuffer.prototype.writeInt8 = function(offset, value) {
-  this.bytes_[offset] = /** @type {number} */(value);
-};
-
-/**
- * @param {number} offset
- * @param {number} value
- */
-flatbuffers.ByteBuffer.prototype.writeUint8 = function(offset, value) {
-  this.bytes_[offset] = value;
-};
-
-/**
- * @param {number} offset
- * @param {number} value
- */
-flatbuffers.ByteBuffer.prototype.writeInt16 = function(offset, value) {
-  this.bytes_[offset] = value;
-  this.bytes_[offset + 1] = value >> 8;
-};
-
-/**
- * @param {number} offset
- * @param {number} value
- */
-flatbuffers.ByteBuffer.prototype.writeUint16 = function(offset, value) {
-    this.bytes_[offset] = value;
-    this.bytes_[offset + 1] = value >> 8;
-};
-
-/**
- * @param {number} offset
- * @param {number} value
- */
-flatbuffers.ByteBuffer.prototype.writeInt32 = function(offset, value) {
-  this.bytes_[offset] = value;
-  this.bytes_[offset + 1] = value >> 8;
-  this.bytes_[offset + 2] = value >> 16;
-  this.bytes_[offset + 3] = value >> 24;
-};
-
-/**
- * @param {number} offset
- * @param {number} value
- */
-flatbuffers.ByteBuffer.prototype.writeUint32 = function(offset, value) {
-    this.bytes_[offset] = value;
-    this.bytes_[offset + 1] = value >> 8;
-    this.bytes_[offset + 2] = value >> 16;
-    this.bytes_[offset + 3] = value >> 24;
-};
-
-/**
- * @param {number} offset
- * @param {flatbuffers.Long} value
- */
-flatbuffers.ByteBuffer.prototype.writeInt64 = function(offset, value) {
-  this.writeInt32(offset, value.low);
-  this.writeInt32(offset + 4, value.high);
-};
-
-/**
- * @param {number} offset
- * @param {flatbuffers.Long} value
- */
-flatbuffers.ByteBuffer.prototype.writeUint64 = function(offset, value) {
-    this.writeUint32(offset, value.low);
-    this.writeUint32(offset + 4, value.high);
-};
-
-/**
- * @param {number} offset
- * @param {number} value
- */
-flatbuffers.ByteBuffer.prototype.writeFloat32 = function(offset, value) {
-  flatbuffers.float32[0] = value;
-  this.writeInt32(offset, flatbuffers.int32[0]);
-};
-
-/**
- * @param {number} offset
- * @param {number} value
- */
-flatbuffers.ByteBuffer.prototype.writeFloat64 = function(offset, value) {
-  flatbuffers.float64[0] = value;
-  this.writeInt32(offset, flatbuffers.int32[flatbuffers.isLittleEndian ? 0 : 1]);
-  this.writeInt32(offset + 4, flatbuffers.int32[flatbuffers.isLittleEndian ? 1 : 0]);
-};
-
- *)
