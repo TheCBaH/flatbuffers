@@ -1,9 +1,9 @@
 
 let _ = print_endline "flatbuffers"
 
-let sizeof_short = 2
+let _SIZEOF_SHORT = 2
 
-let sizeof_int = 4
+let _SIZEOF_INT = 4
 
 let file_identifier_length = 4
 
@@ -179,13 +179,13 @@ module ByteBuffer = struct
   let readFloat32 t offset =
     Int32.float_of_bits (readInt32 t offset)
 
-  let wrteFloat32 t offset value =
+  let writeFloat32 t offset value =
     writeInt32 t offset (Int32.bits_of_float value)
 
   let readFloat64 t offset =
     Int64.float_of_bits (readInt64 t offset)
 
-  let wrteFloat64 t offset value =
+  let writeFloat64 t offset value =
     writeInt64 t offset (Int64.bits_of_float value)
 
   let get_string t ~offset ~length =
@@ -308,14 +308,15 @@ type t= {
     mutable object_start:int;
     mutable vector_num_elems:int;
     mutable force_defaults:bool;
+    mutable vtable: int array;
 (*
-  this.vtable = null;
   this.vtables = [];
  *)
   }
 
 let clear t =
   ByteBuffer.clear t.bb;
+  t.vtable <- Array.make 0 0;
   t.space <- ByteBuffer.capacity t.bb;
   t.minalign <- 1;
   t.vtable_in_use <- 0;
@@ -327,6 +328,7 @@ let clear t =
 let create ?(initial_size=256)  () =
   {
     bb = ByteBuffer.allocate initial_size;
+    vtable = Array.make 0 0;
     space = initial_size;
     minalign = 1;
     vtable_in_use = 0;
@@ -366,11 +368,11 @@ let growByteBuffer bb =
 let rec pad t byte_size =
   if byte_size > 0 then begin
     t.space <- t.space - 1 ;
-    ByteBuffer.writeUint8 t.bb t.space 0;
+    ByteBuffer.write_byte t.bb t.space 0;
     pad t (byte_size - 1)
   end
 
-let prep t size additional_bytes =
+let prep t ?(additional_bytes=0) size =
   if size > t.minalign then
     t.minalign <- size;
   let align_size =
@@ -387,13 +389,132 @@ let prep t size additional_bytes =
   pad t align_size
 
 let writeInt8 t value =
-  t.space <- t.space - 1 ;
-  if value > 127 || value < -128 then raise (Invalid_argument "Builder.writeInt8");
-  ByteBuffer.writeUint8 t.bb (value land 0xFF)
+  t.space <- t.space - 1;
+  ByteBuffer.writeInt8 t.bb t.space value
 
-flatbuffers.Builder.prototype.writeInt16 = function(value) {
-  this.bb.writeInt16(this.space -= 2, value);
-};
+let writeInt16 t value =
+  t.space <- t.space - 2;
+  ByteBuffer.writeInt16 t.bb t.space value
+
+let writeInt32 t value =
+  t.space <- t.space - 4;
+  ByteBuffer.writeInt32 t.bb t.space value
+
+let write_ocaml_int32 t value =
+  t.space <- t.space - 4;
+  ByteBuffer.write_ocaml_int32 t.bb t.space value
+
+let writeInt64 t value =
+  t.space <- t.space - 8;
+  ByteBuffer.writeInt64 t.bb t.space value
+
+let writeFloat32 t value =
+  t.space <- t.space - 4;
+  ByteBuffer.writeFloat32 t.bb t.space value
+
+let writeFloat64 t value =
+  t.space <- t.space - 8;
+  ByteBuffer.writeFloat64 t.bb t.soace value
+
+let addInt8 t value =
+  prep t 1;
+  writeInt8 t value
+
+let addInt16 t value =
+  prep t 2;
+  writeInt16 t value
+
+let addInt32 t value =
+  prep t 4;
+  writeInt32 t value
+
+let addInt64 t value =
+  prep t 8;
+  writeInt64 t value
+
+let addFloat32 t value =
+  prep t 4;
+  writeFloat32 t value
+
+let addFloat64 t value =
+  prep t 8;
+  writeFloat64 t value
+
+let slot t voffset =
+  t.vtable.(voffset) <- offset t
+
+let addFieldInt8 t voffset value defaultValue =
+  if (t.force_defaults || value != defaultValue) then begin
+      addInt8 t value;
+      slot t voffset;
+  end
+
+let addFieldInt16 t voffset value defaultValue =
+  if (t.force_defaults || value != defaultValue) then begin
+      addInt16 t value;
+      slot t voffset;
+  end
+
+let addFieldInt32 t voffset value defaultValue =
+  if (t.force_defaults || value != defaultValue) then begin
+      addInt32 t value;
+      slot t voffset;
+    end
+
+let addFieldInt64 t voffset value defaultValue =
+  if (t.force_defaults || value != defaultValue) then begin
+      addInt64 t value;
+      slot t voffset;
+  end
+
+let addFieldFloat32 t voffset value defaultValue =
+  if (t.force_defaults || value != defaultValue) then begin
+      addFloat32 t value;
+      slot t voffset;
+  end
+
+let addFieldFloat64 t voffset value defaultValue =
+  if (t.force_defaults || value != defaultValue) then begin
+      addFloat64 t value;
+      slot t voffset;
+  end
+
+let addOffset t _offset =
+  prep t _SIZEOF_INT;
+  write_ocaml_int32 t ((offset t) - _offset + _SIZEOF_INT)
+
+let addFieldOffset t voffset value defaultValue =
+  if t.force_defaults || value != defaultValue then begin
+    addOffset t value;
+    slot t voffset;
+  end
+
+let nested t obj =
+  if obj != (offset t) then
+    failwith "FlatBuffers: struct must be serialized inline."
+
+let notNested t  =
+  if t.isNested then
+    failwith "FlatBuffers: object serialization must not be nested."
+
+let addFieldStruct t voffset value defaultValue =
+  if value != defaultValue then begin
+    nested t value;
+    slot t voffset;
+  end
+
+let startObject t numfields =
+  notNested t;
+  if Array.length t.vtable < numfields then
+    t.vtable <- Array.make numfields 0
+  else
+    for i = 0 to numfields - 1 do
+      t.vtable.(i) <- 0
+    done;
+  t.vtable_in_use <- numfields;
+  t.isNested <- true;
+  t.object_start <- offset t
+
 
 
 let _ = 1
@@ -410,299 +531,11 @@ let _ = 1
 /// @cond FLATBUFFERS_INTERNAL
 ;
 
-/**
- * @param {number} value
- */
-flatbuffers.Builder.prototype.writeInt8 = function(value) {
-  this.bb.writeInt8(this.space -= 1, value);
-};
 
-/**
- * @param {number} value
- */
-flatbuffers.Builder.prototype.writeInt16 = function(value) {
-  this.bb.writeInt16(this.space -= 2, value);
-};
-
-/**
- * @param {number} value
- */
-flatbuffers.Builder.prototype.writeInt32 = function(value) {
-  this.bb.writeInt32(this.space -= 4, value);
-};
-
-/**
- * @param {flatbuffers.Long} value
- */
-flatbuffers.Builder.prototype.writeInt64 = function(value) {
-  this.bb.writeInt64(this.space -= 8, value);
-};
-
-/**
- * @param {number} value
- */
-flatbuffers.Builder.prototype.writeFloat32 = function(value) {
-  this.bb.writeFloat32(this.space -= 4, value);
-};
-
-/**
- * @param {number} value
- */
-flatbuffers.Builder.prototype.writeFloat64 = function(value) {
-  this.bb.writeFloat64(this.space -= 8, value);
-};
-/// @endcond
-
-/**
- * Add an `int8` to the buffer, properly aligned, and grows the buffer (if necessary).
- * @param {number} value The `int8` to add the the buffer.
- */
-flatbuffers.Builder.prototype.addInt8 = function(value) {
-  this.prep(1, 0);
-  this.writeInt8(value);
-};
-
-/**
- * Add an `int16` to the buffer, properly aligned, and grows the buffer (if necessary).
- * @param {number} value The `int16` to add the the buffer.
- */
-flatbuffers.Builder.prototype.addInt16 = function(value) {
-  this.prep(2, 0);
-  this.writeInt16(value);
-};
-
-/**
- * Add an `int32` to the buffer, properly aligned, and grows the buffer (if necessary).
- * @param {number} value The `int32` to add the the buffer.
- */
-flatbuffers.Builder.prototype.addInt32 = function(value) {
-  this.prep(4, 0);
-  this.writeInt32(value);
-};
-
-/**
- * Add an `int64` to the buffer, properly aligned, and grows the buffer (if necessary).
- * @param {flatbuffers.Long} value The `int64` to add the the buffer.
- */
-flatbuffers.Builder.prototype.addInt64 = function(value) {
-  this.prep(8, 0);
-  this.writeInt64(value);
-};
-
-/**
- * Add a `float32` to the buffer, properly aligned, and grows the buffer (if necessary).
- * @param {number} value The `float32` to add the the buffer.
- */
-flatbuffers.Builder.prototype.addFloat32 = function(value) {
-  this.prep(4, 0);
-  this.writeFloat32(value);
-};
-
-/**
- * Add a `float64` to the buffer, properly aligned, and grows the buffer (if necessary).
- * @param {number} value The `float64` to add the the buffer.
- */
-flatbuffers.Builder.prototype.addFloat64 = function(value) {
-  this.prep(8, 0);
-  this.writeFloat64(value);
-};
 
 /// @cond FLATBUFFERS_INTERNAL
-/**
- * @param {number} voffset
- * @param {number} value
- * @param {number} defaultValue
- */
-flatbuffers.Builder.prototype.addFieldInt8 = function(voffset, value, defaultValue) {
-  if (this.force_defaults || value != defaultValue) {
-    this.addInt8(value);
-    this.slot(voffset);
-  }
-};
-
-/**
- * @param {number} voffset
- * @param {number} value
- * @param {number} defaultValue
- */
-flatbuffers.Builder.prototype.addFieldInt16 = function(voffset, value, defaultValue) {
-  if (this.force_defaults || value != defaultValue) {
-    this.addInt16(value);
-    this.slot(voffset);
-  }
-};
-
-/**
- * @param {number} voffset
- * @param {number} value
- * @param {number} defaultValue
- */
-flatbuffers.Builder.prototype.addFieldInt32 = function(voffset, value, defaultValue) {
-  if (this.force_defaults || value != defaultValue) {
-    this.addInt32(value);
-    this.slot(voffset);
-  }
-};
-
-/**
- * @param {number} voffset
- * @param {flatbuffers.Long} value
- * @param {flatbuffers.Long} defaultValue
- */
-flatbuffers.Builder.prototype.addFieldInt64 = function(voffset, value, defaultValue) {
-  if (this.force_defaults || !value.equals(defaultValue)) {
-    this.addInt64(value);
-    this.slot(voffset);
-  }
-};
-
-/**
- * @param {number} voffset
- * @param {number} value
- * @param {number} defaultValue
- */
-flatbuffers.Builder.prototype.addFieldFloat32 = function(voffset, value, defaultValue) {
-  if (this.force_defaults || value != defaultValue) {
-    this.addFloat32(value);
-    this.slot(voffset);
-  }
-};
-
-/**
- * @param {number} voffset
- * @param {number} value
- * @param {number} defaultValue
- */
-flatbuffers.Builder.prototype.addFieldFloat64 = function(voffset, value, defaultValue) {
-  if (this.force_defaults || value != defaultValue) {
-    this.addFloat64(value);
-    this.slot(voffset);
-  }
-};
-
-/**
- * @param {number} voffset
- * @param {flatbuffers.Offset} value
- * @param {flatbuffers.Offset} defaultValue
- */
-flatbuffers.Builder.prototype.addFieldOffset = function(voffset, value, defaultValue) {
-  if (this.force_defaults || value != defaultValue) {
-    this.addOffset(value);
-    this.slot(voffset);
-  }
-};
-
-/**
- * Structs are stored inline, so nothing additional is being added. `d` is always 0.
- *
- * @param {number} voffset
- * @param {flatbuffers.Offset} value
- * @param {flatbuffers.Offset} defaultValue
- */
-flatbuffers.Builder.prototype.addFieldStruct = function(voffset, value, defaultValue) {
-  if (value != defaultValue) {
-    this.nested(value);
-    this.slot(voffset);
-  }
-};
-
-/**
- * Structures are always stored inline, they need to be created right
- * where they're used.  You'll get this assertion failure if you
- * created it elsewhere.
- *
- * @param {flatbuffers.Offset} obj The offset of the created object
- */
-flatbuffers.Builder.prototype.nested = function(obj) {
-  if (obj != this.offset()) {
-    throw new Error('FlatBuffers: struct must be serialized inline.');
-  }
-};
-
-/**
- * Should not be creating any other object, string or vector
- * while an object is being constructed
- */
-flatbuffers.Builder.prototype.notNested = function() {
-  if (this.isNested) {
-    throw new Error('FlatBuffers: object serialization must not be nested.');
-  }
-};
-
-/**
- * Set the current vtable at `voffset` to the current location in the buffer.
- *
- * @param {number} voffset
- */
-flatbuffers.Builder.prototype.slot = function(voffset) {
-  this.vtable[voffset] = this.offset();
-};
-
-/**
- * @returns {flatbuffers.Offset} Offset relative to the end of the buffer.
- */
-flatbuffers.Builder.prototype.offset = function() {
-  return this.bb.capacity() - this.space;
-};
-
-/**
- * Doubles the size of the backing ByteBuffer and copies the old data towards
- * the end of the new buffer (since we build the buffer backwards).
- *
- * @param {flatbuffers.ByteBuffer} bb The current buffer with the existing data
- * @returns {flatbuffers.ByteBuffer} A new byte buffer with the old data copied
- * to it. The data is located at the end of the buffer.
- *
- * uint8Array.set() formally takes {Array<number>|ArrayBufferView}, so to pass
- * it a uint8Array we need to suppress the type check:
- * @suppress {checkTypes}
- */
-flatbuffers.Builder.growByteBuffer = function(bb) {
-  var old_buf_size = bb.capacity();
-
-  // Ensure we don't grow beyond what fits in an int.
-  if (old_buf_size & 0xC0000000) {
-    throw new Error('FlatBuffers: cannot grow buffer beyond 2 gigabytes.');
-  }
-
-  var new_buf_size = old_buf_size << 1;
-  var nbb = flatbuffers.ByteBuffer.allocate(new_buf_size);
-  nbb.setPosition(new_buf_size - old_buf_size);
-  nbb.bytes().set(bb.bytes(), new_buf_size - old_buf_size);
-  return nbb;
-};
-/// @endcond
-
-/**
- * Adds on offset, relative to where it will be written.
- *
- * @param {flatbuffers.Offset} offset The offset to add.
- */
-flatbuffers.Builder.prototype.addOffset = function(offset) {
-  this.prep(flatbuffers.SIZEOF_INT, 0); // Ensure alignment is already done.
-  this.writeInt32(this.offset() - offset + flatbuffers.SIZEOF_INT);
-};
 
 /// @cond FLATBUFFERS_INTERNAL
-/**
- * Start encoding a new object in the buffer.  Users will not usually need to
- * call this directly. The FlatBuffers compiler will generate helper methods
- * that call this method internally.
- *
- * @param {number} numfields
- */
-flatbuffers.Builder.prototype.startObject = function(numfields) {
-  this.notNested();
-  if (this.vtable == null) {
-    this.vtable = [];
-  }
-  this.vtable_in_use = numfields;
-  for (var i = 0; i < numfields; i++) {
-    this.vtable[i] = 0; // This will push additional elements as needed
-  }
-  this.isNested = true;
-  this.object_start = this.offset();
-};
 
 /**
  * Finish off writing the object that is under construction.
