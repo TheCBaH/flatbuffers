@@ -7,27 +7,7 @@ let _SIZEOF_INT = 4
 
 let _FILE_IDENTIFIER_LENGTH = 4
 
-let encoding_utf8_bytes  = 1
-
-let encoding_utf16_string = 2
-
 let isLittleEndian = not Sys.big_endian
-
-
-let long low high =
-  Int64.logor
-    (Int64.of_int32 low)
-    (Int64.shift_left (Int64.of_int32 high) 32)
-
-
-let long_toFloat64 t = Int64.bits_of_float t
-
-let long_equals t1 t2 = Int64.equal t1 t2
-
-let long_zero = Int64.zero
-
-let _ = -1 lsr (24+32)
-
 
 
 module ByteBuffer = struct
@@ -94,7 +74,7 @@ module ByteBuffer = struct
   let readUint16 t offset =
     (readUint8 t offset) lor ((readUint8 t (offset+1)) lsl 8 )
 
-  let writeUint15 t offset value =
+  let writeUint16 t offset value =
     if value > 0xFFFF || value < 0 then
       invalid_arg "ByteBuffer.writeUint16";
     write_byte t offset value;
@@ -123,9 +103,9 @@ module ByteBuffer = struct
     write_byte t (offset+2) (value lsr 16)
 
   let writeUint32 t offset value =
-    if Int64.compare value 0xFFFFFFFL > 0
+    if Int64.compare value 0xFFFFFFFFL > 0
        || Int64.compare value 0L < 0 then
-      invalid_arg "ByteBuffer.writeInt16";
+      invalid_arg "ByteBuffer.writeUint32";
     let b012 = Int64.to_int (Int64.logand value 0xFFFFFFL) in
     write_uint24 t offset b012;
     write_byte t (offset+3) (Int64.to_int (Int64.shift_right_logical value 24))
@@ -251,35 +231,41 @@ module ByteBuffer = struct
 
 end
 
-let do_test s f =
+let do_test r w v s =
   let offset = 0  in
-  let t= ByteBuffer.of_string s in
-  f t offset
+  let t = ByteBuffer.of_string s in
+  let v' = r t offset in
+  assert(v = v');
+  let len = String.length s in
+  let t = ByteBuffer.allocate len in
+  w t offset v;
+  let s' = ByteBuffer.read_string t 0 len in
+  assert(s' =  s);
+  true
 
-let _ =  assert( 0 = do_test "\x00" ByteBuffer.readInt8)
+let _ =  assert( do_test ByteBuffer.readInt8 ByteBuffer.writeInt8 0 "\x00")
 
-let _ =  assert( -1 = do_test "\xFF" ByteBuffer.readInt8)
+let _ =  assert( do_test ByteBuffer.readUint8 ByteBuffer.writeUint8 0 "\x00")
 
-let _ =  assert( 0xff = do_test "\xFF" ByteBuffer.readUint8)
+let _ =  assert( do_test ByteBuffer.readInt8 ByteBuffer.writeInt8 (-1) "\xFF")
 
-let _ =  assert( -1 = do_test "\xFF\xFF" ByteBuffer.readInt16)
+let _ =  assert( do_test ByteBuffer.readInt16 ByteBuffer.writeInt16 (-1) "\xFF\xFF")
 
-let _ =  assert( 0xffff = do_test "\xFF\xFF" ByteBuffer.readUint16)
+let _ =  assert( do_test ByteBuffer.readUint16 ByteBuffer.writeUint16 0xFFFF "\xFF\xFF")
 
-let _ =  assert( -32768 = do_test "\x00\x80" ByteBuffer.readInt16)
+let _ =  assert( do_test ByteBuffer.readInt16 ByteBuffer.writeInt16 (-32768) "\x00\x80")
 
-let _ =  assert( 0xf0ff = do_test "\xFF\xF0" ByteBuffer.readUint16)
+let _ =  assert( do_test ByteBuffer.readUint16 ByteBuffer.writeUint16 0xF0FF "\xFF\xF0")
 
-let _ =  assert( 0x80030201L = do_test "\x01\x02\x03\x80" ByteBuffer.readUint32)
+let _ =  assert( do_test ByteBuffer.readUint32 ByteBuffer.writeUint32 0x80030201L "\x01\x02\x03\x80")
 
-let _ =  assert( -2147286527l = do_test "\x01\x02\x03\x80" ByteBuffer.readInt32)
+let _ =  assert( do_test ByteBuffer.readInt32 ByteBuffer.writeInt32 (-2147286527l) "\x01\x02\x03\x80")
 
-let _ =  assert( 0x24030201 = do_test "\x01\x02\x03\x24" ByteBuffer.read_ocaml_int32)
-let _ =  assert( -1006435839 = do_test "\x01\x02\x03\xC4" ByteBuffer.read_ocaml_int32)
+let _ =  assert( do_test ByteBuffer.read_ocaml_int32 ByteBuffer.write_ocaml_int32 0x24030201 "\x01\x02\x03\x24")
 
-let _ =  assert( 0x0807060504030201L = do_test "\x01\x02\x03\x04\x05\x06\x07\x08" ByteBuffer.readUint64)
+let _ =  assert( do_test ByteBuffer.read_ocaml_int32 ByteBuffer.write_ocaml_int32 (-1006435839) "\x01\x02\x03\xC4")
 
-let _ =  assert( 0x0807060504030201L = do_test "\x01\x02\x03\x04\x05\x06\x07\x08" ByteBuffer.readInt64)
+let _ =  assert( do_test ByteBuffer.readUint64 ByteBuffer.writeUint64 0x0807060504030201L "\x01\x02\x03\x04\x05\x06\x07\x08")
 
 
 module Color = struct
