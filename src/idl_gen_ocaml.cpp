@@ -592,8 +592,8 @@ class OcamlGenerator : public BaseGenerator {
     std::string &code = *code_ptr;
 
     code += "\n";
-    code += "def Create" + NormalizedName(struct_def);
-    code += "(builder";
+    code += Indent + "let create" + NormalizedName(struct_def);
+    code += " builder";
   }
 
   // Recursively generate arguments for a constructor, to deal with nested
@@ -611,7 +611,7 @@ class OcamlGenerator : public BaseGenerator {
                           (nameprefix + (NormalizedName(field) + "_")).c_str(), code_ptr);
       } else {
         std::string &code = *code_ptr;
-        code += std::string(", ") + nameprefix;
+        code += std::string(" ") + nameprefix;
         code += MakeCamel(NormalizedName(field), false);
       }
     }
@@ -620,7 +620,7 @@ class OcamlGenerator : public BaseGenerator {
   // End the creator function signature.
   void EndBuilderArgs(std::string *code_ptr) {
     std::string &code = *code_ptr;
-    code += "):\n";
+    code += " =\n";
   }
 
   // Recursively generate struct construction statements and instert manual
@@ -628,26 +628,26 @@ class OcamlGenerator : public BaseGenerator {
   void StructBuilderBody(const StructDef &struct_def,
                          const char *nameprefix, std::string *code_ptr) {
     std::string &code = *code_ptr;
-    code += "    builder.Prep(" + NumToString(struct_def.minalign) + ", ";
-    code += NumToString(struct_def.bytesize) + ")\n";
+    code += Indent + Indent + "Builder.prep builder ~additional_bytes:" + NumToString(struct_def.minalign) + " ";
+    code += NumToString(struct_def.bytesize) + ";\n";
     for (auto it = struct_def.fields.vec.rbegin();
         it != struct_def.fields.vec.rend(); ++it) {
       auto &field = **it;
       if (field.padding)
-        code += "    builder.Pad(" + NumToString(field.padding) + ")\n";
+        code += Indent + Indent + "Builder.pad builder " + NumToString(field.padding) + ";\n";
       if (IsStruct(field.value.type)) {
         StructBuilderBody(*field.value.type.struct_def,
                           (nameprefix + (NormalizedName(field) + "_")).c_str(), code_ptr);
       } else {
-        code += "    builder.Prepend" + GenMethod(field) + "(";
-        code += nameprefix + MakeCamel(NormalizedName(field), false) + ")\n";
+        code += Indent + Indent + "Builder.add" + GenMethod(field) + " builder ";
+        code += nameprefix + MakeCamel(NormalizedName(field), false) + ";\n";
       }
     }
   }
 
   void EndBuilderBody(std::string *code_ptr) {
     std::string &code = *code_ptr;
-    code += "    return builder.Offset()\n";
+    code += Indent + Indent + "Builder.offset builder\n";
   }
 
   // Get the value of a table's starting offset.
@@ -806,15 +806,15 @@ class OcamlGenerator : public BaseGenerator {
 
       GenStructAccessor(struct_def, field, &code, &dependencies);
     }
-#if 0
     if (struct_def.fixed) {
       // create a struct constructor function
-      GenStructBuilder(struct_def, code_ptr);
+      GenStructBuilder(struct_def, &code);
     } else {
+#if 0
       // Create a set of functions that allow table construction.
       GenTableBuilders(struct_def, code_ptr);
-    }
 #endif
+    }
     EndStruct(&code);
 
     ns.addStruct(struct_def.defined_namespace, NormalizedName(struct_def),dependencies, code);
@@ -909,7 +909,6 @@ class OcamlGenerator : public BaseGenerator {
     BeginBuilderArgs(struct_def, code_ptr);
     StructBuilderArgs(struct_def, "", code_ptr);
     EndBuilderArgs(code_ptr);
-
     StructBuilderBody(struct_def, "", code_ptr);
     EndBuilderBody(code_ptr);
   }

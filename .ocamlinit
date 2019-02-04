@@ -2,7 +2,7 @@
 #use "topfind";;
 #require "bigarray";;
 #use "ocaml/flatbuffers_priv.ml";;
-(* 
 #use "monster_generated.ml";;
-*)
 #use "monster_test_generated.ml";;
+(* 
+*)

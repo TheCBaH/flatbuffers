@@ -404,6 +404,10 @@ module Builder = struct
     t.space <- t.space - 4;
     ByteBuffer.writeInt32 t.bb t.space value
 
+  let writeUint32 t value =
+    t.space <- t.space - 4;
+    ByteBuffer.writeUint32 t.bb t.space value
+
   let write_ocaml_int32 t value =
     t.space <- t.space - 4;
     ByteBuffer.write_ocaml_int32 t.bb t.space value
@@ -431,6 +435,10 @@ module Builder = struct
   let addInt32 t value =
     prep t 4;
     writeInt32 t value
+
+  let addUint32 t value =
+    prep t 4;
+    writeUint32 t value
 
   let add_ocaml_int32 t value =
     prep t 4;
