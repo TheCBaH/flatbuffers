@@ -611,7 +611,7 @@ class OcamlGenerator : public BaseGenerator {
                           (nameprefix + (NormalizedName(field) + "_")).c_str(), code_ptr);
       } else {
         std::string &code = *code_ptr;
-        code += std::string(" ") + nameprefix;
+        code += std::string(" ") + "~" + nameprefix;
         code += MakeCamel(NormalizedName(field), false);
       }
     }
@@ -654,11 +654,11 @@ class OcamlGenerator : public BaseGenerator {
   void GetStartOfTable(const StructDef &struct_def,
                        std::string *code_ptr) {
     std::string &code = *code_ptr;
-    code += "def " + NormalizedName(struct_def) + "Start";
-    code += "(builder): ";
-    code += "builder.StartObject(";
+    code += Indent + "let start" + NormalizedName(struct_def);
+    code += " builder =\n";
+    code += Indent + Indent + "Builder.startObject  builder ";
     code += NumToString(struct_def.fields.vec.size());
-    code += ")\n";
+    code += "\n\n";
   }
 
   // Set the value of a table's field.
@@ -666,49 +666,40 @@ class OcamlGenerator : public BaseGenerator {
                          const FieldDef &field, const size_t offset,
                          std::string *code_ptr) {
     std::string &code = *code_ptr;
-    code += "def " + NormalizedName(struct_def) + "Add" + MakeCamel(NormalizedName(field));
-    code += "(builder, ";
-    code += MakeCamel(NormalizedName(field), false);
-    code += "): ";
-    code += "builder.Prepend";
-    code += GenMethod(field) + "Slot(";
-    code += NumToString(offset) + ", ";
-    if (!IsScalar(field.value.type.base_type) && (!struct_def.fixed)) {
-      code += "flatbuffers.number_types.UOffsetTFlags.py_type";
-      code += "(";
-      code += MakeCamel(NormalizedName(field), false) + ")";
-    } else {
-      code += MakeCamel(NormalizedName(field), false);
-    }
-    code += ", ";
+    std::string name = MakeCamel(NormalizedName(field), false);
+    code += Indent + "let add" + NormalizedName(struct_def) + MakeCamel(NormalizedName(field));
+    code += " builder " + name + " =\n";
+    code += Indent + Indent + "Builder.addFieldOffset builder ";
+    code += NumToString(offset) + " ";
+    code += name;
+    code += " ";
     code += IsFloat(field.value.type.base_type)
                 ? float_const_gen_.GenFloatConstant(field)
                 : field.value.constant;
-    code += ")\n";
+    code += "\n\n";
   }
 
   // Set the value of one of the members of a table's vector.
   void BuildVectorOfTable(const StructDef &struct_def,
                           const FieldDef &field, std::string *code_ptr) {
     std::string &code = *code_ptr;
-    code += "def " + NormalizedName(struct_def) + "Start";
-    code += MakeCamel(NormalizedName(field));
-    code += "Vector(builder, numElems): return builder.StartVector(";
+    code += Indent + "let start" + NormalizedName(struct_def) + MakeCamel(NormalizedName(field)) + " builder numElems =\n";
     auto vector_type = field.value.type.VectorType();
-    auto alignment = InlineAlignment(vector_type);
     auto elem_size = InlineSize(vector_type);
+    auto alignment = InlineAlignment(vector_type);
+    code += Indent + Indent + "Builder.startVector builder ";
     code += NumToString(elem_size);
-    code += ", numElems, " + NumToString(alignment);
-    code += ")\n";
+    code += " numElems " + NumToString(alignment);
+    code += "\n\n";
   }
 
   // Get the offset of the end of a table.
   void GetEndOffsetOnTable(const StructDef &struct_def,
                            std::string *code_ptr) {
     std::string &code = *code_ptr;
-    code += "def " + NormalizedName(struct_def) + "End";
-    code += "(builder): ";
-    code += "return builder.EndObject()\n";
+    code += Indent + "let end" + NormalizedName(struct_def);
+    code += " builder =\n";
+    code += Indent + Indent + "Builder.endObject builder\n\n";
   }
 
   // Generate the receiver for function signatures.
@@ -810,10 +801,8 @@ class OcamlGenerator : public BaseGenerator {
       // create a struct constructor function
       GenStructBuilder(struct_def, &code);
     } else {
-#if 0
       // Create a set of functions that allow table construction.
-      GenTableBuilders(struct_def, code_ptr);
-#endif
+      GenTableBuilders(struct_def, &code);
     }
     EndStruct(&code);
 
