@@ -400,6 +400,10 @@ module Builder = struct
     t.space <- t.space - 2;
     ByteBuffer.writeInt16 t.bb t.space value
 
+  let writeUint16 t value =
+    t.space <- t.space - 2;
+    ByteBuffer.writeUint16 t.bb t.space value
+
   let writeInt32 t value =
     t.space <- t.space - 4;
     ByteBuffer.writeInt32 t.bb t.space value
@@ -428,9 +432,17 @@ module Builder = struct
     prep t 1;
     writeInt8 t value
 
+  let addUint8 t value =
+    prep t 1;
+    writeUint8 t value
+
   let addInt16 t value =
     prep t 2;
     writeInt16 t value
+
+ let addUint16 t value =
+    prep t 2;
+    writeUint16 t value
 
   let addInt32 t value =
     prep t 4;
@@ -465,9 +477,27 @@ module Builder = struct
         slot t voffset;
       end
 
+  let addFieldUint8 t voffset value defaultValue =
+    if (t.force_defaults || value != defaultValue) then begin
+        addUint8 t value;
+        slot t voffset;
+      end
+
+  let addFieldBool t voffset value defaultValue =
+    if (t.force_defaults || value != defaultValue) then begin
+        addUint8 t (if value then 0 else 0xFF);
+        slot t voffset;
+      end
+
   let addFieldInt16 t voffset value defaultValue =
     if (t.force_defaults || value != defaultValue) then begin
         addInt16 t value;
+        slot t voffset;
+      end
+
+  let addFieldUint16 t voffset value defaultValue =
+    if (t.force_defaults || value != defaultValue) then begin
+        addUint16 t value;
         slot t voffset;
       end
 
@@ -477,11 +507,19 @@ module Builder = struct
         slot t voffset;
       end
 
+   let addFieldUint32 t voffset value defaultValue =
+    if (t.force_defaults || value != defaultValue) then begin
+        addUint32 t value;
+        slot t voffset;
+      end
+
   let addFieldInt64 t voffset value defaultValue =
     if (t.force_defaults || value != defaultValue) then begin
         addInt64 t value;
         slot t voffset;
       end
+
+  let addFieldUint64 = addFieldInt64
 
   let addFieldFloat32 t voffset value defaultValue =
     if (t.force_defaults || value != defaultValue) then begin

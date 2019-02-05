@@ -667,15 +667,22 @@ class OcamlGenerator : public BaseGenerator {
                          std::string *code_ptr) {
     std::string &code = *code_ptr;
     std::string name = MakeCamel(NormalizedName(field), false);
-    code += Indent + "let add" + NormalizedName(struct_def) + MakeCamel(NormalizedName(field));
+    auto type = field.value.type;
+    code += Indent + "let add" + MakeCamel(NormalizedName(field));
     code += " builder " + name + " =\n";
-    code += Indent + Indent + "Builder.addFieldOffset builder ";
-    code += NumToString(offset) + " ";
-    code += name;
+    code += Indent + Indent + "Builder.addField";
+    if (IsScalar(type.base_type)) {
+      code += GetScalarAccessorType(struct_def, type);
+    } else {
+      code += "Offset";
+    }
+    code += " builder " + NumToString(offset) + " " + name;
     code += " ";
-    code += IsFloat(field.value.type.base_type)
-                ? float_const_gen_.GenFloatConstant(field)
-                : field.value.constant;
+    auto default_value = IsFloat(field.value.type.base_type)
+      ? float_const_gen_.GenFloatConstant(field)
+      : GetScalarConstant(struct_def, field.value.type, field.value.constant);
+
+    code +=  default_value;
     code += "\n\n";
   }
 
