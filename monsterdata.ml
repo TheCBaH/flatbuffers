@@ -54,5 +54,20 @@ let w = Monster.weapons monster 2 |> _opt
 
 let _ = Monster.equipped_type monster
 
+(*
+let _ = Weapon.name monster
+ *)
+
+
+let _ = 1
+
+module Buf = struct
+  type 'a offset = {
+      b: ByteBuffer.t;
+      pos: int;
+    }
+end
+
+let weapon_ w : Weapon.t Buf.offset = {Buf.b = w.Weapon.b;Buf.pos=w.Weapon.pos}
 
 let _ = 1

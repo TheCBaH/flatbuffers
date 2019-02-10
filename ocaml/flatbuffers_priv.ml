@@ -1,6 +1,4 @@
 
-let _ = print_endline "flatbuffers"
-
 let _SIZEOF_SHORT = 2
 
 let _SIZEOF_INT = 4
@@ -15,10 +13,21 @@ module ByteBuffer = struct
       mutable position: int;
       bytes: (char, Bigarray.int8_unsigned_elt, Bigarray.c_layout) Bigarray.Array1.t
     }
+
+  type union
+
+  type 'a offset = {
+      b: t;
+      pos: int;
+    }
+
+  let offset t pos = {b=t;pos}
+
   let allocate byte_size = {
       bytes = Bigarray.Array1.create Bigarray.char Bigarray.c_layout byte_size;
       position = 0
     }
+
   let of_strings sl =
     let size = List.fold_left (fun l s -> l + (String.length s)) 0 sl in
     let t = allocate size in
@@ -199,9 +208,9 @@ module ByteBuffer = struct
       readInt16 t (vtable + vtable_offset)
     else 0
 
-  let __union t offset =
-    let bb_pos = offset + (read_ocaml_int32 t offset) in
-    (t,bb_pos)
+  let __union t offset : union offset =
+    let pos = offset + (read_ocaml_int32 t offset) in
+    {b=t;pos}
 
   let __string t offset =
     let offset = offset + (read_ocaml_int32 t offset) in
@@ -671,11 +680,7 @@ module Builder = struct
 
 end
 
-
 let _ = 1
 
-let _ = 1
 
-let _ = 1 lor 2
-
-let _ = 1
+let _ = print_endline "flatbuffers"
