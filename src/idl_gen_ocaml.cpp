@@ -272,7 +272,9 @@ class OcamlGenerator : public BaseGenerator {
 
   void BeginStruct(const StructDef &struct_def, std::string *code_ptr) {
     BeginModule(NormalizedName(struct_def), code_ptr);
-    *code_ptr += Indent + "let init b pos = ByteBuffer.offset b pos\n\n";
+    *code_ptr += Indent + "type _t\n\n";
+    *code_ptr += Indent + "type t = _t ByteBuffer.offset\n\n";
+    *code_ptr += Indent + "let init b pos : t = ByteBuffer.offset b pos\n\n";
   }
 
   void BeginEnum(const std::string class_name, std::string *code_ptr) {
@@ -398,7 +400,7 @@ class OcamlGenerator : public BaseGenerator {
     std::string &code = *code_ptr;
     code += Indent + "let ";
     code += NormalizedName(field);
-    code += " t =\n";
+    code += " (t:t) =\n";
   }
 
   std::string GetRelativeOffset(const std::string &offset) {
@@ -530,11 +532,11 @@ class OcamlGenerator : public BaseGenerator {
                                  std::string *code_ptr) {
     std::string &code = *code_ptr;
     std::string offset = Indent + Indent + "let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos " + NumToString(field.value.offset) + " in\n";
-    code += Indent + "let " + NormalizedName(field) + "Length t =\n";
+    code += Indent + "let " + NormalizedName(field) + "Length (t:t) =\n";
     code += offset;
     code += Indent + Indent + "if(offset!=0) then ByteBuffer.__vector_len t.ByteBuffer.b (t.ByteBuffer.pos + offset)\n";
     code += Indent + Indent + "else 0\n\n";
-    code += Indent + "let " + NormalizedName(field) + " t index =\n";
+    code += Indent + "let " + NormalizedName(field) + " (t:t) index =\n";
     code += offset;
     code += Indent + Indent + "if(offset!=0) then\n";
     code += Indent + Indent + Indent + "let index = index";
