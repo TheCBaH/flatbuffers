@@ -23,6 +23,8 @@ module ByteBuffer = struct
 
   let offset t pos = {b=t;pos}
 
+  let offset_of_union (o:union offset)  = offset o.b o.pos
+
   let allocate byte_size = {
       bytes = Bigarray.Array1.create Bigarray.char Bigarray.c_layout byte_size;
       position = 0
@@ -208,9 +210,13 @@ module ByteBuffer = struct
       readInt16 t (vtable + vtable_offset)
     else 0
 
-  let __union t offset : union offset =
-    let pos = offset + (read_ocaml_int32 t offset) in
-    {b=t;pos}
+  let __union o field_offset : union offset option =
+    let offset = __offset o.b o.pos field_offset in
+    if offset != 0 then
+      let offset = o.pos + offset in
+      let pos = offset + (read_ocaml_int32 o.b offset) in
+      Some {b=o.b;pos}
+    else None
 
   let __string t offset =
     let offset = offset + (read_ocaml_int32 t offset) in

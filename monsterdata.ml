@@ -52,11 +52,17 @@ let w = Monster.weapons monster 1 |> _opt
 let _ = Weapon.damage w
 let _ = Weapon.name w
 
-let w = Monster.weapons monster 2 |> _opt
+let _ = Monster.weapons monster 2 |> _opt
 
 let _ = Monster.equipped_type monster
 
+let w = Monster.equipped monster |> _opt |> Weapon.of_union
+
+let _ = Weapon.name w
+
+
 let _ = Weapon.name monster
+
 
 
 let _ = 1

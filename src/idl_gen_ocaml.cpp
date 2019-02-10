@@ -257,6 +257,7 @@ class OcamlGenerator : public BaseGenerator {
     keywords_.insert(std::begin(keywords), std::end(keywords));
   }
 
+  #if 0
   // Most field accessors need to retrieve and test the field offset first,
   // this is the prefix code for that.
   std::string OffsetPrefix(const FieldDef &field) {
@@ -265,6 +266,7 @@ class OcamlGenerator : public BaseGenerator {
           "(self._tab.Offset(" + NumToString(field.value.offset) + "))\n" +
           Indent + Indent + "if o != 0:\n";
   }
+  #endif
 
   void BeginModule(const std::string class_name, std::string *code_ptr) {
     *code_ptr += "module " + class_name + " = struct\n";
@@ -275,6 +277,7 @@ class OcamlGenerator : public BaseGenerator {
     *code_ptr += Indent + "type _t\n\n";
     *code_ptr += Indent + "type t = _t ByteBuffer.offset\n\n";
     *code_ptr += Indent + "let init b pos : t = ByteBuffer.offset b pos\n\n";
+    *code_ptr += Indent + "let of_union o : t = ByteBuffer.offset_of_union o\n\n";
   }
 
   void BeginEnum(const std::string class_name, std::string *code_ptr) {
@@ -328,6 +331,7 @@ class OcamlGenerator : public BaseGenerator {
 
   }
 
+  #if 0
   // Get the length of a vector.
   void GetVectorLen(const StructDef &struct_def, const FieldDef &field,
                     std::string *code_ptr) {
@@ -339,6 +343,7 @@ class OcamlGenerator : public BaseGenerator {
     code += Indent + Indent + Indent + "return self._tab.VectorLen(o)\n";
     code += Indent + Indent + "return 0\n\n";
   }
+  #endif
 
   std::string GetScalarAccessorType(const StructDef &struct_def, const Type &type) {
     if(0 && &struct_def) {
@@ -396,8 +401,9 @@ class OcamlGenerator : public BaseGenerator {
     return code;
   }
 
-  void GenOcamlReceiver(const FieldDef &field, std::string *code_ptr) {
+  void GenReceiver(const StructDef &struct_def, const FieldDef &field, std::string *code_ptr) {
     std::string &code = *code_ptr;
+    code += Indent + "(* " + NormalizedName(struct_def) + " *)\n";
     code += Indent + "let ";
     code += NormalizedName(field);
     code += " (t:t) =\n";
@@ -411,7 +417,7 @@ class OcamlGenerator : public BaseGenerator {
   void GetScalarFieldOfStruct(const StructDef &struct_def,
                               const FieldDef &field,
                               std::string *code_ptr) {
-    GenOcamlReceiver(field, code_ptr);
+    GenReceiver(struct_def, field, code_ptr);
     std::string &code = *code_ptr;
     code += Indent + Indent + GetRelativeOffset(NumToString(field.value.offset)) + "\n";
     code += Indent + Indent + GetScalarReceiver(struct_def, field.value.type) + "\n";
@@ -422,7 +428,7 @@ class OcamlGenerator : public BaseGenerator {
                              const FieldDef &field,
                              std::string *code_ptr
                              ) {
-    GenOcamlReceiver(field, code_ptr);
+    GenReceiver(struct_def, field, code_ptr);
     std::string &code = *code_ptr;
     code += Indent + Indent + "let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos " + NumToString(field.value.offset) + " in\n";
     std::string default_value;
@@ -454,7 +460,7 @@ class OcamlGenerator : public BaseGenerator {
                               std::string *code_ptr,
                               StringSet *dependencies
                               ) {
-    GenOcamlReceiver(field, code_ptr);
+    GenReceiver(struct_def, field, code_ptr);
     std::string &code = *code_ptr;
     code += Indent + Indent + GetRelativeOffset(NumToString(field.value.offset)) + "\n";
     code += Indent + Indent + GetStructReceiver(struct_def, field, dependencies) + "\n";
@@ -467,7 +473,7 @@ class OcamlGenerator : public BaseGenerator {
                              std::string *code_ptr,
                              StringSet *dependencies
                              ) {
-    GenOcamlReceiver(field, code_ptr);
+    GenReceiver(struct_def, field, code_ptr);
     std::string &code = *code_ptr;
     code += Indent + Indent + "let offset = ";
     if (field.value.type.struct_def->fixed) {
@@ -484,8 +490,7 @@ class OcamlGenerator : public BaseGenerator {
   // Get the value of a string.
   void GetStringField(const StructDef &struct_def, const FieldDef &field,
                       std::string *code_ptr) {
-    if(0 && &struct_def) {}
-    GenOcamlReceiver(field, code_ptr);
+    GenReceiver(struct_def, field, code_ptr);
     std::string &code = *code_ptr;
     code += Indent + Indent + "let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos " + NumToString(field.value.offset) + " in\n";
     code += Indent + Indent + "if(offset!=0) then Some (ByteBuffer.__string t.ByteBuffer.b (t.ByteBuffer.pos + offset))\n";
@@ -496,35 +501,8 @@ class OcamlGenerator : public BaseGenerator {
   void GetUnionField(const StructDef &struct_def, const FieldDef &field,
                      std::string *code_ptr) {
     std::string &code = *code_ptr;
-    #if 0
-    if(0 && &struct_def) {}
-    GenOcamlReceiver(field, code_ptr);
-    code += Indent + Indent + "let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos " + NumToString(field.value.offset) + " in\n";
-    code += Indent + Indent + "if(offset!=0) then ";
-    code += MakeCamel(TypeName(field)) + ".of_int (ByteBuffer.readUint8 t.ByteBuffer.b offset)\n";
-    std::string default_value;
-    default_value = field.value.constant;
-    code += Indent + Indent + "else " + default_value + "\n";
-    #endif
-
-    #if 1
-    GenReceiver(struct_def, code_ptr);
-    code += MakeCamel(NormalizedName(field)) + "(self):";
-    code += OffsetPrefix(field);
-
-    // TODO(rw): this works and is not the good way to it:
-    bool is_native_table = TypeName(field) == "*flatbuffers.Table";
-    if (is_native_table) {
-      code += Indent + Indent + Indent + "from flatbuffers.table import Table\n";
-    } else {
-      code += Indent + Indent + Indent;
-      code += "from ." + TypeName(field) + " import " + TypeName(field) + "\n";
-    }
-    code += Indent + Indent + Indent + "obj = Table(bytearray(), 0)\n";
-    code += Indent + Indent + Indent + GenGetter(field.value.type);
-    code += "obj, o)\n" + Indent + Indent + Indent + "return obj\n";
-    code += Indent + Indent + "return None\n\n";
-    #endif
+    GenReceiver(struct_def, field, code_ptr);
+    code += Indent + Indent + "ByteBuffer.__union t " + NumToString(field.value.offset) + "\n";
   }
 
 
@@ -706,12 +684,14 @@ class OcamlGenerator : public BaseGenerator {
     code += Indent + Indent + "Builder.endObject builder\n\n";
   }
 
+  #if 0
   // Generate the receiver for function signatures.
   void GenReceiver(const StructDef &struct_def, std::string *code_ptr) {
     std::string &code = *code_ptr;
     code += Indent + "# " + NormalizedName(struct_def) + "\n";
-    code += Indent + "def ";
+    code += Indent + "let ";
   }
+  #endif
 
   // Generate a struct field, conditioned on its child type(s).
   void GenStructAccessor(const StructDef &struct_def,
@@ -743,13 +723,9 @@ class OcamlGenerator : public BaseGenerator {
           }
           break;
         }
-          #if 0
         case BASE_TYPE_UNION: GetUnionField(struct_def, field, code_ptr); break;
-          #endif
         default:
-          #if 0
           FLATBUFFERS_ASSERT(0);
-          #endif
           break;
       }
     }
