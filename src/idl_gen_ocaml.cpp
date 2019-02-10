@@ -272,12 +272,7 @@ class OcamlGenerator : public BaseGenerator {
 
   void BeginStruct(const StructDef &struct_def, std::string *code_ptr) {
     BeginModule(NormalizedName(struct_def), code_ptr);
-    *code_ptr += Indent + "type t = {\n";
-    *code_ptr += Indent + Indent + "b: ByteBuffer.t;\n";
-    *code_ptr += Indent + Indent + "pos: int;\n";
-    *code_ptr += Indent + "}\n";
-    *code_ptr += "\n";
-    *code_ptr += Indent + "let init b pos = {b;pos}\n\n";
+    *code_ptr += Indent + "let init b pos = ByteBuffer.offset b pos\n\n";
   }
 
   void BeginEnum(const std::string class_name, std::string *code_ptr) {
@@ -353,7 +348,7 @@ class OcamlGenerator : public BaseGenerator {
   {
     std::string code;
     code += "ByteBuffer.";
-    code += "read" + GetScalarAccessorType(struct_def, type) + " t.b offset";
+    code += "read" + GetScalarAccessorType(struct_def, type) + " t.ByteBuffer.b offset";
     return code;
   }
 
@@ -395,7 +390,7 @@ class OcamlGenerator : public BaseGenerator {
         dependencies->insert(module);
         code += module + ".init";
     }
-    code += " t.b offset";
+    code += " t.ByteBuffer.b offset";
     return code;
   }
 
@@ -407,7 +402,7 @@ class OcamlGenerator : public BaseGenerator {
   }
 
   std::string GetRelativeOffset(const std::string &offset) {
-    return "let offset = t.pos + " + offset + " in";
+    return "let offset = t.ByteBuffer.pos + " + offset + " in";
   }
 
   // Get the value of a struct's scalar.
@@ -427,7 +422,7 @@ class OcamlGenerator : public BaseGenerator {
                              ) {
     GenOcamlReceiver(field, code_ptr);
     std::string &code = *code_ptr;
-    code += Indent + Indent + "let offset = ByteBuffer.__offset t.b t.pos " + NumToString(field.value.offset) + " in\n";
+    code += Indent + Indent + "let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos " + NumToString(field.value.offset) + " in\n";
     std::string default_value;
     auto is_bool = IsBool(field.value.type.base_type);
     if (is_bool) {
@@ -474,9 +469,9 @@ class OcamlGenerator : public BaseGenerator {
     std::string &code = *code_ptr;
     code += Indent + Indent + "let offset = ";
     if (field.value.type.struct_def->fixed) {
-      code += "ByteBuffer.__offset t.b t.pos " + NumToString(field.value.offset);
+      code += "ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos " + NumToString(field.value.offset);
     } else {
-      code += "t.pos + (ByteBuffer.__indirect t.b " + NumToString(field.value.offset) + ")";
+      code += "t.ByteBuffer.pos + (ByteBuffer.__indirect t.ByteBuffer.b " + NumToString(field.value.offset) + ")";
     }
     code += " in\n";
     code += Indent + Indent + "if(offset!=0) then Some (";
@@ -490,8 +485,8 @@ class OcamlGenerator : public BaseGenerator {
     if(0 && &struct_def) {}
     GenOcamlReceiver(field, code_ptr);
     std::string &code = *code_ptr;
-    code += Indent + Indent + "let offset = ByteBuffer.__offset t.b t.pos " + NumToString(field.value.offset) + " in\n";
-    code += Indent + Indent + "if(offset!=0) then Some (ByteBuffer.__string t.b (t.pos + offset))\n";
+    code += Indent + Indent + "let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos " + NumToString(field.value.offset) + " in\n";
+    code += Indent + Indent + "if(offset!=0) then Some (ByteBuffer.__string t.ByteBuffer.b (t.ByteBuffer.pos + offset))\n";
     code += Indent + Indent + "else None\n";
   }
 
@@ -502,9 +497,9 @@ class OcamlGenerator : public BaseGenerator {
     #if 0
     if(0 && &struct_def) {}
     GenOcamlReceiver(field, code_ptr);
-    code += Indent + Indent + "let offset = ByteBuffer.__offset t.b t.pos " + NumToString(field.value.offset) + " in\n";
+    code += Indent + Indent + "let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos " + NumToString(field.value.offset) + " in\n";
     code += Indent + Indent + "if(offset!=0) then ";
-    code += MakeCamel(TypeName(field)) + ".of_int (ByteBuffer.readUint8 t.b offset)\n";
+    code += MakeCamel(TypeName(field)) + ".of_int (ByteBuffer.readUint8 t.ByteBuffer.b offset)\n";
     std::string default_value;
     default_value = field.value.constant;
     code += Indent + Indent + "else " + default_value + "\n";
@@ -534,10 +529,10 @@ class OcamlGenerator : public BaseGenerator {
  void GenMemberOfVectorCommon(const FieldDef &field,
                                  std::string *code_ptr) {
     std::string &code = *code_ptr;
-    std::string offset = Indent + Indent + "let offset = ByteBuffer.__offset t.b t.pos " + NumToString(field.value.offset) + " in\n";
+    std::string offset = Indent + Indent + "let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos " + NumToString(field.value.offset) + " in\n";
     code += Indent + "let " + NormalizedName(field) + "Length t =\n";
     code += offset;
-    code += Indent + Indent + "if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)\n";
+    code += Indent + Indent + "if(offset!=0) then ByteBuffer.__vector_len t.ByteBuffer.b (t.ByteBuffer.pos + offset)\n";
     code += Indent + Indent + "else 0\n\n";
     code += Indent + "let " + NormalizedName(field) + " t index =\n";
     code += offset;
@@ -549,7 +544,7 @@ class OcamlGenerator : public BaseGenerator {
       code += " * " + NumToString(inline_size);
     }
     code += " in \n";
-    code += Indent + Indent + Indent + "let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in\n";
+    code += Indent + Indent + Indent + "let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in\n";
 }
 
 
@@ -561,7 +556,7 @@ class OcamlGenerator : public BaseGenerator {
                                  ) {
     std::string &code = *code_ptr;
     GenMemberOfVectorCommon(field, code_ptr);
-    code += Indent + Indent + Indent + "let offset = ByteBuffer.__indirect t.b offset in\n";
+    code += Indent + Indent + Indent + "let offset = ByteBuffer.__indirect t.ByteBuffer.b offset in\n";
     code += Indent + Indent + Indent + "Some (" + GetStructReceiver(struct_def, field, dependencies) + ")\n";
     code += Indent + Indent + "else None\n";
    }
@@ -579,7 +574,7 @@ class OcamlGenerator : public BaseGenerator {
       code += Indent + Indent + Indent + GetScalarReceiver(struct_def, vectortype) + "\n";
       code += Indent + Indent + "else " + GetScalarZero(struct_def, vectortype) + "\n";
     } else if (vectortype.base_type == BASE_TYPE_STRING) {
-      code += Indent + Indent + Indent + "Some (ByteBuffer.__string t.b offset)\n";
+      code += Indent + Indent + Indent + "Some (ByteBuffer.__string t.ByteBuffer.b offset)\n";
       code += Indent + Indent + "else None\n";
     } else {
         FLATBUFFERS_ASSERT(0);

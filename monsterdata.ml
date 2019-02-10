@@ -1,4 +1,6 @@
 
+#use "monster_generated.ml";;
+
 let file = "monsterdata.bin"
 
 let load_file f =
@@ -54,9 +56,7 @@ let w = Monster.weapons monster 2 |> _opt
 
 let _ = Monster.equipped_type monster
 
-(*
 let _ = Weapon.name monster
- *)
 
 
 let _ = 1
