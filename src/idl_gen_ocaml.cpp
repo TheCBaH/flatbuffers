@@ -195,7 +195,7 @@ class OcamlGenerator : public BaseGenerator {
                   const std::string &file_name)
       : BaseGenerator(parser, path, file_name, "" /* not used */,
                       "" /* not used */),
-        float_const_gen_("float('nan')", "float('inf')", "float('-inf')") {
+        float_const_gen_("Float.nan", "Float.inf", "Float.neg_inf") {
     static const char * const keywords[] = {
       "and",
       "as",
@@ -261,9 +261,89 @@ class OcamlGenerator : public BaseGenerator {
     *code_ptr += "module " + class_name + " = struct\n";
   }
 
+  const char *GetScalarType(const StructDef &struct_def, const Type &type)
+  {
+    if(0 && &struct_def) {
+    }
+    switch(type.base_type) {
+    case BASE_TYPE_UINT: return "Int64.t";
+    case BASE_TYPE_ULONG: return "Int64.t";
+    case BASE_TYPE_LONG: return "Int64.t";
+    case BASE_TYPE_INT: return "Int32.t";
+    case BASE_TYPE_DOUBLE: return "float";
+    case BASE_TYPE_FLOAT: return "float";
+    case BASE_TYPE_BOOL: return "bool";
+    default: return "int";
+    }
+  }
+
+  std::string GetStructType(const StructDef &struct_def, const FieldDef &field) {
+    if(struct_def.name.compare(TypeName(field))==0) {
+      return "t";
+    } else {
+      return MakeCamel(TypeName(field)) + ".t";
+    }
+  }
+
+  void GenerateStructType(const StructDef &struct_def, std::string *code_ptr)
+  {
+    *code_ptr += Indent + "type t";
+    if(struct_def.fields.vec.empty()) {
+      *code_ptr += "\n\n";
+      return;
+    }
+    *code_ptr += " = {\n";
+    for (auto it = struct_def.fields.vec.begin();
+	 it != struct_def.fields.vec.end(); ++it) {
+      auto &field = **it;
+      if (field.deprecated) continue;
+      const auto &name = NormalizedName(field);
+      *code_ptr += Indent + Indent + name + " : ";
+      if (IsScalar(field.value.type.base_type)) {
+	*code_ptr += GetScalarType(struct_def, field.value.type);
+      }
+      else {
+	switch (field.value.type.base_type) {
+	case BASE_TYPE_STRUCT:
+	  *code_ptr += GetStructType(struct_def, field);
+	  if (!struct_def.fixed) {
+	    *code_ptr += " option";
+	  }
+	  break;
+	case BASE_TYPE_STRING:
+	  *code_ptr += "string option";
+	  break;
+	case BASE_TYPE_VECTOR: {
+	  auto vectortype = field.value.type.VectorType();
+	  if (vectortype.base_type == BASE_TYPE_STRUCT) {
+	    *code_ptr += GetScalarType(struct_def, field.value.type);
+	  } else if (IsScalar(vectortype.base_type)) {
+	    *code_ptr += GetScalarType(struct_def, vectortype);
+	  } else {
+	    *code_ptr += GetStructType(struct_def, field);
+	  }
+	  break;
+	}
+	case BASE_TYPE_UNION:
+	  *code_ptr += "ByteBuffer.union";
+	  break;
+	default:
+	  FLATBUFFERS_ASSERT(0);
+	  break;
+	}
+      }
+      *code_ptr += ";\n";
+    }
+    *code_ptr += Indent + "}\n";
+  }
+
   void BeginStruct(const StructDef &struct_def, std::string *code_ptr) {
     BeginModule(NormalizedName(struct_def), code_ptr);
-    *code_ptr += Indent + "type t\n\n";
+    if(0) {
+      *code_ptr += Indent + "type t\n\n";
+    } else {
+      GenerateStructType(struct_def, code_ptr);
+    }
     *code_ptr += Indent + "type offset = t ByteBuffer.offset\n\n";
     *code_ptr += Indent + "let init b pos : offset = ByteBuffer.offset b pos\n\n";
     *code_ptr += Indent + "let of_union o : offset = ByteBuffer.offset_of_union o\n\n";
@@ -344,11 +424,12 @@ class OcamlGenerator : public BaseGenerator {
     case BASE_TYPE_LONG: return "Int64.zero";
     case BASE_TYPE_INT: return "Int32.zero";
     case BASE_TYPE_DOUBLE:
-    case BASE_TYPE_FLOAT: return "0.9";
+    case BASE_TYPE_FLOAT: return "0.0";
     case BASE_TYPE_BOOL: return "false";
     default: return "0";
     }
   }
+
   std::string GetScalarConstant(const StructDef &struct_def, const Type &type, const std::string &value) {
     if(value.compare("0")==0) {
       return GetScalarZero(struct_def, type);
@@ -780,18 +861,6 @@ class OcamlGenerator : public BaseGenerator {
     EndEnum(&code);
 
     ns.addEnum(enum_def.defined_namespace, name, code);
-  }
-
-  // Returns the function name that is able to read a value of the given type.
-  std::string GenGetter(const Type &type) {
-    switch (type.base_type) {
-      case BASE_TYPE_STRING: return "self._tab.String(";
-      case BASE_TYPE_UNION: return "self._tab.Union(";
-      case BASE_TYPE_VECTOR: return GenGetter(type.VectorType());
-      default:
-        return "self._tab.Get(flatbuffers.number_types." +
-              MakeCamel(GenTypeGet(type)) + "Flags, ";
-    }
   }
 
   // Returns the method name for use with add/put calls.
