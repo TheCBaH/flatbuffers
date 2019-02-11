@@ -257,27 +257,16 @@ class OcamlGenerator : public BaseGenerator {
     keywords_.insert(std::begin(keywords), std::end(keywords));
   }
 
-  #if 0
-  // Most field accessors need to retrieve and test the field offset first,
-  // this is the prefix code for that.
-  std::string OffsetPrefix(const FieldDef &field) {
-    return "\n" + Indent + Indent +
-          "o = flatbuffers.number_types.UOffsetTFlags.py_type" +
-          "(self._tab.Offset(" + NumToString(field.value.offset) + "))\n" +
-          Indent + Indent + "if o != 0:\n";
-  }
-  #endif
-
   void BeginModule(const std::string class_name, std::string *code_ptr) {
     *code_ptr += "module " + class_name + " = struct\n";
   }
 
   void BeginStruct(const StructDef &struct_def, std::string *code_ptr) {
     BeginModule(NormalizedName(struct_def), code_ptr);
-    *code_ptr += Indent + "type _t\n\n";
-    *code_ptr += Indent + "type t = _t ByteBuffer.offset\n\n";
-    *code_ptr += Indent + "let init b pos : t = ByteBuffer.offset b pos\n\n";
-    *code_ptr += Indent + "let of_union o : t = ByteBuffer.offset_of_union o\n\n";
+    *code_ptr += Indent + "type t\n\n";
+    *code_ptr += Indent + "type offset = t ByteBuffer.offset\n\n";
+    *code_ptr += Indent + "let init b pos : offset = ByteBuffer.offset b pos\n\n";
+    *code_ptr += Indent + "let of_union o : offset = ByteBuffer.offset_of_union o\n\n";
   }
 
   void BeginEnum(const std::string class_name, std::string *code_ptr) {
@@ -330,20 +319,6 @@ class OcamlGenerator : public BaseGenerator {
     code += Indent + Indent + "init b offset\n\n";
 
   }
-
-  #if 0
-  // Get the length of a vector.
-  void GetVectorLen(const StructDef &struct_def, const FieldDef &field,
-                    std::string *code_ptr) {
-    std::string &code = *code_ptr;
-
-    GenReceiver(struct_def, code_ptr);
-    code += MakeCamel(NormalizedName(field)) + "Length(self";
-    code += "):" + OffsetPrefix(field);
-    code += Indent + Indent + Indent + "return self._tab.VectorLen(o)\n";
-    code += Indent + Indent + "return 0\n\n";
-  }
-  #endif
 
   std::string GetScalarAccessorType(const StructDef &struct_def, const Type &type) {
     if(0 && &struct_def) {
@@ -406,7 +381,7 @@ class OcamlGenerator : public BaseGenerator {
     code += Indent + "(* " + NormalizedName(struct_def) + " *)\n";
     code += Indent + "let ";
     code += NormalizedName(field);
-    code += " (t:t) =\n";
+    code += " (t:offset) =\n";
   }
 
   std::string GetRelativeOffset(const std::string &offset) {
@@ -510,11 +485,11 @@ class OcamlGenerator : public BaseGenerator {
                                  std::string *code_ptr) {
     std::string &code = *code_ptr;
     std::string offset = Indent + Indent + "let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos " + NumToString(field.value.offset) + " in\n";
-    code += Indent + "let " + NormalizedName(field) + "Length (t:t) =\n";
+    code += Indent + "let " + NormalizedName(field) + "Length (t:offset) =\n";
     code += offset;
     code += Indent + Indent + "if(offset!=0) then ByteBuffer.__vector_len t.ByteBuffer.b (t.ByteBuffer.pos + offset)\n";
     code += Indent + Indent + "else 0\n\n";
-    code += Indent + "let " + NormalizedName(field) + " (t:t) index =\n";
+    code += Indent + "let " + NormalizedName(field) + " (t:offset) index =\n";
     code += offset;
     code += Indent + Indent + "if(offset!=0) then\n";
     code += Indent + Indent + Indent + "let index = index";
@@ -684,15 +659,6 @@ class OcamlGenerator : public BaseGenerator {
     code += Indent + Indent + "Builder.endObject builder\n\n";
   }
 
-  #if 0
-  // Generate the receiver for function signatures.
-  void GenReceiver(const StructDef &struct_def, std::string *code_ptr) {
-    std::string &code = *code_ptr;
-    code += Indent + "# " + NormalizedName(struct_def) + "\n";
-    code += Indent + "let ";
-  }
-  #endif
-
   // Generate a struct field, conditioned on its child type(s).
   void GenStructAccessor(const StructDef &struct_def,
                          const FieldDef &field, std::string *code_ptr, StringSet *dependencies) {
@@ -729,11 +695,6 @@ class OcamlGenerator : public BaseGenerator {
           break;
       }
     }
-    #if 0
-    if (field.value.type.base_type == BASE_TYPE_VECTOR) {
-      GetVectorLen(struct_def, field, code_ptr);
-    }
-    #endif
     *code_ptr += "\n";
   }
 
