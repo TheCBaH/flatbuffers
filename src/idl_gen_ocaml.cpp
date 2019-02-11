@@ -297,7 +297,9 @@ class OcamlGenerator : public BaseGenerator {
 	 it != struct_def.fields.vec.end(); ++it) {
       auto &field = **it;
       if (field.deprecated) continue;
-      if (field.value.type.enum_def && field.value.type.base_type != BASE_TYPE_UNION) {
+      if (field.value.type.base_type != BASE_TYPE_UNION
+	  && (field.value.type.enum_def && field.value.type.enum_def->is_union)
+	  ) {
 	continue;
       }
 
@@ -305,7 +307,11 @@ class OcamlGenerator : public BaseGenerator {
       *code_ptr += Indent + Indent + name + " : ";
 
       if (IsScalar(field.value.type.base_type)) {
-	*code_ptr += GetScalarType(struct_def, field.value.type);
+	if(field.value.type.enum_def) {
+	  *code_ptr += NormalizedName(*field.value.type.enum_def) + ".t";
+	} else {
+	  *code_ptr += GetScalarType(struct_def, field.value.type);
+	}
       }
       else {
 	switch (field.value.type.base_type) {
@@ -950,12 +956,30 @@ class OcamlGenerator : public BaseGenerator {
     }
   }
 
+  std::string getUnionName(const EnumDef &enum_def)
+  {
+    return NormalizedName(enum_def) + "Union";
+  }
+
+  void generateUnion(const EnumDef &enum_def) {
+    std::string code;
+    StringSet dependencies;
+    const auto &name = getUnionName(enum_def);
+    BeginModule(name, &code);
+    code += Indent + Indent + "type t\n";
+    EndModule(&code);
+    ns.addStruct(enum_def.defined_namespace, name, dependencies, code);
+  }
+
 
   bool generateEnums() {
     for (auto it = parser_.enums_.vec.begin(); it != parser_.enums_.vec.end();
          ++it) {
       auto &enum_def = **it;
       GenEnum(enum_def);
+      if(enum_def.is_union ) {
+	generateUnion(enum_def);
+      }
     }
     return true;
   }
