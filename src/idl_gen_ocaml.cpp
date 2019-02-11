@@ -297,8 +297,13 @@ class OcamlGenerator : public BaseGenerator {
 	 it != struct_def.fields.vec.end(); ++it) {
       auto &field = **it;
       if (field.deprecated) continue;
+      if (field.value.type.enum_def && field.value.type.base_type != BASE_TYPE_UNION) {
+	continue;
+      }
+
       const auto &name = NormalizedName(field);
       *code_ptr += Indent + Indent + name + " : ";
+
       if (IsScalar(field.value.type.base_type)) {
 	*code_ptr += GetScalarType(struct_def, field.value.type);
       }
