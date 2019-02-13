@@ -47,16 +47,6 @@ static std::string GeneratedFileName(const std::string &path,
 typedef std::unordered_set<std::string> StringSet;
 
 
-class Enum {
-public:
-  const flatbuffers::Namespace *ns;
-  std::string name;
-  std::string code;
-  Enum() {}
-
-  Enum(const flatbuffers::Namespace  *_ns, const std::string &_name, const std::string &_code) : ns(_ns), name(_name), code(_code) {}
-};
-
 class Struct {
 public:
   const flatbuffers::Namespace *ns;
@@ -70,7 +60,6 @@ public:
 class Namespace {
 private:
   std::string name;
-  std::unordered_map<std::string, Enum> enums;
   std::unordered_map<std::string, Struct> structs;
   std::map<std::string, Namespace> namespaces;
 
@@ -92,12 +81,6 @@ private:
         }
     }
     return *current;
-  }
-
-  void printEnums(std::string *code_ptr) {
-    for(auto it = enums.begin(); it != enums.end(); it++) {
-      *code_ptr += it->second.code;
-    }
   }
 
   static bool setContains(const StringSet &a,  const StringSet &b) {
@@ -154,7 +137,6 @@ private:
       *code_ptr += "module " + this->name + " = struct\n\n";
     }
 
-    printEnums(code_ptr);
     printStucts(code_ptr, known_structures);
     for(auto it = namespaces.begin(); it != namespaces.end(); it++) {
       it->second.print_rec(code_ptr, known_structures);
@@ -166,13 +148,6 @@ private:
 
 public:
   Namespace() {}
-  void addEnum(const flatbuffers::Namespace *ns, const std::string &_name,
-               const std::string &code) {
-    Namespace &target = resolve(ns);
-    Enum _enum(ns, _name, code);
-    target.enums[_name]=_enum;
-    return;
-  }
   void addStruct(const flatbuffers::Namespace *ns, const std::string &_name,
                  const StringSet &dependencies, const std::string &code) {
     Namespace &target = resolve(ns);
@@ -336,7 +311,7 @@ class OcamlGenerator : public BaseGenerator {
 	  break;
 	}
 	case BASE_TYPE_UNION:
-	  *code_ptr += "ByteBuffer.union";
+	  *code_ptr += getUnionName(field.value.type) + ".t";
 	  break;
 	default:
 	  FLATBUFFERS_ASSERT(0);
@@ -374,6 +349,30 @@ class OcamlGenerator : public BaseGenerator {
 
   std::string NormalizedName(const EnumVal &ev) const {
     return EscapeKeyword(ev.name);
+  }
+
+  std::string GenTypeBasic(const Type &type) const {
+    static const char *ctypename[] = {
+    // clang-format off
+      #define FLATBUFFERS_TD(ENUM, IDLTYPE, \
+        CTYPE, JTYPE, GTYPE, NTYPE, PTYPE, RTYPE) \
+        #PTYPE,
+        FLATBUFFERS_GEN_TYPES(FLATBUFFERS_TD)
+      #undef FLATBUFFERS_TD
+      // clang-format on
+    };
+    return ctypename[type.base_type];
+  }
+
+
+  std::string NormalizedName(const Type &type) const {
+    if(type.struct_def) {
+      return NormalizedName(*(type.struct_def));
+    }
+    if(type.enum_def) {
+      return NormalizedName(*(type.enum_def));
+    }
+    return GenTypeBasic(type);
   }
 
   // A single enum member.
@@ -844,6 +843,7 @@ class OcamlGenerator : public BaseGenerator {
 
   // Generate enum declarations.
   void GenEnum(const EnumDef &enum_def) {
+    StringSet dependencies;
     if (enum_def.generated) return;
     std::string type, of_int, to_int;
     const std::string &name = NormalizedName(enum_def);
@@ -869,9 +869,13 @@ class OcamlGenerator : public BaseGenerator {
     code += to_int;
     code += "\n";
 
+    if(enum_def.is_union ) {
+      generateUnion(enum_def, &code);
+    }
+
     EndEnum(&code);
 
-    ns.addEnum(enum_def.defined_namespace, name, code);
+    ns.addStruct(enum_def.defined_namespace, name, dependencies, code);
   }
 
   // Returns the method name for use with add/put calls.
@@ -881,20 +885,7 @@ class OcamlGenerator : public BaseGenerator {
               : (IsStruct(field.value.type) ? "Struct" : "UOffsetTRelative");
   }
 
-  std::string GenTypeBasic(const Type &type) {
-    static const char *ctypename[] = {
-    // clang-format off
-      #define FLATBUFFERS_TD(ENUM, IDLTYPE, \
-        CTYPE, JTYPE, GTYPE, NTYPE, PTYPE, RTYPE) \
-        #PTYPE,
-        FLATBUFFERS_GEN_TYPES(FLATBUFFERS_TD)
-      #undef FLATBUFFERS_TD
-      // clang-format on
-    };
-    return ctypename[type.base_type];
-  }
-
-  std::string GenTypePointer(const Type &type) {
+   std::string GenTypePointer(const Type &type) {
     switch (type.base_type) {
       case BASE_TYPE_STRING: return "string";
       case BASE_TYPE_VECTOR: return GenTypeGet(type.VectorType());
@@ -956,19 +947,18 @@ class OcamlGenerator : public BaseGenerator {
     }
   }
 
-  std::string getUnionName(const EnumDef &enum_def)
+  std::string getUnionName(const Type &type)
   {
-    return NormalizedName(enum_def) + "Union";
+    return NormalizedName(type) + ".Union";
   }
 
-  void generateUnion(const EnumDef &enum_def) {
-    std::string code;
-    StringSet dependencies;
-    const auto &name = getUnionName(enum_def);
-    BeginModule(name, &code);
-    code += Indent + Indent + "type t\n";
-    EndModule(&code);
-    ns.addStruct(enum_def.defined_namespace, name, dependencies, code);
+  void generateUnion(const EnumDef &enum_def, std::string *code) {
+    const auto &name = "Union";
+    if(&enum_def) {
+    }
+    BeginModule(name, code);
+    *code += Indent + Indent + "type t\n";
+    EndModule(code);
   }
 
 
@@ -977,9 +967,6 @@ class OcamlGenerator : public BaseGenerator {
          ++it) {
       auto &enum_def = **it;
       GenEnum(enum_def);
-      if(enum_def.is_union ) {
-	generateUnion(enum_def);
-      }
     }
     return true;
   }
