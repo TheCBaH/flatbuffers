@@ -105,20 +105,29 @@ private:
         }
         if(skip_dependencies || setContains(*known, s.dependencies)) {
           advanced = true;
-          printed.insert(s.name);
-          known->insert(s.name);
-          *code_ptr += s.code;
           if(skip_dependencies) {
             std::cerr << "Module: " << s.name << std::endl;
             std::cerr << "Dependencies: " << std::endl;
             for(auto d = s.dependencies.begin(); d != s.dependencies.end(); d++) {
-              if(printed.count(*d)==0) {
-                std::cerr << *d << " ";
+	      auto n2 = *d;
+              if(printed.count(n2)==0) {
+                std::cerr << n2 << '(';
+		auto s2 = structs[n2];
+		for(auto d2 = s2.dependencies.begin(); d2 != s2.dependencies.end(); d2++) {
+		  auto n3 = *d2;
+		  if(printed.count(n3)==0) {
+		    std::cerr << n3 << ' ';
+		  }
+		}
+                std::cerr << ") ";
               }
             }
-            std::cerr << std::endl;
+            std::cerr << std::endl << std::endl;
             FLATBUFFERS_ASSERT(0);
           }
+          printed.insert(s.name);
+          known->insert(s.name);
+          *code_ptr += s.code;
         } else {
           skipped.insert(s.name);
         }
@@ -260,7 +269,7 @@ class OcamlGenerator : public BaseGenerator {
     }
   }
 
-  void GenerateStructType(const StructDef &struct_def, std::string *code_ptr)
+  void GenerateStructType(const StructDef &struct_def, StringSet *dependencies, std::string *code_ptr)
   {
     *code_ptr += Indent + "type t";
     if(struct_def.fields.vec.empty()) {
@@ -311,6 +320,7 @@ class OcamlGenerator : public BaseGenerator {
 	  break;
 	}
 	case BASE_TYPE_UNION:
+	  dependencies->insert(NormalizedName(field.value.type));
 	  *code_ptr += getUnionName(field.value.type) + ".t";
 	  break;
 	default:
@@ -323,12 +333,12 @@ class OcamlGenerator : public BaseGenerator {
     *code_ptr += Indent + "}\n";
   }
 
-  void BeginStruct(const StructDef &struct_def, std::string *code_ptr) {
+  void BeginStruct(const StructDef &struct_def, StringSet *dependencies, std::string *code_ptr) {
     BeginModule(NormalizedName(struct_def), code_ptr);
     if(0) {
       *code_ptr += Indent + "type t\n\n";
     } else {
-      GenerateStructType(struct_def, code_ptr);
+      GenerateStructType(struct_def, dependencies, code_ptr);
     }
     *code_ptr += Indent + "type offset = t ByteBuffer.offset\n\n";
     *code_ptr += Indent + "let init b pos : offset = ByteBuffer.offset b pos\n\n";
@@ -816,7 +826,7 @@ class OcamlGenerator : public BaseGenerator {
     StringSet dependencies;
 
     GenComment(struct_def.doc_comment, &code);
-    BeginStruct(struct_def, &code);
+    BeginStruct(struct_def, &dependencies, &code);
     if (!struct_def.fixed) {
       // Generate a special accessor for the table that has been declared as
       // the root type.
@@ -870,7 +880,7 @@ class OcamlGenerator : public BaseGenerator {
     code += "\n";
 
     if(enum_def.is_union ) {
-      generateUnion(enum_def, &code);
+      generateUnion(enum_def, &dependencies, &code);
     }
 
     EndEnum(&code);
@@ -952,12 +962,23 @@ class OcamlGenerator : public BaseGenerator {
     return NormalizedName(type) + ".Union";
   }
 
-  void generateUnion(const EnumDef &enum_def, std::string *code) {
-    const auto &name = "Union";
-    if(&enum_def) {
+  void generateUnion(const EnumDef &enum_def, StringSet *dependencies, std::string *code) {
+    BeginModule("Union", code);
+    *code += Indent + Indent + "type t = \n";
+    for (auto it = enum_def.vals.vec.begin(); it != enum_def.vals.vec.end();
+        ++it) {
+      auto &ev = **it;
+      std::string name = NormalizedName(ev);
+      if(ev.value == 0) {
+	*code += Indent + Indent + "  " + name + "\n";
+      } else {
+	std::string type_name = NormalizedName(ev.union_type);
+	dependencies->insert(type_name);
+	*code += Indent + Indent + "| " + name + " of " + type_name + ".t" + "\n";
+      }
+
     }
-    BeginModule(name, code);
-    *code += Indent + Indent + "type t\n";
+
     EndModule(code);
   }
 
