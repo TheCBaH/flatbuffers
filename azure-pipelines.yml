@@ -17,8 +17,10 @@ steps:
 - script: |
    set -eux
    echo docker run hello-world
-   docker run busybox uname -a
+   echo docker run busybox uname -a
    docker run i386/busybox uname -a
+   docker run ocaml/opam2 opam switch
+   echo docker run i386/ocaml/opam2 opam switch
    sudo apt update
    sudo apt install -y qemu qemu-user-static qemu-user binfmt-support
    docker run --rm --privileged multiarch/qemu-user-static:register --reset
@@ -48,6 +50,8 @@ steps:
     echo opam install --verbose --yes ocaml
     eval `opam config env` 
     ocaml --version
+    opam update
+    opam install --yes ocamlfind
   displayName: 'Install OCaml'
 
 - script: |

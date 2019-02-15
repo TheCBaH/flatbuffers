@@ -123,7 +123,7 @@ private:
               }
             }
             std::cerr << std::endl << std::endl;
-            FLATBUFFERS_ASSERT(0);
+	    if(0) FLATBUFFERS_ASSERT(0);
           }
           printed.insert(s.name);
           known->insert(s.name);
