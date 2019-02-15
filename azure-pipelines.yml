@@ -1,0 +1,58 @@
+# https://aka.ms/yaml
+
+trigger:
+- master
+
+variables:
+  opamVersion: 2.0.3
+  ocamlVersion: 4.07.0 
+  verbose: 
+
+# verbose: --verbose
+
+pool:
+  vmImage: 'Ubuntu-16.04'
+
+steps:
+- script: |
+   set -eux
+   echo docker run hello-world
+   docker run busybox uname -a
+   docker run i386/busybox uname -a
+   sudo apt update
+   sudo apt install -y qemu qemu-user-static qemu-user binfmt-support
+   docker run --rm --privileged multiarch/qemu-user-static:register --reset
+   docker run -v /usr/bin/qemu-arm-static:/usr/bin/qemu-arm-static  arm32v7/busybox uname -a || echo Failed
+   docker run ppc64le/busybox uname -a || echo Failed
+  displayName: 'ARM Setup'
+
+- script: |
+    set -eux
+    NCPU="$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)"
+    cmake -G "Unix Makefiles"
+    make -j $NCPU 
+  displayName: 'Build Flatbuffers'
+
+- script:  |
+    set -eux
+    echo "pwd;id;env"
+    mkdir -p ~/bin
+    wget --progress=dot:giga https://github.com/ocaml/opam/releases/download/$(opamVersion)/opam-$(opamVersion)-x86_64-linux -O ~/bin/opam
+    chmod +x ~/bin/opam
+    echo "~/bin/opam --version;pwd"
+    PATH=$HOME/bin:$PATH
+    opam --version
+    NCPU="$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)"
+    opam init -j $NCPU $(verbose) --yes --compiler=$(ocamlVersion) --no-setup --disable-sandboxing
+    echo opam switch set ocaml_$(ocamlVersion) --alias-of $(ocamlVersion)
+    echo opam install --verbose --yes ocaml
+    eval `opam config env` 
+    ocaml --version
+  displayName: 'Install OCaml'
+
+- script: |
+    set -eux
+    PATH=$HOME/bin:$PATH
+    eval `opam config env` 
+    bash ocaml/test.sh
+  displayName: 'Flatbuffers OCaml'

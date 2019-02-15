@@ -335,10 +335,11 @@ class OcamlGenerator : public BaseGenerator {
 
   void BeginStruct(const StructDef &struct_def, StringSet *dependencies, std::string *code_ptr) {
     BeginModule(NormalizedName(struct_def), code_ptr);
-    if(0) {
-      *code_ptr += Indent + "type t\n\n";
-    } else {
+
+    if(parser_.opts.generate_object_based_api) {
       GenerateStructType(struct_def, dependencies, code_ptr);
+    } else {
+      *code_ptr += Indent + "type t\n\n";
     }
     *code_ptr += Indent + "type offset = t ByteBuffer.offset\n\n";
     *code_ptr += Indent + "let init b pos : offset = ByteBuffer.offset b pos\n\n";
@@ -879,8 +880,10 @@ class OcamlGenerator : public BaseGenerator {
     code += to_int;
     code += "\n";
 
-    if(enum_def.is_union ) {
-      generateUnion(enum_def, &dependencies, &code);
+    if(parser_.opts.generate_object_based_api) {
+	if(enum_def.is_union ) {
+	  generateUnion(enum_def, &dependencies, &code);
+	}
     }
 
     EndEnum(&code);
