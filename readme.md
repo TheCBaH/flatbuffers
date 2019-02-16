@@ -52,3 +52,7 @@ maximum memory efficiency. It allows you to directly access serialized data with
    [stackoverflow.com]: http://stackoverflow.com/search?q=flatbuffers
    [landing page]: https://google.github.io/flatbuffers
    [LICENSE]: https://github.com/google/flatbuffers/blob/master/LICENSE.txt
+
+## Misc
+
+[![Build Status](https://dev.azure.com/thecbah/thecbah/_apis/build/status/TheCBaH.flatbuffers?branchName=master)](https://dev.azure.com/thecbah/thecbah/_build/latest?definitionId=1&branchName=master)
