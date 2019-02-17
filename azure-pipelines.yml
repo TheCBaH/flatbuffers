@@ -16,16 +16,12 @@ pool:
 steps:
 - script: |
    set -eux
-   echo docker run hello-world
-   echo docker run busybox uname -a
-   docker run i386/busybox uname -a
+   docker run i386/ubuntu:16.04 dpkg --print-architecture
    docker run ocaml/opam2 opam switch
-   echo docker run i386/ocaml/opam2 opam switch
    sudo apt update
    sudo apt install -y qemu qemu-user-static qemu-user binfmt-support
    docker run --rm --privileged multiarch/qemu-user-static:register --reset
-   docker run -v /usr/bin/qemu-arm-static:/usr/bin/qemu-arm-static  arm32v7/busybox uname -a || echo Failed
-   docker run ppc64le/busybox uname -a || echo Failed
+   docker run -v /usr/bin/qemu-arm-static:/usr/bin/qemu-arm-static  arm32v7/ubuntu:16.04 dpkg --print-architecture
   displayName: 'ARM Setup'
 
 - script: |
