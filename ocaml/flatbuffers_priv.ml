@@ -636,7 +636,3 @@ module Builder = struct
     ByteBuffer.write_string t.bb s t.space ;
     endVector t
 end
-
-let _ = 1
-
-let _ = print_endline "flatbuffers"
