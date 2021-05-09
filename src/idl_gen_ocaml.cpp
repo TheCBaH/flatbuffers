@@ -686,7 +686,7 @@ class OcamlGenerator : public BaseGenerator {
                              : GetScalarConstant(struct_def, field.value.type,
                                                  field.value.constant);
 
-    code += default_value;
+    code += '(' + default_value + ')';
     code += "\n\n";
   }
 

@@ -542,7 +542,7 @@ module Builder = struct
     in
     let i = trim_trailing_zeros t (t.vtable_in_use - 1) in
     let trimmed_size = i + 1 in
-    (* Writ^e out the current vtable. *)
+    (* Write out the current vtable. *)
     let rec write_current_vtable t vtableloc i =
       if i >= 0 then (
         (* Offset relative to the start of the table *)
