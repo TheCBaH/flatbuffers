@@ -37,12 +37,14 @@ namespace ocaml {
 // Hardcode spaces per indentation.
 const std::string Indent = "    ";
 
+#if 0
 const std::string kGeneratedFileNamePostfix = "_generated";
 
 static std::string GeneratedFileName(const std::string &path,
                                      const std::string &file_name) {
   return path + file_name + kGeneratedFileNamePostfix + ".ml";
 }
+#endif
 
 typedef std::unordered_set<std::string> StringSet;
 
@@ -178,7 +180,7 @@ class OcamlGenerator : public BaseGenerator {
   OcamlGenerator(const Parser &parser, const std::string &path,
                   const std::string &file_name)
       : BaseGenerator(parser, path, file_name, "" /* not used */,
-                      "" /* not used */),
+                      "" /* not used */, "ml"),
         float_const_gen_("Float.nan", "Float.inf", "Float.neg_inf") {
     static const char * const keywords[] = {
       "and",
@@ -247,8 +249,7 @@ class OcamlGenerator : public BaseGenerator {
 
   const char *GetScalarType(const StructDef &struct_def, const Type &type)
   {
-    if(0 && &struct_def) {
-    }
+    (void)struct_def;
     switch(type.base_type) {
     case BASE_TYPE_UINT: return "Int64.t";
     case BASE_TYPE_ULONG: return "Int64.t";
@@ -366,7 +367,7 @@ class OcamlGenerator : public BaseGenerator {
     static const char *ctypename[] = {
     // clang-format off
       #define FLATBUFFERS_TD(ENUM, IDLTYPE, \
-        CTYPE, JTYPE, GTYPE, NTYPE, PTYPE, RTYPE) \
+              CTYPE, JTYPE, GTYPE, NTYPE, PTYPE, ...) \
         #PTYPE,
         FLATBUFFERS_GEN_TYPES(FLATBUFFERS_TD)
       #undef FLATBUFFERS_TD
@@ -389,7 +390,7 @@ class OcamlGenerator : public BaseGenerator {
   // A single enum member.
   void EnumMember(const EnumVal ev, std::string &type, std::string &of_int, std::string &to_int) {
     std::string name = NormalizedName(ev);
-    std::string value = NumToString(ev.value);
+    std::string value = NumToString(ev.GetAsInt64());
     type += Indent + Indent + "| " + name + "\n";
     // code += NumToString(ev.value) + "\n";
     of_int += Indent + Indent + "| " + value + " -> " + name + "\n";
@@ -422,8 +423,7 @@ class OcamlGenerator : public BaseGenerator {
   }
 
   std::string GetScalarAccessorType(const StructDef &struct_def, const Type &type) {
-    if(0 && &struct_def) {
-    }
+    (void)struct_def;
     return MakeCamel(GenTypeBasic(type));
   }
 
@@ -437,8 +437,7 @@ class OcamlGenerator : public BaseGenerator {
 
   const char *GetScalarZero(const StructDef &struct_def, const Type &type)
   {
-    if(0 && &struct_def) {
-    }
+    (void)struct_def;
     switch(type.base_type) {
     case BASE_TYPE_UINT:
     case BASE_TYPE_ULONG:
@@ -863,7 +862,8 @@ class OcamlGenerator : public BaseGenerator {
 
     GenComment(enum_def.doc_comment, &code);
     BeginEnum(name, &code);
-    for (auto it = enum_def.vals.vec.begin(); it != enum_def.vals.vec.end();
+    const auto &vals = enum_def.Vals();
+    for (auto it = vals.begin(); it != vals.end();
         ++it) {
       auto &ev = **it;
       GenComment(ev.doc_comment, &type);
@@ -932,7 +932,7 @@ class OcamlGenerator : public BaseGenerator {
     if (!generateStructs()) return false;
     std::string code;
     ns.print(&code);
-    return SaveFile(GeneratedFileName(path_, file_name_).c_str(), code,
+    return SaveFile(GeneratedFileName(path_, file_name_, parser_.opts ).c_str(), code,
                     false);
   }
 
@@ -968,11 +968,12 @@ class OcamlGenerator : public BaseGenerator {
   void generateUnion(const EnumDef &enum_def, StringSet *dependencies, std::string *code) {
     BeginModule("Union", code);
     *code += Indent + Indent + "type t = \n";
-    for (auto it = enum_def.vals.vec.begin(); it != enum_def.vals.vec.end();
+    const auto &vals = enum_def.Vals();
+    for (auto it = vals.begin(); it != vals.end();
         ++it) {
       auto &ev = **it;
       std::string name = NormalizedName(ev);
-      if(ev.value == 0) {
+      if(ev.GetAsInt64() == 0) {
 	*code += Indent + Indent + "  " + name + "\n";
       } else {
 	std::string type_name = NormalizedName(ev.union_type);
