@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 set -x
-ocaml ocaml/flatbuffers_priv.ml
+ocaml ocaml/flatBuffers_priv.ml
 make -j4 flatc
 ./flatc --ocaml -o ocaml samples/monster.fbs
 ocaml ocaml/monster.test.ml

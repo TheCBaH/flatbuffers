@@ -1,5 +1,5 @@
 ;;
-#use "flatbuffers_priv.ml"
+#use "flatBuffers_priv.ml"
 
 ;;
 #use "monster_test_generated.ml"

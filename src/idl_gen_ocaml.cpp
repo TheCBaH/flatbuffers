@@ -174,7 +174,7 @@ class OcamlGenerator : public BaseGenerator {
                  const std::string &file_name)
       : BaseGenerator(parser, path, file_name, "" /* not used */,
                       "" /* not used */, "ml"),
-        float_const_gen_("Float.nan", "Float.inf", "Float.neg_inf") {
+        float_const_gen_("Float.nan", "Float.infinity", "Float.neg_infinity") {
     static const char *const keywords[] = {
       "and",        "as",       "assert", "asr",     "begin",   "class",
       "constraint", "do",       "done",   "downto",  "else",    "end",
@@ -880,6 +880,7 @@ class OcamlGenerator : public BaseGenerator {
     if (!generateEnums()) return false;
     if (!generateStructs()) return false;
     std::string code;
+    BeginFile(&code);
     ns.print(&code);
     return SaveFile(GeneratedFileName(path_, file_name_, parser_.opts).c_str(),
                     code, false);
@@ -946,35 +947,11 @@ class OcamlGenerator : public BaseGenerator {
     return true;
   }
 
-  // Begin by declaring namespace and imports.
-  void BeginFile(const std::string name_space_name, const bool needs_imports,
-                 std::string *code_ptr) {
+  void BeginFile(std::string *code_ptr) {
     std::string &code = *code_ptr;
     code = code + "(* " + FlatBuffersGeneratedWarning() + " *)\n\n";
-    code += "(* namespace: " + name_space_name + " *)\n\n";
-    if (needs_imports) { code += "import flatbuffers\n\n"; }
-  }
-
-  // Save out the generated code for a Ocaml Table type.
-  bool SaveType(const Definition &def, const std::string &classcode,
-                bool needs_imports) {
-    if (!classcode.length()) return true;
-
-    std::string namespace_dir = path_;
-    auto &namespaces = def.defined_namespace->components;
-    for (auto it = namespaces.begin(); it != namespaces.end(); ++it) {
-      if (it != namespaces.begin()) namespace_dir += kPathSeparator;
-      namespace_dir += *it;
-      std::string init_py_filename = namespace_dir + "/__init__.py";
-      SaveFile(init_py_filename.c_str(), "", false);
-    }
-
-    std::string code = "";
-    BeginFile(LastNamespacePart(*def.defined_namespace), needs_imports, &code);
-    code += classcode;
-    std::string filename =
-        NamespaceDir(*def.defined_namespace) + NormalizedName(def) + ".ml";
-    return SaveFile(filename.c_str(), code, false);
+    code = code + "open FlatBuffers\n\n";
+    return;
   }
 
  private:
