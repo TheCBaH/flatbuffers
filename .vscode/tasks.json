@@ -1,0 +1,50 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "process",
+			"label": "CMake Configure",
+			"command": "cmake",
+			"args": [
+				"-G",
+				"Unix Makefiles",
+				"-DCMAKE_BUILD_TYPE=Release"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		},
+		{
+			"type": "process",
+			"label": "flatcc build",
+			"command": "ocaml/test.sh",
+			"args": [
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		}
+		{
+			"type": "process",
+			"label": "ocaml test",
+			"command": "tests/OcamlTest.sh",
+			"args": [
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
+			"group": "build"
+		}
+	]
+}
