@@ -42,4 +42,5 @@ for t in $tests; do
   ${testdir}/../flatc --ocaml -I ${testdir}/include_test -o ${targetdir} ${testdir}/$t.fbs
   ocamlc -I ${runtimelibrarydir} ${runtimelibrarydir}/flatBuffers_priv.cmo ${runtimelibrarydir}/flatBuffers.cmo $file.ml -o $file
   $file
+  cp $file.ml ${testdir}
 done
