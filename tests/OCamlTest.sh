@@ -15,6 +15,7 @@
 # limitations under the License.
 
 #set -x
+env
 testdir=$(dirname $0)
 targetdir="${testdir}/ocaml"
 
