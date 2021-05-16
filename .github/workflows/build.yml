@@ -59,3 +59,28 @@ jobs:
     - name: test
       working-directory: tests
       run: sh TypeScriptTest.sh
+
+  build-ocaml:
+    name: Build OCaml
+      strategy:
+        fail-fast: false
+        matrix:
+          os:
+            - ubuntu-latest
+          ocaml-version:
+            - 4.10.1
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Use OCaml ${{ matrix.ocaml-version }}
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: ${{ matrix.ocaml-version }}
+      - name: cmake
+        run: CXX=${{ matrix.cxx }} cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release .
+      - name: build
+        run: make -j4
+      - name: test
+        working-directory: tests
+          run: sh OCamlTest.sh
