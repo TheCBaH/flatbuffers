@@ -82,4 +82,4 @@ jobs:
       - name: build
         run: make -j4
       - name: test
-        run: test/OCamlTest.sh
+        run: $(opam env) && test/OCamlTest.sh
