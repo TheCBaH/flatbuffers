@@ -71,20 +71,19 @@ jobs:
           - 4.10.1
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
       - name: Use OCaml ${{ matrix.ocaml-version }} on ${{ matrix.os }}
         uses: avsm/setup-ocaml@v1
         with:
           ocaml-version: ${{ matrix.ocaml-version }}
-      - name: cmake
-        run: cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release .
-      - name: build
-        run: make -j4
-      - name: test
-        run: |
-          opam env
-          pwd
-          ls -al test
-          $(opam env)
-          $(opam env) && test/OCamlTest.sh
+      - steps:
+        - name: Checkout code
+          uses: actions/checkout@v2
+        - name: cmake
+          run: cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release .
+        - name: build
+          run: make -j4
+        - name: test
+          run: |
+            pwd
+            ls -al test
+            test/OCamlTest.sh
