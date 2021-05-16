@@ -5,8 +5,8 @@ trigger:
 
 variables:
   opamVersion: 2.0.3
-  ocamlVersion: 4.07.0 
-  verbose: 
+  ocamlVersion: 4.07.0
+  verbose:
 
 # verbose: --verbose
 
@@ -28,7 +28,7 @@ steps:
     set -eux
     NCPU="$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)"
     cmake -G "Unix Makefiles"
-    make -j $NCPU 
+    make -j $NCPU
   displayName: 'Build Flatbuffers'
 
 - script:  |
@@ -44,7 +44,7 @@ steps:
     opam init -j $NCPU $(verbose) --yes --compiler=$(ocamlVersion) --no-setup --disable-sandboxing
     echo opam switch set ocaml_$(ocamlVersion) --alias-of $(ocamlVersion)
     echo opam install --verbose --yes ocaml
-    eval `opam config env` 
+    eval `opam config env`
     ocaml --version
     opam update
     opam install --yes ocamlfind

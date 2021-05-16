@@ -545,7 +545,7 @@ class OcamlGenerator : public BaseGenerator {
     auto vectortype = field.value.type.VectorType();
     auto inline_size = InlineSize(vectortype);
     if (inline_size != 1) { code += " * " + NumToString(inline_size); }
-    code += " in \n";
+    code += " in\n";
     code += Indent + Indent + Indent +
             "let offset = (ByteBuffer.__vector t.ByteBuffer.b "
             "(t.ByteBuffer.pos + offset)) + index in\n";
