@@ -14,8 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -eu
-set -x
+#set -x
 testdir=$(dirname $0)
 targetdir="${testdir}/ocaml"
 
