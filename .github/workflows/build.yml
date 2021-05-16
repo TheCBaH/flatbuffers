@@ -73,6 +73,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+
       - name: Use OCaml ${{ matrix.ocaml-version }} on ${{ matrix.os }}
         uses: avsm/setup-ocaml@v1
         with:
@@ -82,8 +83,4 @@ jobs:
       - name: build
         run: make -j4
       - name: test
-        run: |
-          pwd
-          env
-          ls -al tests
-          tests/OCamlTest.sh
+        run: opam exec -- tests/OCamlTest.sh
