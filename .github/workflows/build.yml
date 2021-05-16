@@ -83,4 +83,4 @@ jobs:
         run: make -j4
       - name: test
         working-directory: tests
-        run: sh OCamlTest.sh
+        run: OCamlTest.sh

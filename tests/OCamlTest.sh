@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -x
+#set -x
 testdir=$(dirname $0)
 targetdir="${testdir}/ocaml"
 
@@ -26,7 +26,32 @@ fi
 mkdir -v "${targetdir}"
 runtimelibrarydir=${testdir}/../ocaml
 
-# Emit Python code for the example schema in the test dir:
+function check_test_result() {
+    if [[ $? == 0 ]]; then
+        echo OK: OCaml $1 passed.
+    else
+        echo KO: OCaml $1 failed.
+        exit 1
+    fi
+}
+
+function setup () {
+  ocamlc -c -I ${runtimelibrarydir} ${runtimelibrarydir}/flatBuffers_priv.ml
+  ocamlc -c -I ${runtimelibrarydir} ${runtimelibrarydir}/flatBuffers.ml
+}
+
+function run_test () {
+  t=$1
+  file=${targetdir}/${t}_generated
+  ${testdir}/../flatc --ocaml -I ${testdir}/include_test -o ${targetdir} ${testdir}/$t.fbs
+  ocamlc -I ${runtimelibrarydir} ${runtimelibrarydir}/flatBuffers_priv.cmo ${runtimelibrarydir}/flatBuffers.cmo $file.ml -o $file
+  $file
+  cp $file.ml ${testdir}
+}
+
+setup
+check_test_result "Setup test"
+
 tests="\
  monster_extra\
  monster_test\
@@ -35,12 +60,7 @@ tests="\
 # arrays_test\
 # more_defaults\
 # optional_scalars\
-ocamlc -c -I ${runtimelibrarydir} ${runtimelibrarydir}/flatBuffers_priv.ml
-ocamlc -c -I ${runtimelibrarydir} ${runtimelibrarydir}/flatBuffers.ml
 for t in $tests; do
-  file=${targetdir}/${t}_generated
-  ${testdir}/../flatc --ocaml -I ${testdir}/include_test -o ${targetdir} ${testdir}/$t.fbs
-  ocamlc -I ${runtimelibrarydir} ${runtimelibrarydir}/flatBuffers_priv.cmo ${runtimelibrarydir}/flatBuffers.cmo $file.ml -o $file
-  $file
-  cp $file.ml ${testdir}
+  run_test $t
+  check_test_result $t
 done
