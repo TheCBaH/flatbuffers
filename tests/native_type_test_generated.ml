@@ -91,7 +91,7 @@ module ApplicationData = struct
     let vectors (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 4 in
         if(offset!=0) then
-            let index = index * 12 in 
+            let index = index * 12 in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             let offset = ByteBuffer.__indirect t.ByteBuffer.b offset in
             Some (Vector3D.init t.ByteBuffer.b offset)
@@ -105,7 +105,7 @@ module ApplicationData = struct
     let vectors_alt (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 6 in
         if(offset!=0) then
-            let index = index * 12 in 
+            let index = index * 12 in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             let offset = ByteBuffer.__indirect t.ByteBuffer.b offset in
             Some (Vector3DAlt.init t.ByteBuffer.b offset)

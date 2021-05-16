@@ -73,7 +73,7 @@ module MonsterExtra = struct
     let dvec (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 20 in
         if(offset!=0) then
-            let index = index * 8 in 
+            let index = index * 8 in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             ByteBuffer.readFloat64 t.ByteBuffer.b offset
         else 0.0
@@ -86,7 +86,7 @@ module MonsterExtra = struct
     let fvec (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 22 in
         if(offset!=0) then
-            let index = index * 4 in 
+            let index = index * 4 in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             ByteBuffer.readFloat32 t.ByteBuffer.b offset
         else 0.0

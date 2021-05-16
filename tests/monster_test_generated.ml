@@ -108,7 +108,7 @@ module TypeAliases = struct
     let v8 (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 24 in
         if(offset!=0) then
-            let index = index in 
+            let index = index in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             ByteBuffer.readInt8 t.ByteBuffer.b offset
         else 0
@@ -121,7 +121,7 @@ module TypeAliases = struct
     let vf64 (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 26 in
         if(offset!=0) then
-            let index = index * 8 in 
+            let index = index * 8 in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             ByteBuffer.readFloat64 t.ByteBuffer.b offset
         else 0.0
@@ -596,7 +596,7 @@ module Monster = struct
     let inventory (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 14 in
         if(offset!=0) then
-            let index = index in 
+            let index = index in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             ByteBuffer.readUint8 t.ByteBuffer.b offset
         else 0
@@ -625,7 +625,7 @@ module Monster = struct
     let test4 (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 22 in
         if(offset!=0) then
-            let index = index * 4 in 
+            let index = index * 4 in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             let offset = ByteBuffer.__indirect t.ByteBuffer.b offset in
             Some (Test.init t.ByteBuffer.b offset)
@@ -639,7 +639,7 @@ module Monster = struct
     let testarrayofstring (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 24 in
         if(offset!=0) then
-            let index = index * 4 in 
+            let index = index * 4 in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             Some (ByteBuffer.__string t.ByteBuffer.b offset)
         else None
@@ -657,7 +657,7 @@ module Monster = struct
     let testarrayoftables (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 26 in
         if(offset!=0) then
-            let index = index * 4 in 
+            let index = index * 4 in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             let offset = ByteBuffer.__indirect t.ByteBuffer.b offset in
             Some (init t.ByteBuffer.b offset)
@@ -677,7 +677,7 @@ module Monster = struct
     let testnestedflatbuffer (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 30 in
         if(offset!=0) then
-            let index = index in 
+            let index = index in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             ByteBuffer.readUint8 t.ByteBuffer.b offset
         else 0
@@ -750,7 +750,7 @@ module Monster = struct
     let testarrayofbools (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 52 in
         if(offset!=0) then
-            let index = index in 
+            let index = index in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             ByteBuffer.readBool t.ByteBuffer.b offset
         else false
@@ -781,7 +781,7 @@ module Monster = struct
     let testarrayofstring2 (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 60 in
         if(offset!=0) then
-            let index = index * 4 in 
+            let index = index * 4 in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             Some (ByteBuffer.__string t.ByteBuffer.b offset)
         else None
@@ -794,7 +794,7 @@ module Monster = struct
     let testarrayofsortedstruct (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 62 in
         if(offset!=0) then
-            let index = index * 8 in 
+            let index = index * 8 in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             let offset = ByteBuffer.__indirect t.ByteBuffer.b offset in
             Some (Ability.init t.ByteBuffer.b offset)
@@ -808,7 +808,7 @@ module Monster = struct
     let flex (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 64 in
         if(offset!=0) then
-            let index = index in 
+            let index = index in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             ByteBuffer.readUint8 t.ByteBuffer.b offset
         else 0
@@ -821,7 +821,7 @@ module Monster = struct
     let test5 (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 66 in
         if(offset!=0) then
-            let index = index * 4 in 
+            let index = index * 4 in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             let offset = ByteBuffer.__indirect t.ByteBuffer.b offset in
             Some (Test.init t.ByteBuffer.b offset)
@@ -835,7 +835,7 @@ module Monster = struct
     let vector_of_longs (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 68 in
         if(offset!=0) then
-            let index = index * 8 in 
+            let index = index * 8 in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             ByteBuffer.readInt64 t.ByteBuffer.b offset
         else Int64.zero
@@ -848,7 +848,7 @@ module Monster = struct
     let vector_of_doubles (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 70 in
         if(offset!=0) then
-            let index = index * 8 in 
+            let index = index * 8 in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             ByteBuffer.readFloat64 t.ByteBuffer.b offset
         else 0.0
@@ -867,7 +867,7 @@ module Monster = struct
     let vector_of_referrables (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 74 in
         if(offset!=0) then
-            let index = index * 4 in 
+            let index = index * 4 in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             let offset = ByteBuffer.__indirect t.ByteBuffer.b offset in
             Some (Referrable.init t.ByteBuffer.b offset)
@@ -887,7 +887,7 @@ module Monster = struct
     let vector_of_weak_references (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 78 in
         if(offset!=0) then
-            let index = index * 8 in 
+            let index = index * 8 in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             ByteBuffer.readUint64 t.ByteBuffer.b offset
         else Int64.zero
@@ -900,7 +900,7 @@ module Monster = struct
     let vector_of_strong_referrables (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 80 in
         if(offset!=0) then
-            let index = index * 4 in 
+            let index = index * 4 in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             let offset = ByteBuffer.__indirect t.ByteBuffer.b offset in
             Some (Referrable.init t.ByteBuffer.b offset)
@@ -920,7 +920,7 @@ module Monster = struct
     let vector_of_co_owning_references (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 84 in
         if(offset!=0) then
-            let index = index * 8 in 
+            let index = index * 8 in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             ByteBuffer.readUint64 t.ByteBuffer.b offset
         else Int64.zero
@@ -939,7 +939,7 @@ module Monster = struct
     let vector_of_non_owning_references (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 88 in
         if(offset!=0) then
-            let index = index * 8 in 
+            let index = index * 8 in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             ByteBuffer.readUint64 t.ByteBuffer.b offset
         else Int64.zero
@@ -972,7 +972,7 @@ module Monster = struct
     let vector_of_enums (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 98 in
         if(offset!=0) then
-            let index = index in 
+            let index = index in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             ByteBuffer.readUint8 t.ByteBuffer.b offset
         else 0
@@ -991,7 +991,7 @@ module Monster = struct
     let testrequirednestedflatbuffer (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 102 in
         if(offset!=0) then
-            let index = index in 
+            let index = index in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             ByteBuffer.readUint8 t.ByteBuffer.b offset
         else 0
@@ -1004,7 +1004,7 @@ module Monster = struct
     let scalar_key_sorted_tables (t:offset) index =
         let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 104 in
         if(offset!=0) then
-            let index = index * 4 in 
+            let index = index * 4 in
             let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
             let offset = ByteBuffer.__indirect t.ByteBuffer.b offset in
             Some (Stat.init t.ByteBuffer.b offset)
