@@ -85,5 +85,5 @@ jobs:
         run: |
           pwd
           env
-          ls -al test
-          test/OCamlTest.sh
+          ls -al tests
+          tests/OCamlTest.sh
