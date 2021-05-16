@@ -62,13 +62,13 @@ jobs:
 
   build-ocaml:
     name: Build OCaml
-      strategy:
-        fail-fast: false
-        matrix:
-          os:
-            - ubuntu-latest
-          ocaml-version:
-            - 4.10.1
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+        ocaml-version:
+          - 4.10.1
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
