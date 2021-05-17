@@ -35,24 +35,36 @@ function run_test () {
     fi
 }
 
-function setup () {
-  test=flatBuffers_test
-  ocamlc -c -I ${runtimelibrarydir} ${runtimelibrarydir}/flatBuffers_priv.ml &&
-  ocamlc -I ${runtimelibrarydir} ${runtimelibrarydir}/flatBuffers_priv.cmo ${runtimelibrarydir}/$test.ml -o ${targetdir}/$test &&
-  ${targetdir}/$test &&
-  ocamlc -c -I ${runtimelibrarydir} ${runtimelibrarydir}/flatBuffers.ml
+function tools () {
+  if [ "$1" = "native" ]; then
+    opt="opt"
+    obj="cmx"
+  else
+    opt="c"
+    obj="cmo"
+  fi
 }
+function setup () {
+  tools $1
+  test=flatBuffers_test
+  ocaml$opt -c -I ${runtimelibrarydir} ${runtimelibrarydir}/flatBuffers_priv.ml &&
+  ocaml$opt -I ${runtimelibrarydir} ${runtimelibrarydir}/flatBuffers_priv.$obj ${runtimelibrarydir}/$test.ml -o ${targetdir}/$test.$opt &&
+  ${targetdir}/$test.$opt &&
+  ocaml$opt -c -I ${runtimelibrarydir} ${runtimelibrarydir}/flatBuffers.ml
+}
+
 
 function run_flatc () {
   t=$1
+  tools $2
   file=${targetdir}/${t}_generated
   ${testdir}/../flatc --ocaml -I ${testdir}/include_test -o ${targetdir} ${testdir}/$t.fbs &&
-  ocamlc -I ${runtimelibrarydir} ${runtimelibrarydir}/flatBuffers_priv.cmo ${runtimelibrarydir}/flatBuffers.cmo $file.ml -o $file &&
-  $file &&
+  ocaml$opt -I ${runtimelibrarydir} ${runtimelibrarydir}/flatBuffers_priv.$obj ${runtimelibrarydir}/flatBuffers.$obj $file.ml -o $file.$opt &&
+  $file.$opt &&
   cp $file.ml ${testdir}
 }
 
-run_test setup "Setup test"
+run_test "setup bytecode" "Setup test [bytecode]"
 
 tests="\
  monster_extra\
@@ -63,5 +75,10 @@ tests="\
 # more_defaults\
 # optional_scalars\
 for t in $tests; do
-  run_test "run_flatc $t" $t
+  run_test "run_flatc $t bytecode" "$t [bytecode]"
+done
+
+run_test "setup native" "Setup test [native]"
+for t in $tests; do
+  run_test "run_flatc $t native" "$t [native]"
 done
