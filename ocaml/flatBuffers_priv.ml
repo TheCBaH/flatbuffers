@@ -76,7 +76,7 @@ module FlatBuffers = struct
       sign_extend_int uint8 8
 
     let writeInt8 t offset value =
-      if value > 0x7F || value < -0x80 then invalid_arg "Builder.writeUint16" ;
+      if value > 0x7F || value < -0x80 then invalid_arg "ByteBuffer.writeInt8" ;
       write_byte t offset value
 
     let readUint16 t offset =
