@@ -1,15 +1,10 @@
 #!/bin/sh
-set -e
+set -eu
 set -x
 ocaml ocaml/flatBuffers_priv.ml
 NCPU="$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)"
 make -j$NCPU flatc
 ./flatc --ocaml -o ocaml samples/monster.fbs
-ocaml ocaml/monster.test.ml
+ocaml -I ocaml ocaml/dev/monster.test.ml
 ./flatc --ocaml -o ocaml -I tests/include_test tests/monster_test.fbs
-ocaml ocaml/monster_test.test.ml
-exit 0
-./flatc --gen-object-api --ocaml samples/monster.fbs
-./flatc --gen-object-api --ocaml -I tests/include_test tests/monster_test.fbs
-echo ocaml </dev/null
-echo OK
+ocaml -I ocaml ocaml/dev/monster_test.test.ml
