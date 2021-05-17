@@ -146,7 +146,7 @@ class Namespace {
       it->second.print_rec(code_ptr, known_structures);
     }
     if (!this->name.empty()) {
-      *code_ptr += "end (* " + this->name + " *)\n\n";
+      *code_ptr += "end (* " + this->name + " *)\n";
     }
   }
 

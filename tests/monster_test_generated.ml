@@ -1229,7 +1229,6 @@ module Monster = struct
 end
 
 end (* Example *)
-
 module Example2 = struct
 
 module Monster = struct
@@ -1254,6 +1253,4 @@ module Monster = struct
 end
 
 end (* Example2 *)
-
 end (* MyGame *)
-
