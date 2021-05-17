@@ -2,7 +2,7 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"type": "process",
+			"type": "shell",
 			"label": "CMake Configure",
 			"command": "cmake",
 			"args": [
@@ -19,9 +19,9 @@
 			"group": "build"
 		},
 		{
-			"type": "process",
-			"label": "flatcc build",
-			"command": "ocaml/test.sh",
+			"type": "shell",
+			"label": "flatcc test",
+			"command": "ocaml/dev/test.sh",
 			"args": [
 			],
 			"options": {
@@ -31,11 +31,11 @@
 				"$gcc"
 			],
 			"group": "build"
-		}
+		},
 		{
-			"type": "process",
+			"type": "shell",
 			"label": "ocaml test",
-			"command": "tests/OcamlTest.sh",
+			"command": "tests/OCamlTest.sh",
 			"args": [
 			],
 			"options": {
