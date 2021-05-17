@@ -16,13 +16,11 @@ module FlatBuffers = struct
           , Bigarray.c_layout )
           Bigarray.Array1.t }
 
+    type 'a offset = int
+    let null = 0
+
     type union
-
-    type 'a offset = {b: t; pos: int}
-
-    let offset t pos = {b= t; pos}
-
-    let offset_of_union (o : union offset) = offset o.b o.pos
+    let offset_of_union (offset:union offset) = offset
 
     let allocate byte_size =
       { bytes= Bigarray.Array1.create Bigarray.char Bigarray.c_layout byte_size
@@ -124,11 +122,15 @@ module FlatBuffers = struct
         if msb == 0 || msb == 3 then int
         else failwith "FlatBuffers: read_int overflow"
 
+    let read_offset = read_ocaml_int32
+
     let write_ocaml_int32 t offset value =
       write_uint24 t offset value ;
       let b = value lsr 24 in
       let b = if int_length = 31 then sign_extend_int b 7 else b in
       write_byte t (offset + 3) b
+
+    let write_offset = write_ocaml_int32
 
     let readInt32 t offset =
       Int32.logor
@@ -195,18 +197,18 @@ module FlatBuffers = struct
           ~length:_FILE_IDENTIFIER_LENGTH
 
     let __offset t bb_pos vtable_offset =
-      let vtable = bb_pos - read_ocaml_int32 t bb_pos in
+      let vtable = bb_pos - read_offset t bb_pos in
       if vtable_offset < readInt16 t vtable then
         readInt16 t (vtable + vtable_offset)
       else 0
 
-    let __union o field_offset : union offset option =
-      let offset = __offset o.b o.pos field_offset in
-      if offset != 0 then
-        let offset = o.pos + offset in
-        let pos = offset + read_ocaml_int32 o.b offset in
-        Some {b= o.b; pos}
-      else None
+    let __union t pos field_offset : union offset =
+      let offset = __offset t pos field_offset in
+      if offset != null then
+        let offset = pos + offset in
+        let pos = offset + read_offset t offset in
+        pos
+      else null
 
     let __string t offset =
       let offset = offset + read_ocaml_int32 t offset in

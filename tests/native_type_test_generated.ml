@@ -5,28 +5,26 @@ open FlatBuffers
 module Geometry = struct
 
 module Vector3DAlt = struct
-    type t
+    type t    type offset = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
-    type offset = t ByteBuffer.offset
+    let init b pos = {b;pos}
 
-    let init b pos : offset = ByteBuffer.offset b pos
-
-    let of_union o : offset = ByteBuffer.offset_of_union o
+    let of_union b pos = {b=b; pos=ByteBuffer.offset_of_union pos}
 
     (* Vector3DAlt *)
     let a (t:offset) =
-        let offset = t.ByteBuffer.pos + 0 in
-        ByteBuffer.readFloat32 t.ByteBuffer.b offset
+        let offset = t.pos + 0 in
+        ByteBuffer.readFloat32 t.b offset
 
     (* Vector3DAlt *)
     let b (t:offset) =
-        let offset = t.ByteBuffer.pos + 4 in
-        ByteBuffer.readFloat32 t.ByteBuffer.b offset
+        let offset = t.pos + 4 in
+        ByteBuffer.readFloat32 t.b offset
 
     (* Vector3DAlt *)
     let c (t:offset) =
-        let offset = t.ByteBuffer.pos + 8 in
-        ByteBuffer.readFloat32 t.ByteBuffer.b offset
+        let offset = t.pos + 8 in
+        ByteBuffer.readFloat32 t.b offset
 
 
     let create ~builder ~a ~b ~c =
@@ -38,28 +36,26 @@ module Vector3DAlt = struct
 end
 
 module Vector3D = struct
-    type t
+    type t    type offset = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
-    type offset = t ByteBuffer.offset
+    let init b pos = {b;pos}
 
-    let init b pos : offset = ByteBuffer.offset b pos
-
-    let of_union o : offset = ByteBuffer.offset_of_union o
+    let of_union b pos = {b=b; pos=ByteBuffer.offset_of_union pos}
 
     (* Vector3D *)
     let x (t:offset) =
-        let offset = t.ByteBuffer.pos + 0 in
-        ByteBuffer.readFloat32 t.ByteBuffer.b offset
+        let offset = t.pos + 0 in
+        ByteBuffer.readFloat32 t.b offset
 
     (* Vector3D *)
     let y (t:offset) =
-        let offset = t.ByteBuffer.pos + 4 in
-        ByteBuffer.readFloat32 t.ByteBuffer.b offset
+        let offset = t.pos + 4 in
+        ByteBuffer.readFloat32 t.b offset
 
     (* Vector3D *)
     let z (t:offset) =
-        let offset = t.ByteBuffer.pos + 8 in
-        ByteBuffer.readFloat32 t.ByteBuffer.b offset
+        let offset = t.pos + 8 in
+        ByteBuffer.readFloat32 t.b offset
 
 
     let create ~builder ~x ~y ~z =
@@ -71,44 +67,42 @@ module Vector3D = struct
 end
 
 module ApplicationData = struct
-    type t
+    type t    type offset = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
-    type offset = t ByteBuffer.offset
+    let init b pos = {b;pos}
 
-    let init b pos : offset = ByteBuffer.offset b pos
-
-    let of_union o : offset = ByteBuffer.offset_of_union o
+    let of_union b pos = {b=b; pos=ByteBuffer.offset_of_union pos}
 
     let getRootAsApplicationData b =
         let offset = (ByteBuffer.read_ocaml_int32 b (ByteBuffer.position b)) + (ByteBuffer.position b) in
         init b offset
 
     let vectorsLength (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 4 in
-        if(offset!=0) then ByteBuffer.__vector_len t.ByteBuffer.b (t.ByteBuffer.pos + offset)
+        let offset = ByteBuffer.__offset t.b t.pos 4 in
+        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
         else 0
 
     let vectors (t:offset) index =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 4 in
+        let offset = ByteBuffer.__offset t.b t.pos 4 in
         if(offset!=0) then
             let index = index * 12 in
-            let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
-            let offset = ByteBuffer.__indirect t.ByteBuffer.b offset in
-            Some (Vector3D.init t.ByteBuffer.b offset)
+            let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
+            let offset = ByteBuffer.__indirect t.b offset in
+            Some (Vector3D.init t.b offset)
         else None
 
     let vectors_altLength (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 6 in
-        if(offset!=0) then ByteBuffer.__vector_len t.ByteBuffer.b (t.ByteBuffer.pos + offset)
+        let offset = ByteBuffer.__offset t.b t.pos 6 in
+        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
         else 0
 
     let vectors_alt (t:offset) index =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 6 in
+        let offset = ByteBuffer.__offset t.b t.pos 6 in
         if(offset!=0) then
             let index = index * 12 in
-            let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
-            let offset = ByteBuffer.__indirect t.ByteBuffer.b offset in
-            Some (Vector3DAlt.init t.ByteBuffer.b offset)
+            let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
+            let offset = ByteBuffer.__indirect t.b offset in
+            Some (Vector3DAlt.init t.b offset)
         else None
 
     let start builder =

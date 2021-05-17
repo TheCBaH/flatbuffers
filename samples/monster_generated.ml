@@ -7,13 +7,11 @@ module MyGame = struct
 module Sample = struct
 
 module Weapon = struct
-    type t
+    type t    type offset = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
-    type offset = t ByteBuffer.offset
+    let init b pos = {b;pos}
 
-    let init b pos : offset = ByteBuffer.offset b pos
-
-    let of_union o : offset = ByteBuffer.offset_of_union o
+    let of_union b pos = {b=b; pos=ByteBuffer.offset_of_union pos}
 
     let getRootAsWeapon b =
         let offset = (ByteBuffer.read_ocaml_int32 b (ByteBuffer.position b)) + (ByteBuffer.position b) in
@@ -21,14 +19,14 @@ module Weapon = struct
 
     (* Weapon *)
     let name (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 4 in
-        if(offset!=0) then Some (ByteBuffer.__string t.ByteBuffer.b (t.ByteBuffer.pos + offset))
+        let offset = ByteBuffer.__offset t.b t.pos 4 in
+        if(offset!=0) then Some (ByteBuffer.__string t.b (t.pos + offset))
         else None
 
     (* Weapon *)
     let damage (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 6 in
-        if(offset!=0) then let offset = t.ByteBuffer.pos + offset in ByteBuffer.readInt16 t.ByteBuffer.b offset
+        let offset = ByteBuffer.__offset t.b t.pos 6 in
+        if(offset!=0) then let offset = t.pos + offset in ByteBuffer.readInt16 t.b offset
         else 0
 
     let start builder =
@@ -52,28 +50,26 @@ module Weapon = struct
 end
 
 module Vec3 = struct
-    type t
+    type t    type offset = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
-    type offset = t ByteBuffer.offset
+    let init b pos = {b;pos}
 
-    let init b pos : offset = ByteBuffer.offset b pos
-
-    let of_union o : offset = ByteBuffer.offset_of_union o
+    let of_union b pos = {b=b; pos=ByteBuffer.offset_of_union pos}
 
     (* Vec3 *)
     let x (t:offset) =
-        let offset = t.ByteBuffer.pos + 0 in
-        ByteBuffer.readFloat32 t.ByteBuffer.b offset
+        let offset = t.pos + 0 in
+        ByteBuffer.readFloat32 t.b offset
 
     (* Vec3 *)
     let y (t:offset) =
-        let offset = t.ByteBuffer.pos + 4 in
-        ByteBuffer.readFloat32 t.ByteBuffer.b offset
+        let offset = t.pos + 4 in
+        ByteBuffer.readFloat32 t.b offset
 
     (* Vec3 *)
     let z (t:offset) =
-        let offset = t.ByteBuffer.pos + 8 in
-        ByteBuffer.readFloat32 t.ByteBuffer.b offset
+        let offset = t.pos + 8 in
+        ByteBuffer.readFloat32 t.b offset
 
 
     let create ~builder ~x ~y ~z =
@@ -120,13 +116,11 @@ module Color = struct
 end
 
 module Monster = struct
-    type t
+    type t    type offset = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
-    type offset = t ByteBuffer.offset
+    let init b pos = {b;pos}
 
-    let init b pos : offset = ByteBuffer.offset b pos
-
-    let of_union o : offset = ByteBuffer.offset_of_union o
+    let of_union b pos = {b=b; pos=ByteBuffer.offset_of_union pos}
 
     let getRootAsMonster b =
         let offset = (ByteBuffer.read_ocaml_int32 b (ByteBuffer.position b)) + (ByteBuffer.position b) in
@@ -134,83 +128,83 @@ module Monster = struct
 
     (* Monster *)
     let pos (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 4 in
-        if(offset!=0) then Some (let offset = t.ByteBuffer.pos + offset in Vec3.init t.ByteBuffer.b offset)
+        let offset = ByteBuffer.__offset t.b t.pos 4 in
+        if(offset!=0) then Some (let offset = t.pos + offset in Vec3.init t.b offset)
         else None
 
     (* Monster *)
     let mana (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 6 in
-        if(offset!=0) then let offset = t.ByteBuffer.pos + offset in ByteBuffer.readInt16 t.ByteBuffer.b offset
+        let offset = ByteBuffer.__offset t.b t.pos 6 in
+        if(offset!=0) then let offset = t.pos + offset in ByteBuffer.readInt16 t.b offset
         else 150
 
     (* Monster *)
     let hp (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 8 in
-        if(offset!=0) then let offset = t.ByteBuffer.pos + offset in ByteBuffer.readInt16 t.ByteBuffer.b offset
+        let offset = ByteBuffer.__offset t.b t.pos 8 in
+        if(offset!=0) then let offset = t.pos + offset in ByteBuffer.readInt16 t.b offset
         else 100
 
     (* Monster *)
     let name (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 10 in
-        if(offset!=0) then Some (ByteBuffer.__string t.ByteBuffer.b (t.ByteBuffer.pos + offset))
+        let offset = ByteBuffer.__offset t.b t.pos 10 in
+        if(offset!=0) then Some (ByteBuffer.__string t.b (t.pos + offset))
         else None
 
     let inventoryLength (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 14 in
-        if(offset!=0) then ByteBuffer.__vector_len t.ByteBuffer.b (t.ByteBuffer.pos + offset)
+        let offset = ByteBuffer.__offset t.b t.pos 14 in
+        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
         else 0
 
     let inventory (t:offset) index =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 14 in
+        let offset = ByteBuffer.__offset t.b t.pos 14 in
         if(offset!=0) then
             let index = index in
-            let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
-            ByteBuffer.readUint8 t.ByteBuffer.b offset
+            let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
+            ByteBuffer.readUint8 t.b offset
         else 0
 
     (* Monster *)
     let color (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 16 in
-        if(offset!=0) then Color.of_int (let offset = t.ByteBuffer.pos + offset in ByteBuffer.readInt8 t.ByteBuffer.b offset)
+        let offset = ByteBuffer.__offset t.b t.pos 16 in
+        if(offset!=0) then Color.of_int (let offset = t.pos + offset in ByteBuffer.readInt8 t.b offset)
         else Color.Blue
 
     let weaponsLength (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 18 in
-        if(offset!=0) then ByteBuffer.__vector_len t.ByteBuffer.b (t.ByteBuffer.pos + offset)
+        let offset = ByteBuffer.__offset t.b t.pos 18 in
+        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
         else 0
 
     let weapons (t:offset) index =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 18 in
+        let offset = ByteBuffer.__offset t.b t.pos 18 in
         if(offset!=0) then
             let index = index * 4 in
-            let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
-            let offset = ByteBuffer.__indirect t.ByteBuffer.b offset in
-            Some (Weapon.init t.ByteBuffer.b offset)
+            let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
+            let offset = ByteBuffer.__indirect t.b offset in
+            Some (Weapon.init t.b offset)
         else None
 
     (* Monster *)
     let equipped_type (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 20 in
-        if(offset!=0) then Equipment.of_int (let offset = t.ByteBuffer.pos + offset in ByteBuffer.readUint8 t.ByteBuffer.b offset)
+        let offset = ByteBuffer.__offset t.b t.pos 20 in
+        if(offset!=0) then Equipment.of_int (let offset = t.pos + offset in ByteBuffer.readUint8 t.b offset)
         else Equipment.NONE
 
     (* Monster *)
     let equipped (t:offset) =
-        ByteBuffer.__union t 22
+        ByteBuffer.__union t.b t.pos 22
 
     let pathLength (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 24 in
-        if(offset!=0) then ByteBuffer.__vector_len t.ByteBuffer.b (t.ByteBuffer.pos + offset)
+        let offset = ByteBuffer.__offset t.b t.pos 24 in
+        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
         else 0
 
     let path (t:offset) index =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 24 in
+        let offset = ByteBuffer.__offset t.b t.pos 24 in
         if(offset!=0) then
             let index = index * 12 in
-            let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
-            let offset = ByteBuffer.__indirect t.ByteBuffer.b offset in
-            Some (Vec3.init t.ByteBuffer.b offset)
+            let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
+            let offset = ByteBuffer.__indirect t.b offset in
+            Some (Vec3.init t.b offset)
         else None
 
     let start builder =

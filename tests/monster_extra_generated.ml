@@ -5,13 +5,11 @@ open FlatBuffers
 module MyGame = struct
 
 module MonsterExtra = struct
-    type t
+    type t    type offset = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
-    type offset = t ByteBuffer.offset
+    let init b pos = {b;pos}
 
-    let init b pos : offset = ByteBuffer.offset b pos
-
-    let of_union o : offset = ByteBuffer.offset_of_union o
+    let of_union b pos = {b=b; pos=ByteBuffer.offset_of_union pos}
 
     let getRootAsMonsterExtra b =
         let offset = (ByteBuffer.read_ocaml_int32 b (ByteBuffer.position b)) + (ByteBuffer.position b) in
@@ -19,76 +17,76 @@ module MonsterExtra = struct
 
     (* MonsterExtra *)
     let d0 (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 4 in
-        if(offset!=0) then let offset = t.ByteBuffer.pos + offset in ByteBuffer.readFloat64 t.ByteBuffer.b offset
+        let offset = ByteBuffer.__offset t.b t.pos 4 in
+        if(offset!=0) then let offset = t.pos + offset in ByteBuffer.readFloat64 t.b offset
         else Float.nan
 
     (* MonsterExtra *)
     let d1 (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 6 in
-        if(offset!=0) then let offset = t.ByteBuffer.pos + offset in ByteBuffer.readFloat64 t.ByteBuffer.b offset
+        let offset = ByteBuffer.__offset t.b t.pos 6 in
+        if(offset!=0) then let offset = t.pos + offset in ByteBuffer.readFloat64 t.b offset
         else Float.nan
 
     (* MonsterExtra *)
     let d2 (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 8 in
-        if(offset!=0) then let offset = t.ByteBuffer.pos + offset in ByteBuffer.readFloat64 t.ByteBuffer.b offset
+        let offset = ByteBuffer.__offset t.b t.pos 8 in
+        if(offset!=0) then let offset = t.pos + offset in ByteBuffer.readFloat64 t.b offset
         else Float.infinity
 
     (* MonsterExtra *)
     let d3 (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 10 in
-        if(offset!=0) then let offset = t.ByteBuffer.pos + offset in ByteBuffer.readFloat64 t.ByteBuffer.b offset
+        let offset = ByteBuffer.__offset t.b t.pos 10 in
+        if(offset!=0) then let offset = t.pos + offset in ByteBuffer.readFloat64 t.b offset
         else Float.neg_infinity
 
     (* MonsterExtra *)
     let f0 (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 12 in
-        if(offset!=0) then let offset = t.ByteBuffer.pos + offset in ByteBuffer.readFloat32 t.ByteBuffer.b offset
+        let offset = ByteBuffer.__offset t.b t.pos 12 in
+        if(offset!=0) then let offset = t.pos + offset in ByteBuffer.readFloat32 t.b offset
         else Float.nan
 
     (* MonsterExtra *)
     let f1 (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 14 in
-        if(offset!=0) then let offset = t.ByteBuffer.pos + offset in ByteBuffer.readFloat32 t.ByteBuffer.b offset
+        let offset = ByteBuffer.__offset t.b t.pos 14 in
+        if(offset!=0) then let offset = t.pos + offset in ByteBuffer.readFloat32 t.b offset
         else Float.nan
 
     (* MonsterExtra *)
     let f2 (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 16 in
-        if(offset!=0) then let offset = t.ByteBuffer.pos + offset in ByteBuffer.readFloat32 t.ByteBuffer.b offset
+        let offset = ByteBuffer.__offset t.b t.pos 16 in
+        if(offset!=0) then let offset = t.pos + offset in ByteBuffer.readFloat32 t.b offset
         else Float.infinity
 
     (* MonsterExtra *)
     let f3 (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 18 in
-        if(offset!=0) then let offset = t.ByteBuffer.pos + offset in ByteBuffer.readFloat32 t.ByteBuffer.b offset
+        let offset = ByteBuffer.__offset t.b t.pos 18 in
+        if(offset!=0) then let offset = t.pos + offset in ByteBuffer.readFloat32 t.b offset
         else Float.neg_infinity
 
     let dvecLength (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 20 in
-        if(offset!=0) then ByteBuffer.__vector_len t.ByteBuffer.b (t.ByteBuffer.pos + offset)
+        let offset = ByteBuffer.__offset t.b t.pos 20 in
+        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
         else 0
 
     let dvec (t:offset) index =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 20 in
+        let offset = ByteBuffer.__offset t.b t.pos 20 in
         if(offset!=0) then
             let index = index * 8 in
-            let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
-            ByteBuffer.readFloat64 t.ByteBuffer.b offset
+            let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
+            ByteBuffer.readFloat64 t.b offset
         else 0.0
 
     let fvecLength (t:offset) =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 22 in
-        if(offset!=0) then ByteBuffer.__vector_len t.ByteBuffer.b (t.ByteBuffer.pos + offset)
+        let offset = ByteBuffer.__offset t.b t.pos 22 in
+        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
         else 0
 
     let fvec (t:offset) index =
-        let offset = ByteBuffer.__offset t.ByteBuffer.b t.ByteBuffer.pos 22 in
+        let offset = ByteBuffer.__offset t.b t.pos 22 in
         if(offset!=0) then
             let index = index * 4 in
-            let offset = (ByteBuffer.__vector t.ByteBuffer.b (t.ByteBuffer.pos + offset)) + index in
-            ByteBuffer.readFloat32 t.ByteBuffer.b offset
+            let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
+            ByteBuffer.readFloat32 t.b offset
         else 0.0
 
     let start builder =
