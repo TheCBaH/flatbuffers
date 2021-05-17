@@ -16,20 +16,18 @@
 
 // independent from idl_parser, since this code is not needed for most clients
 
+#include <algorithm>
+#include <iostream>
+#include <iterator>
+#include <map>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 
 #include "flatbuffers/code_generators.h"
 #include "flatbuffers/flatbuffers.h"
 #include "flatbuffers/idl.h"
 #include "flatbuffers/util.h"
-
-#include <unordered_set>
-#include <map>
-#include <unordered_map>
-#include <iterator>
-#include <algorithm>
-#include <iostream>
-
 
 namespace flatbuffers {
 namespace ocaml {
@@ -145,9 +143,7 @@ class Namespace {
     for (auto it = namespaces.begin(); it != namespaces.end(); it++) {
       it->second.print_rec(code_ptr, known_structures);
     }
-    if (!this->name.empty()) {
-      *code_ptr += "end (* " + this->name + " *)\n";
-    }
+    if (!this->name.empty()) { *code_ptr += "end (* " + this->name + " *)\n"; }
   }
 
  public:

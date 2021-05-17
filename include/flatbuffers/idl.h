@@ -1113,9 +1113,8 @@ extern bool GenerateRust(const Parser &parser, const std::string &path,
 
 // Generate Ocaml files from the definitions in the Parser object.
 // See idl_gen_ocaml.cpp.
-extern bool GenerateOcaml(const Parser &parser,
-                           const std::string &path,
-                           const std::string &file_name);
+extern bool GenerateOcaml(const Parser &parser, const std::string &path,
+                          const std::string &file_name);
 
 // Generate Json schema file
 // See idl_gen_json_schema.cpp.
