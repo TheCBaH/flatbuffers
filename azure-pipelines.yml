@@ -53,7 +53,7 @@ steps:
 - script: |
     set -eux
     PATH=$HOME/bin:$PATH
-    eval `opam config env` 
+    eval `opam config env`
     bash ocaml/test.sh
     bash tests/OcamlTest.sh
   displayName: 'Flatbuffers OCaml'
