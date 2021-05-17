@@ -36,7 +36,10 @@ function run_test () {
 }
 
 function setup () {
-  ocamlc -c -I ${runtimelibrarydir} ${runtimelibrarydir}/flatBuffers_priv.ml &&\
+  test=flatBuffers_test
+  ocamlc -c -I ${runtimelibrarydir} ${runtimelibrarydir}/flatBuffers_priv.ml &&
+  ocamlc -I ${runtimelibrarydir} ${runtimelibrarydir}/flatBuffers_priv.cmo ${runtimelibrarydir}/$test.ml -o ${targetdir}/$test &&
+  ${targetdir}/$test &&
   ocamlc -c -I ${runtimelibrarydir} ${runtimelibrarydir}/flatBuffers.ml
 }
 
