@@ -8,3 +8,6 @@ make -j$NCPU flatc
 ocaml -I ocaml ocaml/dev/monster.test.ml
 ./flatc --ocaml -o ocaml -I tests/include_test tests/monster_test.fbs
 ocaml -I ocaml ocaml/dev/monster_test.test.ml
+cd samples && ./ocaml_sample.sh && cd ..
+tests/OCamlTest.sh
+
