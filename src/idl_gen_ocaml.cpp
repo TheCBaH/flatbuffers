@@ -35,15 +35,6 @@ namespace ocaml {
 // Hardcode spaces per indentation.
 const std::string Indent = "    ";
 
-#if 0
-const std::string kGeneratedFileNamePostfix = "_generated";
-
-static std::string GeneratedFileName(const std::string &path,
-                                     const std::string &file_name) {
-  return path + file_name + kGeneratedFileNamePostfix + ".ml";
-}
-#endif
-
 typedef std::unordered_set<std::string> StringSet;
 
 class Struct {
@@ -94,6 +85,13 @@ class Namespace {
   void printStucts(std::string *code_ptr, StringSet *known) {
     StringSet printed;
     bool skip_dependencies = false;
+    /* OCaml requires strong order of type declarations, types can't be used
+      until they are defined. There is no forward reference either. If type A
+      depends on type B, and type B depends on A, they should be defined as
+      recursive types (not handled currently).
+
+      So this code print types that are only using by already printed types.
+     */
     for (;;) {
       bool advanced = false;
       StringSet skipped;
@@ -103,6 +101,7 @@ class Namespace {
         if (skip_dependencies || setContains(*known, s.dependencies)) {
           advanced = true;
           if (skip_dependencies) {
+            /* This is debug code */
             std::cerr << "Module: " << s.name << std::endl;
             std::cerr << "Dependencies: " << std::endl;
             for (auto d = s.dependencies.begin(); d != s.dependencies.end();
@@ -326,7 +325,6 @@ class OcamlGenerator : public BaseGenerator {
     std::string name = NormalizedName(ev);
     std::string value = NumToString(ev.GetAsInt64());
     type += Indent + Indent + "| " + name + "\n";
-    // code += NumToString(ev.value) + "\n";
     of_int += Indent + Indent + "| " + value + " -> " + name + "\n";
     to_int += Indent + Indent + "| " + name + " -> " + value + "\n";
     return;
