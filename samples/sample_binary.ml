@@ -25,9 +25,7 @@ let load_file f =
   let ic = open_in f in
   let n = in_channel_length ic in
   let s = Bytes.create n in
-  really_input ic s 0 n;
-  close_in ic;
-  Bytes.to_string s
+  really_input ic s 0 n ; close_in ic ; Bytes.to_string s
 
 let main () =
   let builder = Builder.create () in
@@ -37,8 +35,15 @@ let main () =
   and weapon_two_damage = 5 in
   let sword = Weapon.create builder weapon_one_name weapon_one_damage in
   let axe = Weapon.create builder weapon_two_name weapon_two_damage in
-  (sword,axe)
-
+  (* Create a FlatBuffer's `vector` from the list *)
+  let weapons = Builder.createOffsetVector builder [sword; axe]
+  (* Second, serialize the rest of the objects needed by the Monster. *)
+  and position = Vec3.create builder 1.0 2.0 3.0
+  and name = Builder.createString builder "MyMonster"
+  and inventory =
+    Builder.createUbyteVector builder [0; 1; 2; 3; 4; 5; 6; 7; 8; 9]
+  in
+  (weapons, position, name, inventory)
 
 (*
 

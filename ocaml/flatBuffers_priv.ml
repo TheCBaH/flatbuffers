@@ -573,20 +573,35 @@ module FlatBuffers = struct
     let startVector t elem_size num_elems alignment =
       notNested t ;
       t.vector_num_elems <- num_elems ;
-      prep t _SIZEOF_INT ~additional_bytes:(elem_size * num_elems) ;
-      prep t alignment ~additional_bytes:(elem_size * num_elems)
+      let bytes = elem_size * num_elems in
+      prep t _SIZEOF_INT ~additional_bytes:bytes ;
+      prep t alignment ~additional_bytes:bytes ;
+      t.space <- t.space - bytes ;
+      ByteBuffer.setPosition t.bb t.space ;
+      t.space
 
     let endVector t =
       write_ocaml_int32 t t.vector_num_elems ;
       offset t
 
+    let createVector t data len write =
+      let num_elems = List.length data in
+      let offset = startVector t len num_elems _SIZEOF_INT in
+      List.iteri (fun i v -> write t.bb (offset + (i * len)) v) data ;
+      endVector t
+
+    let createUbyteVector t data = createVector t data 1 ByteBuffer.writeUint8
+
+    let createUshortVector t data = createVector t data 2 ByteBuffer.writeUint16
+
+    let createOffsetVector t data =
+      createVector t data _SIZEOF_INT ByteBuffer.write_ocaml_int32
+
     let createString t s =
       addInt8 t 0 ;
       let len = String.length s in
-      startVector t 1 len 1 ;
-      t.space <- t.space - len ;
-      ByteBuffer.setPosition t.bb t.space ;
-      ByteBuffer.write_string t.bb s t.space ;
+      let offset = startVector t 1 len 1 in
+      ByteBuffer.write_string t.bb s offset ;
       endVector t
   end
 end
