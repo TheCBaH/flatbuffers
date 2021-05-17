@@ -102,12 +102,12 @@ module TypeAliases = struct
 
     let v8Length (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 24 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let v8 (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 24 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             ByteBuffer.readInt8 t.b offset
@@ -115,12 +115,12 @@ module TypeAliases = struct
 
     let vf64Length (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 26 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let vf64 (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 26 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index * 8 in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             ByteBuffer.readFloat64 t.b offset
@@ -607,12 +607,12 @@ module Monster = struct
 
     let inventoryLength (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 14 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let inventory (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 14 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             ByteBuffer.readUint8 t.b offset
@@ -636,12 +636,12 @@ module Monster = struct
 
     let test4Length (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 22 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let test4 (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 22 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index * 4 in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             let offset = ByteBuffer.__indirect t.b offset in
@@ -650,12 +650,12 @@ module Monster = struct
 
     let testarrayofstringLength (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 24 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let testarrayofstring (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 24 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index * 4 in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             Some (ByteBuffer.__string t.b offset)
@@ -668,12 +668,12 @@ module Monster = struct
 *)
     let testarrayoftablesLength (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 26 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let testarrayoftables (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 26 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index * 4 in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             let offset = ByteBuffer.__indirect t.b offset in
@@ -688,12 +688,12 @@ module Monster = struct
 
     let testnestedflatbufferLength (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 30 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let testnestedflatbuffer (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 30 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             ByteBuffer.readUint8 t.b offset
@@ -761,12 +761,12 @@ module Monster = struct
 
     let testarrayofboolsLength (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 52 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let testarrayofbools (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 52 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             ByteBuffer.readBool t.b offset
@@ -792,12 +792,12 @@ module Monster = struct
 
     let testarrayofstring2Length (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 60 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let testarrayofstring2 (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 60 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index * 4 in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             Some (ByteBuffer.__string t.b offset)
@@ -805,12 +805,12 @@ module Monster = struct
 
     let testarrayofsortedstructLength (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 62 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let testarrayofsortedstruct (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 62 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index * 8 in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             let offset = ByteBuffer.__indirect t.b offset in
@@ -819,12 +819,12 @@ module Monster = struct
 
     let flexLength (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 64 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let flex (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 64 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             ByteBuffer.readUint8 t.b offset
@@ -832,12 +832,12 @@ module Monster = struct
 
     let test5Length (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 66 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let test5 (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 66 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index * 4 in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             let offset = ByteBuffer.__indirect t.b offset in
@@ -846,12 +846,12 @@ module Monster = struct
 
     let vector_of_longsLength (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 68 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let vector_of_longs (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 68 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index * 8 in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             ByteBuffer.readInt64 t.b offset
@@ -859,12 +859,12 @@ module Monster = struct
 
     let vector_of_doublesLength (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 70 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let vector_of_doubles (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 70 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index * 8 in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             ByteBuffer.readFloat64 t.b offset
@@ -878,12 +878,12 @@ module Monster = struct
 
     let vector_of_referrablesLength (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 74 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let vector_of_referrables (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 74 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index * 4 in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             let offset = ByteBuffer.__indirect t.b offset in
@@ -898,12 +898,12 @@ module Monster = struct
 
     let vector_of_weak_referencesLength (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 78 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let vector_of_weak_references (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 78 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index * 8 in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             ByteBuffer.readUint64 t.b offset
@@ -911,12 +911,12 @@ module Monster = struct
 
     let vector_of_strong_referrablesLength (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 80 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let vector_of_strong_referrables (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 80 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index * 4 in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             let offset = ByteBuffer.__indirect t.b offset in
@@ -931,12 +931,12 @@ module Monster = struct
 
     let vector_of_co_owning_referencesLength (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 84 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let vector_of_co_owning_references (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 84 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index * 8 in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             ByteBuffer.readUint64 t.b offset
@@ -950,12 +950,12 @@ module Monster = struct
 
     let vector_of_non_owning_referencesLength (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 88 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let vector_of_non_owning_references (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 88 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index * 8 in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             ByteBuffer.readUint64 t.b offset
@@ -983,12 +983,12 @@ module Monster = struct
 
     let vector_of_enumsLength (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 98 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let vector_of_enums (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 98 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             ByteBuffer.readUint8 t.b offset
@@ -1002,12 +1002,12 @@ module Monster = struct
 
     let testrequirednestedflatbufferLength (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 102 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let testrequirednestedflatbuffer (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 102 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             ByteBuffer.readUint8 t.b offset
@@ -1015,12 +1015,12 @@ module Monster = struct
 
     let scalar_key_sorted_tablesLength (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 104 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let scalar_key_sorted_tables (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 104 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index * 4 in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             let offset = ByteBuffer.__indirect t.b offset in

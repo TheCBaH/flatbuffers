@@ -529,12 +529,12 @@ class OcamlGenerator : public BaseGenerator {
     code += Indent + "let " + NormalizedName(field) + "Length (t:offset) =\n";
     code += offset;
     code += Indent + Indent +
-            "if(offset!=0) then ByteBuffer.__vector_len t.b "
+            "if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b "
             "(t.pos + offset)\n";
-    code += Indent + Indent + "else 0\n\n";
+    code += Indent + Indent + "else ByteBuffer.null\n\n";
     code += Indent + "let " + NormalizedName(field) + " (t:offset) index =\n";
     code += offset;
-    code += Indent + Indent + "if(offset!=0) then\n";
+    code += Indent + Indent + "if(ByteBuffer.not_null offset) then\n";
     code += Indent + Indent + Indent + "let index = index";
     auto vectortype = field.value.type.VectorType();
     auto inline_size = InlineSize(vectortype);

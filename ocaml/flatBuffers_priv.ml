@@ -19,6 +19,8 @@ module FlatBuffers = struct
     type 'a offset = int
     let null = 0
 
+    let not_null (pos:'a offset) = pos != null
+
     type union
     let offset_of_union (offset:union offset) = offset
 
@@ -204,7 +206,7 @@ module FlatBuffers = struct
 
     let __union t pos field_offset : union offset =
       let offset = __offset t pos field_offset in
-      if offset != null then
+      if not_null offset then
         let offset = pos + offset in
         let pos = offset + read_offset t offset in
         pos

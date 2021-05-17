@@ -152,12 +152,12 @@ module Monster = struct
 
     let inventoryLength (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 14 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let inventory (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 14 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             ByteBuffer.readUint8 t.b offset
@@ -171,12 +171,12 @@ module Monster = struct
 
     let weaponsLength (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 18 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let weapons (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 18 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index * 4 in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             let offset = ByteBuffer.__indirect t.b offset in
@@ -195,12 +195,12 @@ module Monster = struct
 
     let pathLength (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 24 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let path (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 24 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index * 12 in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             let offset = ByteBuffer.__indirect t.b offset in

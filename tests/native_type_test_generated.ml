@@ -79,12 +79,12 @@ module ApplicationData = struct
 
     let vectorsLength (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 4 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let vectors (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 4 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index * 12 in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             let offset = ByteBuffer.__indirect t.b offset in
@@ -93,12 +93,12 @@ module ApplicationData = struct
 
     let vectors_altLength (t:offset) =
         let offset = ByteBuffer.__offset t.b t.pos 6 in
-        if(offset!=0) then ByteBuffer.__vector_len t.b (t.pos + offset)
-        else 0
+        if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
+        else ByteBuffer.null
 
     let vectors_alt (t:offset) index =
         let offset = ByteBuffer.__offset t.b t.pos 6 in
-        if(offset!=0) then
+        if(ByteBuffer.not_null offset) then
             let index = index * 12 in
             let offset = (ByteBuffer.__vector t.b (t.pos + offset)) + index in
             let offset = ByteBuffer.__indirect t.b offset in
