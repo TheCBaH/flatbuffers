@@ -849,7 +849,7 @@ class OcamlGenerator : public BaseGenerator {
       case BASE_TYPE_STRUCT: return type.struct_def->name;
       case BASE_TYPE_UNION:
         // fall through
-      default: return "*flatbuffers.Table";
+      default: return "ByteBuffer.offset";
     }
   }
 
