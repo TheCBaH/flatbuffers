@@ -582,12 +582,11 @@ class OcamlGenerator : public BaseGenerator {
   }
 
   // Begin the creator function signature.
-  void BeginBuilderArgs(const StructDef &struct_def, std::string *code_ptr) {
+  void BeginBuilderArgs(std::string *code_ptr) {
     std::string &code = *code_ptr;
 
     code += "\n";
-    code += Indent + "let create" + NormalizedName(struct_def);
-    code += " builder";
+    code += Indent + "let create ~builder";
   }
 
   // Recursively generate arguments for a constructor, to deal with nested
@@ -700,8 +699,7 @@ class OcamlGenerator : public BaseGenerator {
   }
 
   // Get the offset of the end of a table.
-  void GenEndOffsetOnTable(const StructDef &struct_def, std::string *code_ptr) {
-    (void)struct_def;
+  void GenEndOffsetOnTable(std::string *code_ptr) {
     std::string &code = *code_ptr;
     code += Indent + "let end_";
     code += " builder =\n";
@@ -749,13 +747,13 @@ class OcamlGenerator : public BaseGenerator {
 
   // Generate table create function
   void GenTableCreate(const StructDef &struct_def, std::string *code_ptr) {
+    BeginBuilderArgs(code_ptr);
     std::string &code = *code_ptr;
-    code += Indent + "let create builder ";
     for (auto it = struct_def.fields.vec.begin();
          it != struct_def.fields.vec.end(); ++it) {
       auto &field = **it;
       if (field.deprecated) continue;
-      code += MakeCamel(NormalizedName(field), false) + " ";
+      code += '~' + MakeCamel(NormalizedName(field), false) + " ";
     }
     code += "=\n";
     code += Indent + Indent + "start builder;\n";
@@ -786,7 +784,7 @@ class OcamlGenerator : public BaseGenerator {
       }
     }
 
-    GenEndOffsetOnTable(struct_def, code_ptr);
+    GenEndOffsetOnTable(code_ptr);
     GenTableCreate(struct_def, code_ptr);
   }
 
@@ -888,7 +886,7 @@ class OcamlGenerator : public BaseGenerator {
 
   // Create a struct with a builder and the struct's arguments.
   void GenStructBuilder(const StructDef &struct_def, std::string *code_ptr) {
-    BeginBuilderArgs(struct_def, code_ptr);
+    BeginBuilderArgs(code_ptr);
     StructBuilderArgs(struct_def, "", code_ptr);
     EndBuilderArgs(code_ptr);
     StructBuilderBody(struct_def, "", code_ptr);

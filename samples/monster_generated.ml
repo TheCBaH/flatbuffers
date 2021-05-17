@@ -43,7 +43,8 @@ module Weapon = struct
     let end_ builder =
         Builder.endObject builder
 
-    let create builder name damage =
+
+    let create ~builder~name ~damage =
         start builder;
         addName builder name;
         addDamage builder damage;
@@ -75,7 +76,7 @@ module Vec3 = struct
         ByteBuffer.readFloat32 t.ByteBuffer.b offset
 
 
-    let createVec3 builder ~x ~y ~z =
+    let create ~builder ~x ~y ~z =
         Builder.prep builder ~additional_bytes:4 12;
         Builder.addFloat32 builder z;
         Builder.addFloat32 builder y;
@@ -257,7 +258,8 @@ module Monster = struct
     let end_ builder =
         Builder.endObject builder
 
-    let create builder pos mana hp name inventory color weapons equippedType equipped path =
+
+    let create ~builder~pos ~mana ~hp ~name ~inventory ~color ~weapons ~equippedType ~equipped ~path =
         start builder;
         addPos builder pos;
         addMana builder mana;

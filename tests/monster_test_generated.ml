@@ -23,7 +23,8 @@ module InParentNamespace = struct
     let end_ builder =
         Builder.endObject builder
 
-    let create builder =
+
+    let create ~builder=
         start builder;
         end_ builder
 end
@@ -177,7 +178,8 @@ module TypeAliases = struct
     let end_ builder =
         Builder.endObject builder
 
-    let create builder i8 u8 i16 u16 i32 u32 i64 u64 f32 f64 v8 vf64 =
+
+    let create ~builder~i8 ~u8 ~i16 ~u16 ~i32 ~u32 ~i64 ~u64 ~f32 ~f64 ~v8 ~vf64 =
         start builder;
         addI8 builder i8;
         addU8 builder u8;
@@ -262,7 +264,7 @@ module Ability = struct
         ByteBuffer.readUint32 t.ByteBuffer.b offset
 
 
-    let createAbility builder ~id ~distance =
+    let create ~builder ~id ~distance =
         Builder.prep builder ~additional_bytes:4 8;
         Builder.addUint32 builder distance;
         Builder.addUint32 builder id;
@@ -315,7 +317,8 @@ module Stat = struct
     let end_ builder =
         Builder.endObject builder
 
-    let create builder id val_ count =
+
+    let create ~builder~id ~val_ ~count =
         start builder;
         addId builder id;
         addVal_ builder val_;
@@ -351,7 +354,8 @@ module Referrable = struct
     let end_ builder =
         Builder.endObject builder
 
-    let create builder id =
+
+    let create ~builder~id =
         start builder;
         addId builder id;
         end_ builder
@@ -421,7 +425,7 @@ module Test = struct
         ByteBuffer.readInt8 t.ByteBuffer.b offset
 
 
-    let createTest builder ~a ~b =
+    let create ~builder ~a ~b =
         Builder.prep builder ~additional_bytes:2 4;
         Builder.pad builder 1;
         Builder.addInt8 builder b;
@@ -479,7 +483,8 @@ module TestSimpleTableWithEnum = struct
     let end_ builder =
         Builder.endObject builder
 
-    let create builder color =
+
+    let create ~builder~color =
         start builder;
         addColor builder color;
         end_ builder
@@ -510,7 +515,7 @@ module StructOfStructs = struct
         Ability.init t.ByteBuffer.b offset
 
 
-    let createStructOfStructs builder ~a_id ~a_distance ~b_a ~b_b ~c_id ~c_distance =
+    let create ~builder ~a_id ~a_distance ~b_a ~b_b ~c_id ~c_distance =
         Builder.prep builder ~additional_bytes:4 20;
         Builder.prep builder ~additional_bytes:4 8;
         Builder.addUint32 builder c_distance;
@@ -565,7 +570,7 @@ module Vec3 = struct
         Test.init t.ByteBuffer.b offset
 
 
-    let createVec3 builder ~x ~y ~z ~test1 ~test2 ~test3_a ~test3_b =
+    let create ~builder ~x ~y ~z ~test1 ~test2 ~test3_a ~test3_b =
         Builder.prep builder ~additional_bytes:8 32;
         Builder.pad builder 2;
         Builder.prep builder ~additional_bytes:2 4;
@@ -1258,7 +1263,8 @@ module Monster = struct
     let end_ builder =
         Builder.endObject builder
 
-    let create builder pos mana hp name inventory color testType test test4 testarrayofstring testarrayoftables enemy testnestedflatbuffer testempty testbool testhashs32Fnv1 testhashu32Fnv1 testhashs64Fnv1 testhashu64Fnv1 testhashs32Fnv1a testhashu32Fnv1a testhashs64Fnv1a testhashu64Fnv1a testarrayofbools testf testf2 testf3 testarrayofstring2 testarrayofsortedstruct flex test5 vectorOfLongs vectorOfDoubles parentNamespaceTest vectorOfReferrables singleWeakReference vectorOfWeakReferences vectorOfStrongReferrables coOwningReference vectorOfCoOwningReferences nonOwningReference vectorOfNonOwningReferences anyUniqueType anyUnique anyAmbiguousType anyAmbiguous vectorOfEnums signedEnum testrequirednestedflatbuffer scalarKeySortedTables =
+
+    let create ~builder~pos ~mana ~hp ~name ~inventory ~color ~testType ~test ~test4 ~testarrayofstring ~testarrayoftables ~enemy ~testnestedflatbuffer ~testempty ~testbool ~testhashs32Fnv1 ~testhashu32Fnv1 ~testhashs64Fnv1 ~testhashu64Fnv1 ~testhashs32Fnv1a ~testhashu32Fnv1a ~testhashs64Fnv1a ~testhashu64Fnv1a ~testarrayofbools ~testf ~testf2 ~testf3 ~testarrayofstring2 ~testarrayofsortedstruct ~flex ~test5 ~vectorOfLongs ~vectorOfDoubles ~parentNamespaceTest ~vectorOfReferrables ~singleWeakReference ~vectorOfWeakReferences ~vectorOfStrongReferrables ~coOwningReference ~vectorOfCoOwningReferences ~nonOwningReference ~vectorOfNonOwningReferences ~anyUniqueType ~anyUnique ~anyAmbiguousType ~anyAmbiguous ~vectorOfEnums ~signedEnum ~testrequirednestedflatbuffer ~scalarKeySortedTables =
         start builder;
         addPos builder pos;
         addMana builder mana;
@@ -1335,7 +1341,8 @@ module Monster = struct
     let end_ builder =
         Builder.endObject builder
 
-    let create builder =
+
+    let create ~builder=
         start builder;
         end_ builder
 end

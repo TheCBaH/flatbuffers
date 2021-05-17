@@ -29,7 +29,7 @@ module Vector3DAlt = struct
         ByteBuffer.readFloat32 t.ByteBuffer.b offset
 
 
-    let createVector3DAlt builder ~a ~b ~c =
+    let create ~builder ~a ~b ~c =
         Builder.prep builder ~additional_bytes:4 12;
         Builder.addFloat32 builder c;
         Builder.addFloat32 builder b;
@@ -62,7 +62,7 @@ module Vector3D = struct
         ByteBuffer.readFloat32 t.ByteBuffer.b offset
 
 
-    let createVector3D builder ~x ~y ~z =
+    let create ~builder ~x ~y ~z =
         Builder.prep builder ~additional_bytes:4 12;
         Builder.addFloat32 builder z;
         Builder.addFloat32 builder y;
@@ -129,7 +129,8 @@ module ApplicationData = struct
     let end_ builder =
         Builder.endObject builder
 
-    let create builder vectors vectorsAlt =
+
+    let create ~builder~vectors ~vectorsAlt =
         start builder;
         addVectors builder vectors;
         addVectorsAlt builder vectorsAlt;
