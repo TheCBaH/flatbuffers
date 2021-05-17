@@ -129,6 +129,11 @@ module ApplicationData = struct
     let end_ builder =
         Builder.endObject builder
 
+    let create builder vectors vectorsAlt =
+        start builder;
+        addVectors builder vectors;
+        addVectorsAlt builder vectorsAlt;
+        end_ builder
 end
 
 end (* Geometry *)

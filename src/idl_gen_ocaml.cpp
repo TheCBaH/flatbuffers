@@ -747,6 +747,29 @@ class OcamlGenerator : public BaseGenerator {
     *code_ptr += "\n";
   }
 
+  // Generate table create function
+  void GenTableCreate(const StructDef &struct_def, std::string *code_ptr) {
+    std::string &code = *code_ptr;
+    code += Indent + "let create builder ";
+    for (auto it = struct_def.fields.vec.begin();
+         it != struct_def.fields.vec.end(); ++it) {
+      auto &field = **it;
+      if (field.deprecated) continue;
+      code += MakeCamel(NormalizedName(field), false) + " ";
+    }
+    code += "=\n";
+    code += Indent + Indent + "start builder;\n";
+
+    for (auto it = struct_def.fields.vec.begin();
+         it != struct_def.fields.vec.end(); ++it) {
+      auto &field = **it;
+      if (field.deprecated) continue;
+      code += Indent + Indent + "add" + MakeCamel(NormalizedName(field));
+      code += " builder " + MakeCamel(NormalizedName(field), false) + ";\n";
+    }
+    code += Indent + Indent + "end_ builder\n";
+  }
+
   // Generate table constructors, conditioned on its members' types.
   void GenTableBuilders(const StructDef &struct_def, std::string *code_ptr) {
     GenStartOfTable(struct_def, code_ptr);
@@ -764,6 +787,7 @@ class OcamlGenerator : public BaseGenerator {
     }
 
     GenEndOffsetOnTable(struct_def, code_ptr);
+    GenTableCreate(struct_def, code_ptr);
   }
 
   // Generate struct or table methods.

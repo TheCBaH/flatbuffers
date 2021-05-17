@@ -43,6 +43,11 @@ module Weapon = struct
     let end_ builder =
         Builder.endObject builder
 
+    let create builder name damage =
+        start builder;
+        addName builder name;
+        addDamage builder damage;
+        end_ builder
 end
 
 module Vec3 = struct
@@ -252,6 +257,19 @@ module Monster = struct
     let end_ builder =
         Builder.endObject builder
 
+    let create builder pos mana hp name inventory color weapons equippedType equipped path =
+        start builder;
+        addPos builder pos;
+        addMana builder mana;
+        addHp builder hp;
+        addName builder name;
+        addInventory builder inventory;
+        addColor builder color;
+        addWeapons builder weapons;
+        addEquippedType builder equippedType;
+        addEquipped builder equipped;
+        addPath builder path;
+        end_ builder
 end
 
 end (* Sample *)

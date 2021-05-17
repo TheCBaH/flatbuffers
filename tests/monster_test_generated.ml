@@ -23,6 +23,9 @@ module InParentNamespace = struct
     let end_ builder =
         Builder.endObject builder
 
+    let create builder =
+        start builder;
+        end_ builder
 end
 
 module Example = struct
@@ -174,6 +177,21 @@ module TypeAliases = struct
     let end_ builder =
         Builder.endObject builder
 
+    let create builder i8 u8 i16 u16 i32 u32 i64 u64 f32 f64 v8 vf64 =
+        start builder;
+        addI8 builder i8;
+        addU8 builder u8;
+        addI16 builder i16;
+        addU16 builder u16;
+        addI32 builder i32;
+        addU32 builder u32;
+        addI64 builder i64;
+        addU64 builder u64;
+        addF32 builder f32;
+        addF64 builder f64;
+        addV8 builder v8;
+        addVf64 builder vf64;
+        end_ builder
 end
 
 (*  Composite components of Monster color.*)
@@ -297,6 +315,12 @@ module Stat = struct
     let end_ builder =
         Builder.endObject builder
 
+    let create builder id val_ count =
+        start builder;
+        addId builder id;
+        addVal_ builder val_;
+        addCount builder count;
+        end_ builder
 end
 
 module Referrable = struct
@@ -327,6 +351,10 @@ module Referrable = struct
     let end_ builder =
         Builder.endObject builder
 
+    let create builder id =
+        start builder;
+        addId builder id;
+        end_ builder
 end
 
 module Any = struct
@@ -451,6 +479,10 @@ module TestSimpleTableWithEnum = struct
     let end_ builder =
         Builder.endObject builder
 
+    let create builder color =
+        start builder;
+        addColor builder color;
+        end_ builder
 end
 
 module StructOfStructs = struct
@@ -1226,6 +1258,59 @@ module Monster = struct
     let end_ builder =
         Builder.endObject builder
 
+    let create builder pos mana hp name inventory color testType test test4 testarrayofstring testarrayoftables enemy testnestedflatbuffer testempty testbool testhashs32Fnv1 testhashu32Fnv1 testhashs64Fnv1 testhashu64Fnv1 testhashs32Fnv1a testhashu32Fnv1a testhashs64Fnv1a testhashu64Fnv1a testarrayofbools testf testf2 testf3 testarrayofstring2 testarrayofsortedstruct flex test5 vectorOfLongs vectorOfDoubles parentNamespaceTest vectorOfReferrables singleWeakReference vectorOfWeakReferences vectorOfStrongReferrables coOwningReference vectorOfCoOwningReferences nonOwningReference vectorOfNonOwningReferences anyUniqueType anyUnique anyAmbiguousType anyAmbiguous vectorOfEnums signedEnum testrequirednestedflatbuffer scalarKeySortedTables =
+        start builder;
+        addPos builder pos;
+        addMana builder mana;
+        addHp builder hp;
+        addName builder name;
+        addInventory builder inventory;
+        addColor builder color;
+        addTestType builder testType;
+        addTest builder test;
+        addTest4 builder test4;
+        addTestarrayofstring builder testarrayofstring;
+        addTestarrayoftables builder testarrayoftables;
+        addEnemy builder enemy;
+        addTestnestedflatbuffer builder testnestedflatbuffer;
+        addTestempty builder testempty;
+        addTestbool builder testbool;
+        addTesthashs32Fnv1 builder testhashs32Fnv1;
+        addTesthashu32Fnv1 builder testhashu32Fnv1;
+        addTesthashs64Fnv1 builder testhashs64Fnv1;
+        addTesthashu64Fnv1 builder testhashu64Fnv1;
+        addTesthashs32Fnv1a builder testhashs32Fnv1a;
+        addTesthashu32Fnv1a builder testhashu32Fnv1a;
+        addTesthashs64Fnv1a builder testhashs64Fnv1a;
+        addTesthashu64Fnv1a builder testhashu64Fnv1a;
+        addTestarrayofbools builder testarrayofbools;
+        addTestf builder testf;
+        addTestf2 builder testf2;
+        addTestf3 builder testf3;
+        addTestarrayofstring2 builder testarrayofstring2;
+        addTestarrayofsortedstruct builder testarrayofsortedstruct;
+        addFlex builder flex;
+        addTest5 builder test5;
+        addVectorOfLongs builder vectorOfLongs;
+        addVectorOfDoubles builder vectorOfDoubles;
+        addParentNamespaceTest builder parentNamespaceTest;
+        addVectorOfReferrables builder vectorOfReferrables;
+        addSingleWeakReference builder singleWeakReference;
+        addVectorOfWeakReferences builder vectorOfWeakReferences;
+        addVectorOfStrongReferrables builder vectorOfStrongReferrables;
+        addCoOwningReference builder coOwningReference;
+        addVectorOfCoOwningReferences builder vectorOfCoOwningReferences;
+        addNonOwningReference builder nonOwningReference;
+        addVectorOfNonOwningReferences builder vectorOfNonOwningReferences;
+        addAnyUniqueType builder anyUniqueType;
+        addAnyUnique builder anyUnique;
+        addAnyAmbiguousType builder anyAmbiguousType;
+        addAnyAmbiguous builder anyAmbiguous;
+        addVectorOfEnums builder vectorOfEnums;
+        addSignedEnum builder signedEnum;
+        addTestrequirednestedflatbuffer builder testrequirednestedflatbuffer;
+        addScalarKeySortedTables builder scalarKeySortedTables;
+        end_ builder
 end
 
 end (* Example *)
@@ -1250,6 +1335,9 @@ module Monster = struct
     let end_ builder =
         Builder.endObject builder
 
+    let create builder =
+        start builder;
+        end_ builder
 end
 
 end (* Example2 *)

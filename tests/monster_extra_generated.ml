@@ -133,6 +133,19 @@ module MonsterExtra = struct
     let end_ builder =
         Builder.endObject builder
 
+    let create builder d0 d1 d2 d3 f0 f1 f2 f3 dvec fvec =
+        start builder;
+        addD0 builder d0;
+        addD1 builder d1;
+        addD2 builder d2;
+        addD3 builder d3;
+        addF0 builder f0;
+        addF1 builder f1;
+        addF2 builder f2;
+        addF3 builder f3;
+        addDvec builder dvec;
+        addFvec builder fvec;
+        end_ builder
 end
 
 end (* MyGame *)

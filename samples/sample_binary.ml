@@ -35,14 +35,8 @@ let main () =
   and weapon_one_damage = 3
   and weapon_two_name = Builder.createString builder "Axe"
   and weapon_two_damage = 5 in
-  Weapon.start builder;
-  Weapon.addName builder weapon_one_name;
-  Weapon.addDamage builder weapon_one_damage;
-  let sword = Weapon.end_ builder in
-  Weapon.start builder;
-  Weapon.addName builder weapon_two_name;
-  Weapon.addDamage builder weapon_two_damage;
-  let axe = Weapon.end_ builder in
+  let sword = Weapon.create builder weapon_one_name weapon_one_damage in
+  let axe = Weapon.create builder weapon_two_name weapon_two_damage in
   (sword,axe)
 
 
