@@ -652,7 +652,7 @@ class OcamlGenerator : public BaseGenerator {
   // Get the value of a table's starting offset.
   void GetStartOfTable(const StructDef &struct_def, std::string *code_ptr) {
     std::string &code = *code_ptr;
-    code += Indent + "let start" + NormalizedName(struct_def);
+    code += Indent + "let start";
     code += " builder =\n";
     code += Indent + Indent + "Builder.startObject  builder ";
     code += NumToString(struct_def.fields.vec.size());
@@ -701,8 +701,9 @@ class OcamlGenerator : public BaseGenerator {
 
   // Get the offset of the end of a table.
   void GetEndOffsetOnTable(const StructDef &struct_def, std::string *code_ptr) {
+    (void)struct_def;
     std::string &code = *code_ptr;
-    code += Indent + "let end" + NormalizedName(struct_def);
+    code += Indent + "let end_";
     code += " builder =\n";
     code += Indent + Indent + "Builder.endObject builder\n\n";
   }

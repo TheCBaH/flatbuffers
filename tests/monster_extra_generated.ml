@@ -91,7 +91,7 @@ module MonsterExtra = struct
             ByteBuffer.readFloat32 t.ByteBuffer.b offset
         else 0.0
 
-    let startMonsterExtra builder =
+    let start builder =
         Builder.startObject  builder 11
 
     let addD0 builder d0 =
@@ -130,7 +130,7 @@ module MonsterExtra = struct
     let startMonsterExtraFvec builder numElems =
         Builder.startVector builder 4 numElems 4
 
-    let endMonsterExtra builder =
+    let end_ builder =
         Builder.endObject builder
 
 end

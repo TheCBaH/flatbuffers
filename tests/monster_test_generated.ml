@@ -17,10 +17,10 @@ module InParentNamespace = struct
         let offset = (ByteBuffer.read_ocaml_int32 b (ByteBuffer.position b)) + (ByteBuffer.position b) in
         init b offset
 
-    let startInParentNamespace builder =
+    let start builder =
         Builder.startObject  builder 0
 
-    let endInParentNamespace builder =
+    let end_ builder =
         Builder.endObject builder
 
 end
@@ -126,7 +126,7 @@ module TypeAliases = struct
             ByteBuffer.readFloat64 t.ByteBuffer.b offset
         else 0.0
 
-    let startTypeAliases builder =
+    let start builder =
         Builder.startObject  builder 12
 
     let addI8 builder i8 =
@@ -171,7 +171,7 @@ module TypeAliases = struct
     let startTypeAliasesVf64 builder numElems =
         Builder.startVector builder 8 numElems 8
 
-    let endTypeAliases builder =
+    let end_ builder =
         Builder.endObject builder
 
 end
@@ -282,7 +282,7 @@ module Stat = struct
         if(offset!=0) then let offset = t.ByteBuffer.pos + offset in ByteBuffer.readUint16 t.ByteBuffer.b offset
         else 0
 
-    let startStat builder =
+    let start builder =
         Builder.startObject  builder 3
 
     let addId builder id =
@@ -294,7 +294,7 @@ module Stat = struct
     let addCount builder count =
         Builder.addFieldUint16 builder 2 count (0)
 
-    let endStat builder =
+    let end_ builder =
         Builder.endObject builder
 
 end
@@ -318,13 +318,13 @@ module Referrable = struct
         if(offset!=0) then let offset = t.ByteBuffer.pos + offset in ByteBuffer.readUint64 t.ByteBuffer.b offset
         else Int64.zero
 
-    let startReferrable builder =
+    let start builder =
         Builder.startObject  builder 1
 
     let addId builder id =
         Builder.addFieldUint64 builder 0 id (Int64.zero)
 
-    let endReferrable builder =
+    let end_ builder =
         Builder.endObject builder
 
 end
@@ -442,13 +442,13 @@ module TestSimpleTableWithEnum = struct
         if(offset!=0) then Color.of_int (let offset = t.ByteBuffer.pos + offset in ByteBuffer.readUint8 t.ByteBuffer.b offset)
         else Color.Green
 
-    let startTestSimpleTableWithEnum builder =
+    let start builder =
         Builder.startObject  builder 1
 
     let addColor builder color =
         Builder.addFieldUint8 builder 0 color (2)
 
-    let endTestSimpleTableWithEnum builder =
+    let end_ builder =
         Builder.endObject builder
 
 end
@@ -1010,7 +1010,7 @@ module Monster = struct
             Some (Stat.init t.ByteBuffer.b offset)
         else None
 
-    let startMonster builder =
+    let start builder =
         Builder.startObject  builder 51
 
     let addPos builder pos =
@@ -1223,7 +1223,7 @@ module Monster = struct
     let startMonsterScalarKeySortedTables builder numElems =
         Builder.startVector builder 4 numElems 4
 
-    let endMonster builder =
+    let end_ builder =
         Builder.endObject builder
 
 end
@@ -1244,10 +1244,10 @@ module Monster = struct
         let offset = (ByteBuffer.read_ocaml_int32 b (ByteBuffer.position b)) + (ByteBuffer.position b) in
         init b offset
 
-    let startMonster builder =
+    let start builder =
         Builder.startObject  builder 0
 
-    let endMonster builder =
+    let end_ builder =
         Builder.endObject builder
 
 end

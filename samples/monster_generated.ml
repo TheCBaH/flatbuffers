@@ -31,7 +31,7 @@ module Weapon = struct
         if(offset!=0) then let offset = t.ByteBuffer.pos + offset in ByteBuffer.readInt16 t.ByteBuffer.b offset
         else 0
 
-    let startWeapon builder =
+    let start builder =
         Builder.startObject  builder 2
 
     let addName builder name =
@@ -40,7 +40,7 @@ module Weapon = struct
     let addDamage builder damage =
         Builder.addFieldInt16 builder 1 damage (0)
 
-    let endWeapon builder =
+    let end_ builder =
         Builder.endObject builder
 
 end
@@ -207,7 +207,7 @@ module Monster = struct
             Some (Vec3.init t.ByteBuffer.b offset)
         else None
 
-    let startMonster builder =
+    let start builder =
         Builder.startObject  builder 11
 
     let addPos builder pos =
@@ -249,7 +249,7 @@ module Monster = struct
     let startMonsterPath builder numElems =
         Builder.startVector builder 12 numElems 4
 
-    let endMonster builder =
+    let end_ builder =
         Builder.endObject builder
 
 end

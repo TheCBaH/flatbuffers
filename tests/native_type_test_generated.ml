@@ -111,7 +111,7 @@ module ApplicationData = struct
             Some (Vector3DAlt.init t.ByteBuffer.b offset)
         else None
 
-    let startApplicationData builder =
+    let start builder =
         Builder.startObject  builder 2
 
     let addVectors builder vectors =
@@ -126,7 +126,7 @@ module ApplicationData = struct
     let startApplicationDataVectorsAlt builder numElems =
         Builder.startVector builder 12 numElems 4
 
-    let endApplicationData builder =
+    let end_ builder =
         Builder.endObject builder
 
 end
