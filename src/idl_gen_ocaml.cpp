@@ -650,7 +650,7 @@ class OcamlGenerator : public BaseGenerator {
   }
 
   // Get the value of a table's starting offset.
-  void GetStartOfTable(const StructDef &struct_def, std::string *code_ptr) {
+  void GenStartOfTable(const StructDef &struct_def, std::string *code_ptr) {
     std::string &code = *code_ptr;
     code += Indent + "let start";
     code += " builder =\n";
@@ -700,7 +700,7 @@ class OcamlGenerator : public BaseGenerator {
   }
 
   // Get the offset of the end of a table.
-  void GetEndOffsetOnTable(const StructDef &struct_def, std::string *code_ptr) {
+  void GenEndOffsetOnTable(const StructDef &struct_def, std::string *code_ptr) {
     (void)struct_def;
     std::string &code = *code_ptr;
     code += Indent + "let end_";
@@ -749,7 +749,7 @@ class OcamlGenerator : public BaseGenerator {
 
   // Generate table constructors, conditioned on its members' types.
   void GenTableBuilders(const StructDef &struct_def, std::string *code_ptr) {
-    GetStartOfTable(struct_def, code_ptr);
+    GenStartOfTable(struct_def, code_ptr);
 
     for (auto it = struct_def.fields.vec.begin();
          it != struct_def.fields.vec.end(); ++it) {
@@ -763,7 +763,7 @@ class OcamlGenerator : public BaseGenerator {
       }
     }
 
-    GetEndOffsetOnTable(struct_def, code_ptr);
+    GenEndOffsetOnTable(struct_def, code_ptr);
   }
 
   // Generate struct or table methods.
