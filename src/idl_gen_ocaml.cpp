@@ -275,9 +275,8 @@ class OcamlGenerator : public BaseGenerator {
     if (parser_.opts.generate_object_based_api) {
       GenerateStructType(struct_def, dependencies, code_ptr);
     } else {
-      *code_ptr += Indent + "type t";
+      *code_ptr += Indent + "type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}\n\n";
     }
-    *code_ptr += Indent + "type offset = {b: ByteBuffer.t; pos: t ByteBuffer.offset}\n\n";
     *code_ptr +=
         Indent + "let init b pos = {b;pos}\n\n";
     *code_ptr +=
@@ -410,7 +409,7 @@ class OcamlGenerator : public BaseGenerator {
     code += Indent + "(* " + NormalizedName(struct_def) + " *)\n";
     code += Indent + "let ";
     code += NormalizedName(field);
-    code += " (t:offset) =\n";
+    code += " t =\n";
   }
 
   std::string GetRelativeOffset(const std::string &offset) {
@@ -458,7 +457,7 @@ class OcamlGenerator : public BaseGenerator {
         default_value = module_name + "." + val->name;
       }
     }
-    code += Indent + Indent + "if(offset!=0) then " + field_value + "\n";
+    code += Indent + Indent + "if ByteBuffer.not_null offset then " + field_value + "\n";
     code += Indent + Indent + "else " + default_value + "\n";
   }
 
@@ -490,7 +489,7 @@ class OcamlGenerator : public BaseGenerator {
               NumToString(field.value.offset) + ")";
     }
     code += " in\n";
-    code += Indent + Indent + "if(offset!=0) then Some (";
+    code += Indent + Indent + "if ByteBuffer.not_null offset then Some (";
     code += GetRelativeOffset("offset") + " " +
             GetStructReceiver(struct_def, field, dependencies) + ")\n";
     code += Indent + Indent + "else None\n";
@@ -506,7 +505,7 @@ class OcamlGenerator : public BaseGenerator {
         "let offset = ByteBuffer.__offset t.b t.pos " +
         NumToString(field.value.offset) + " in\n";
     code += Indent + Indent +
-            "if(offset!=0) then Some (ByteBuffer.__string t.b "
+            "if ByteBuffer.not_null offset then Some (ByteBuffer.__string t.b "
             "(t.pos + offset))\n";
     code += Indent + Indent + "else None\n";
   }
@@ -526,13 +525,13 @@ class OcamlGenerator : public BaseGenerator {
         Indent + Indent +
         "let offset = ByteBuffer.__offset t.b t.pos " +
         NumToString(field.value.offset) + " in\n";
-    code += Indent + "let " + NormalizedName(field) + "Length (t:offset) =\n";
+    code += Indent + "let " + NormalizedName(field) + "Length t =\n";
     code += offset;
     code += Indent + Indent +
             "if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b "
             "(t.pos + offset)\n";
     code += Indent + Indent + "else ByteBuffer.null\n\n";
-    code += Indent + "let " + NormalizedName(field) + " (t:offset) index =\n";
+    code += Indent + "let " + NormalizedName(field) + " t index =\n";
     code += offset;
     code += Indent + Indent + "if(ByteBuffer.not_null offset) then\n";
     code += Indent + Indent + Indent + "let index = index";

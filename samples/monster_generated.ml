@@ -7,7 +7,7 @@ module MyGame = struct
 module Sample = struct
 
 module Weapon = struct
-    type t    type offset = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
+    type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
     let init b pos = {b;pos}
 
@@ -18,15 +18,15 @@ module Weapon = struct
         init b offset
 
     (* Weapon *)
-    let name (t:offset) =
+    let name t =
         let offset = ByteBuffer.__offset t.b t.pos 4 in
-        if(offset!=0) then Some (ByteBuffer.__string t.b (t.pos + offset))
+        if ByteBuffer.not_null offset then Some (ByteBuffer.__string t.b (t.pos + offset))
         else None
 
     (* Weapon *)
-    let damage (t:offset) =
+    let damage t =
         let offset = ByteBuffer.__offset t.b t.pos 6 in
-        if(offset!=0) then let offset = t.pos + offset in ByteBuffer.readInt16 t.b offset
+        if ByteBuffer.not_null offset then let offset = t.pos + offset in ByteBuffer.readInt16 t.b offset
         else 0
 
     let start builder =
@@ -50,24 +50,24 @@ module Weapon = struct
 end
 
 module Vec3 = struct
-    type t    type offset = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
+    type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
     let init b pos = {b;pos}
 
     let of_union b pos = {b=b; pos=ByteBuffer.offset_of_union pos}
 
     (* Vec3 *)
-    let x (t:offset) =
+    let x t =
         let offset = t.pos + 0 in
         ByteBuffer.readFloat32 t.b offset
 
     (* Vec3 *)
-    let y (t:offset) =
+    let y t =
         let offset = t.pos + 4 in
         ByteBuffer.readFloat32 t.b offset
 
     (* Vec3 *)
-    let z (t:offset) =
+    let z t =
         let offset = t.pos + 8 in
         ByteBuffer.readFloat32 t.b offset
 
@@ -116,7 +116,7 @@ module Color = struct
 end
 
 module Monster = struct
-    type t    type offset = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
+    type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
     let init b pos = {b;pos}
 
@@ -127,35 +127,35 @@ module Monster = struct
         init b offset
 
     (* Monster *)
-    let pos (t:offset) =
+    let pos t =
         let offset = ByteBuffer.__offset t.b t.pos 4 in
-        if(offset!=0) then Some (let offset = t.pos + offset in Vec3.init t.b offset)
+        if ByteBuffer.not_null offset then Some (let offset = t.pos + offset in Vec3.init t.b offset)
         else None
 
     (* Monster *)
-    let mana (t:offset) =
+    let mana t =
         let offset = ByteBuffer.__offset t.b t.pos 6 in
-        if(offset!=0) then let offset = t.pos + offset in ByteBuffer.readInt16 t.b offset
+        if ByteBuffer.not_null offset then let offset = t.pos + offset in ByteBuffer.readInt16 t.b offset
         else 150
 
     (* Monster *)
-    let hp (t:offset) =
+    let hp t =
         let offset = ByteBuffer.__offset t.b t.pos 8 in
-        if(offset!=0) then let offset = t.pos + offset in ByteBuffer.readInt16 t.b offset
+        if ByteBuffer.not_null offset then let offset = t.pos + offset in ByteBuffer.readInt16 t.b offset
         else 100
 
     (* Monster *)
-    let name (t:offset) =
+    let name t =
         let offset = ByteBuffer.__offset t.b t.pos 10 in
-        if(offset!=0) then Some (ByteBuffer.__string t.b (t.pos + offset))
+        if ByteBuffer.not_null offset then Some (ByteBuffer.__string t.b (t.pos + offset))
         else None
 
-    let inventoryLength (t:offset) =
+    let inventoryLength t =
         let offset = ByteBuffer.__offset t.b t.pos 14 in
         if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
         else ByteBuffer.null
 
-    let inventory (t:offset) index =
+    let inventory t index =
         let offset = ByteBuffer.__offset t.b t.pos 14 in
         if(ByteBuffer.not_null offset) then
             let index = index in
@@ -164,17 +164,17 @@ module Monster = struct
         else 0
 
     (* Monster *)
-    let color (t:offset) =
+    let color t =
         let offset = ByteBuffer.__offset t.b t.pos 16 in
-        if(offset!=0) then Color.of_int (let offset = t.pos + offset in ByteBuffer.readInt8 t.b offset)
+        if ByteBuffer.not_null offset then Color.of_int (let offset = t.pos + offset in ByteBuffer.readInt8 t.b offset)
         else Color.Blue
 
-    let weaponsLength (t:offset) =
+    let weaponsLength t =
         let offset = ByteBuffer.__offset t.b t.pos 18 in
         if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
         else ByteBuffer.null
 
-    let weapons (t:offset) index =
+    let weapons t index =
         let offset = ByteBuffer.__offset t.b t.pos 18 in
         if(ByteBuffer.not_null offset) then
             let index = index * 4 in
@@ -184,21 +184,21 @@ module Monster = struct
         else None
 
     (* Monster *)
-    let equipped_type (t:offset) =
+    let equipped_type t =
         let offset = ByteBuffer.__offset t.b t.pos 20 in
-        if(offset!=0) then Equipment.of_int (let offset = t.pos + offset in ByteBuffer.readUint8 t.b offset)
+        if ByteBuffer.not_null offset then Equipment.of_int (let offset = t.pos + offset in ByteBuffer.readUint8 t.b offset)
         else Equipment.NONE
 
     (* Monster *)
-    let equipped (t:offset) =
+    let equipped t =
         ByteBuffer.__union t.b t.pos 22
 
-    let pathLength (t:offset) =
+    let pathLength t =
         let offset = ByteBuffer.__offset t.b t.pos 24 in
         if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
         else ByteBuffer.null
 
-    let path (t:offset) index =
+    let path t index =
         let offset = ByteBuffer.__offset t.b t.pos 24 in
         if(ByteBuffer.not_null offset) then
             let index = index * 12 in

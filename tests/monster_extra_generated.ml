@@ -5,7 +5,7 @@ open FlatBuffers
 module MyGame = struct
 
 module MonsterExtra = struct
-    type t    type offset = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
+    type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
     let init b pos = {b;pos}
 
@@ -16,59 +16,59 @@ module MonsterExtra = struct
         init b offset
 
     (* MonsterExtra *)
-    let d0 (t:offset) =
+    let d0 t =
         let offset = ByteBuffer.__offset t.b t.pos 4 in
-        if(offset!=0) then let offset = t.pos + offset in ByteBuffer.readFloat64 t.b offset
+        if ByteBuffer.not_null offset then let offset = t.pos + offset in ByteBuffer.readFloat64 t.b offset
         else Float.nan
 
     (* MonsterExtra *)
-    let d1 (t:offset) =
+    let d1 t =
         let offset = ByteBuffer.__offset t.b t.pos 6 in
-        if(offset!=0) then let offset = t.pos + offset in ByteBuffer.readFloat64 t.b offset
+        if ByteBuffer.not_null offset then let offset = t.pos + offset in ByteBuffer.readFloat64 t.b offset
         else Float.nan
 
     (* MonsterExtra *)
-    let d2 (t:offset) =
+    let d2 t =
         let offset = ByteBuffer.__offset t.b t.pos 8 in
-        if(offset!=0) then let offset = t.pos + offset in ByteBuffer.readFloat64 t.b offset
+        if ByteBuffer.not_null offset then let offset = t.pos + offset in ByteBuffer.readFloat64 t.b offset
         else Float.infinity
 
     (* MonsterExtra *)
-    let d3 (t:offset) =
+    let d3 t =
         let offset = ByteBuffer.__offset t.b t.pos 10 in
-        if(offset!=0) then let offset = t.pos + offset in ByteBuffer.readFloat64 t.b offset
+        if ByteBuffer.not_null offset then let offset = t.pos + offset in ByteBuffer.readFloat64 t.b offset
         else Float.neg_infinity
 
     (* MonsterExtra *)
-    let f0 (t:offset) =
+    let f0 t =
         let offset = ByteBuffer.__offset t.b t.pos 12 in
-        if(offset!=0) then let offset = t.pos + offset in ByteBuffer.readFloat32 t.b offset
+        if ByteBuffer.not_null offset then let offset = t.pos + offset in ByteBuffer.readFloat32 t.b offset
         else Float.nan
 
     (* MonsterExtra *)
-    let f1 (t:offset) =
+    let f1 t =
         let offset = ByteBuffer.__offset t.b t.pos 14 in
-        if(offset!=0) then let offset = t.pos + offset in ByteBuffer.readFloat32 t.b offset
+        if ByteBuffer.not_null offset then let offset = t.pos + offset in ByteBuffer.readFloat32 t.b offset
         else Float.nan
 
     (* MonsterExtra *)
-    let f2 (t:offset) =
+    let f2 t =
         let offset = ByteBuffer.__offset t.b t.pos 16 in
-        if(offset!=0) then let offset = t.pos + offset in ByteBuffer.readFloat32 t.b offset
+        if ByteBuffer.not_null offset then let offset = t.pos + offset in ByteBuffer.readFloat32 t.b offset
         else Float.infinity
 
     (* MonsterExtra *)
-    let f3 (t:offset) =
+    let f3 t =
         let offset = ByteBuffer.__offset t.b t.pos 18 in
-        if(offset!=0) then let offset = t.pos + offset in ByteBuffer.readFloat32 t.b offset
+        if ByteBuffer.not_null offset then let offset = t.pos + offset in ByteBuffer.readFloat32 t.b offset
         else Float.neg_infinity
 
-    let dvecLength (t:offset) =
+    let dvecLength t =
         let offset = ByteBuffer.__offset t.b t.pos 20 in
         if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
         else ByteBuffer.null
 
-    let dvec (t:offset) index =
+    let dvec t index =
         let offset = ByteBuffer.__offset t.b t.pos 20 in
         if(ByteBuffer.not_null offset) then
             let index = index * 8 in
@@ -76,12 +76,12 @@ module MonsterExtra = struct
             ByteBuffer.readFloat64 t.b offset
         else 0.0
 
-    let fvecLength (t:offset) =
+    let fvecLength t =
         let offset = ByteBuffer.__offset t.b t.pos 22 in
         if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
         else ByteBuffer.null
 
-    let fvec (t:offset) index =
+    let fvec t index =
         let offset = ByteBuffer.__offset t.b t.pos 22 in
         if(ByteBuffer.not_null offset) then
             let index = index * 4 in

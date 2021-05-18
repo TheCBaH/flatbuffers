@@ -5,24 +5,24 @@ open FlatBuffers
 module Geometry = struct
 
 module Vector3DAlt = struct
-    type t    type offset = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
+    type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
     let init b pos = {b;pos}
 
     let of_union b pos = {b=b; pos=ByteBuffer.offset_of_union pos}
 
     (* Vector3DAlt *)
-    let a (t:offset) =
+    let a t =
         let offset = t.pos + 0 in
         ByteBuffer.readFloat32 t.b offset
 
     (* Vector3DAlt *)
-    let b (t:offset) =
+    let b t =
         let offset = t.pos + 4 in
         ByteBuffer.readFloat32 t.b offset
 
     (* Vector3DAlt *)
-    let c (t:offset) =
+    let c t =
         let offset = t.pos + 8 in
         ByteBuffer.readFloat32 t.b offset
 
@@ -36,24 +36,24 @@ module Vector3DAlt = struct
 end
 
 module Vector3D = struct
-    type t    type offset = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
+    type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
     let init b pos = {b;pos}
 
     let of_union b pos = {b=b; pos=ByteBuffer.offset_of_union pos}
 
     (* Vector3D *)
-    let x (t:offset) =
+    let x t =
         let offset = t.pos + 0 in
         ByteBuffer.readFloat32 t.b offset
 
     (* Vector3D *)
-    let y (t:offset) =
+    let y t =
         let offset = t.pos + 4 in
         ByteBuffer.readFloat32 t.b offset
 
     (* Vector3D *)
-    let z (t:offset) =
+    let z t =
         let offset = t.pos + 8 in
         ByteBuffer.readFloat32 t.b offset
 
@@ -67,7 +67,7 @@ module Vector3D = struct
 end
 
 module ApplicationData = struct
-    type t    type offset = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
+    type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
     let init b pos = {b;pos}
 
@@ -77,12 +77,12 @@ module ApplicationData = struct
         let offset = (ByteBuffer.read_ocaml_int32 b (ByteBuffer.position b)) + (ByteBuffer.position b) in
         init b offset
 
-    let vectorsLength (t:offset) =
+    let vectorsLength t =
         let offset = ByteBuffer.__offset t.b t.pos 4 in
         if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
         else ByteBuffer.null
 
-    let vectors (t:offset) index =
+    let vectors t index =
         let offset = ByteBuffer.__offset t.b t.pos 4 in
         if(ByteBuffer.not_null offset) then
             let index = index * 12 in
@@ -91,12 +91,12 @@ module ApplicationData = struct
             Some (Vector3D.init t.b offset)
         else None
 
-    let vectors_altLength (t:offset) =
+    let vectors_altLength t =
         let offset = ByteBuffer.__offset t.b t.pos 6 in
         if(ByteBuffer.not_null offset) then ByteBuffer.__vector_len t.b (t.pos + offset)
         else ByteBuffer.null
 
-    let vectors_alt (t:offset) index =
+    let vectors_alt t index =
         let offset = ByteBuffer.__offset t.b t.pos 6 in
         if(ByteBuffer.not_null offset) then
             let index = index * 12 in
