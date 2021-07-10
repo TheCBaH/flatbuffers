@@ -172,8 +172,8 @@ module Monster = struct
     (* Monster *)
     let color t =
         let offset = ByteBuffer.__offset t.b t.pos 16 in
-        if ByteBuffer.not_null offset then Color.of_int (let offset = t.pos + offset in ByteBuffer.readInt8 t.b offset)
-        else Color.of_int (2)
+        if ByteBuffer.not_null offset then Color.of_int (let offset = t.pos + offset in ByteBuffer.readInt8 t.b offset) offset
+        else Color.Blue ByteBuffer.null
 
     let weaponsLength t =
         let offset = ByteBuffer.__offset t.b t.pos 18 in
@@ -192,8 +192,8 @@ module Monster = struct
     (* Monster *)
     let equipped_type t =
         let offset = ByteBuffer.__offset t.b t.pos 20 in
-        if ByteBuffer.not_null offset then Equipment.of_int (let offset = t.pos + offset in ByteBuffer.readUint8 t.b offset)
-        else Equipment.of_int (0)
+        if ByteBuffer.not_null offset then Equipment.of_int (let offset = t.pos + offset in ByteBuffer.readUint8 t.b offset) offset
+        else Equipment.NONE ByteBuffer.null
 
     (* Monster *)
     let equipped t =

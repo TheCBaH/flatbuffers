@@ -459,10 +459,10 @@ class OcamlGenerator : public BaseGenerator {
                   GetScalarReceiver(struct_def, field.value.type);
     if (field.value.type.enum_def) {
       auto module_name = NormalizedName(*field.value.type.enum_def);
-      field_value = module_name + ".of_int (" + field_value + ")";
+      field_value = module_name + ".of_int (" + field_value + ") offset";
       if (auto val = field.value.type.enum_def->ReverseLookup(
               StringToInt(field.value.constant.c_str()), false)) {
-                if(0) {
+                if(1) {
         default_value = module_name + "." + val->name + " ByteBuffer.null";
                 } else {
         default_value = module_name + ".of_int (" + field.value.constant.c_str() + ")";
