@@ -320,12 +320,12 @@ class OcamlGenerator : public BaseGenerator {
   }
 
   // A single enum member.
-  void EnumMember(const EnumVal ev, std::string &type, std::string &of_int,
+  void EnumMember(const EnumVal ev, bool is_union, std::string &type, std::string &of_int,
                   std::string &to_int) {
     std::string name = NormalizedName(ev);
     auto val = ev.GetAsInt64();
     std::string value = NumToString(val);
-    if (val==0) {
+    if (val==0 || !is_union) {
       type += Indent + Indent + "| " + name + "\n";
       of_int += Indent + Indent + "| " + value + " -> " + name + "\n";
       to_int += Indent + Indent + "| " + name + " -> " + value + "\n";
@@ -462,11 +462,7 @@ class OcamlGenerator : public BaseGenerator {
       field_value = module_name + ".of_int (" + field_value + ") offset";
       if (auto val = field.value.type.enum_def->ReverseLookup(
               StringToInt(field.value.constant.c_str()), false)) {
-                if(1) {
         default_value = module_name + "." + val->name + " ByteBuffer.null";
-                } else {
-        default_value = module_name + ".of_int (" + field.value.constant.c_str() + ")";
-                }
       }
     }
     code += Indent + Indent + "if ByteBuffer.not_null offset then " + field_value + "\n";
@@ -847,7 +843,7 @@ class OcamlGenerator : public BaseGenerator {
     for (auto it = vals.begin(); it != vals.end(); ++it) {
       auto &ev = **it;
       GenComment(ev.doc_comment, &type);
-      EnumMember(ev, type, of_int, to_int);
+      EnumMember(ev, enum_def.is_union, type, of_int, to_int);
     }
     of_int += Indent + Indent + "| _ -> failwith \"Invalid value\"\n";
     code += Indent + " type t =\n";

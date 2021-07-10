@@ -363,20 +363,20 @@ end
 
 module Any = struct
      type t =
-        | NONE
+        | NONE of unit ByteBuffer.offset
         | Monster of unit ByteBuffer.offset
         | TestSimpleTableWithEnum of unit ByteBuffer.offset
         | MyGame_Example2_Monster of unit ByteBuffer.offset
 
     let of_int u offset = match u with
-        | 0 -> NONE
+        | 0 -> NONE offset
         | 1 -> Monster offset
         | 2 -> TestSimpleTableWithEnum offset
         | 3 -> MyGame_Example2_Monster offset
         | _ -> failwith "Invalid value"
 
     let to_int = function
-        | NONE -> 0
+        | NONE _ -> 0
         | Monster _ -> 1
         | TestSimpleTableWithEnum _ -> 2
         | MyGame_Example2_Monster _ -> 3
@@ -385,20 +385,20 @@ end
 
 module AnyUniqueAliases = struct
      type t =
-        | NONE
+        | NONE of unit ByteBuffer.offset
         | M of unit ByteBuffer.offset
         | TS of unit ByteBuffer.offset
         | M2 of unit ByteBuffer.offset
 
     let of_int u offset = match u with
-        | 0 -> NONE
+        | 0 -> NONE offset
         | 1 -> M offset
         | 2 -> TS offset
         | 3 -> M2 offset
         | _ -> failwith "Invalid value"
 
     let to_int = function
-        | NONE -> 0
+        | NONE _ -> 0
         | M _ -> 1
         | TS _ -> 2
         | M2 _ -> 3
@@ -435,20 +435,20 @@ end
 
 module AnyAmbiguousAliases = struct
      type t =
-        | NONE
+        | NONE of unit ByteBuffer.offset
         | M1 of unit ByteBuffer.offset
         | M2 of unit ByteBuffer.offset
         | M3 of unit ByteBuffer.offset
 
     let of_int u offset = match u with
-        | 0 -> NONE
+        | 0 -> NONE offset
         | 1 -> M1 offset
         | 2 -> M2 offset
         | 3 -> M3 offset
         | _ -> failwith "Invalid value"
 
     let to_int = function
-        | NONE -> 0
+        | NONE _ -> 0
         | M1 _ -> 1
         | M2 _ -> 2
         | M3 _ -> 3
@@ -471,8 +471,8 @@ module TestSimpleTableWithEnum = struct
     (* TestSimpleTableWithEnum *)
     let color t =
         let offset = ByteBuffer.__offset t.b t.pos 4 in
-        if ByteBuffer.not_null offset then Color.of_int (let offset = t.pos + offset in ByteBuffer.readUint8 t.b offset)
-        else Color.of_int (2)
+        if ByteBuffer.not_null offset then Color.of_int (let offset = t.pos + offset in ByteBuffer.readUint8 t.b offset) offset
+        else Color.Green ByteBuffer.null
 
     let start builder =
         Builder.startObject  builder 1
@@ -641,14 +641,14 @@ module Monster = struct
     (* Monster *)
     let color t =
         let offset = ByteBuffer.__offset t.b t.pos 16 in
-        if ByteBuffer.not_null offset then Color.of_int (let offset = t.pos + offset in ByteBuffer.readUint8 t.b offset)
-        else Color.of_int (8)
+        if ByteBuffer.not_null offset then Color.of_int (let offset = t.pos + offset in ByteBuffer.readUint8 t.b offset) offset
+        else Color.Blue ByteBuffer.null
 
     (* Monster *)
     let test_type t =
         let offset = ByteBuffer.__offset t.b t.pos 18 in
-        if ByteBuffer.not_null offset then Any.of_int (let offset = t.pos + offset in ByteBuffer.readUint8 t.b offset)
-        else Any.of_int (0)
+        if ByteBuffer.not_null offset then Any.of_int (let offset = t.pos + offset in ByteBuffer.readUint8 t.b offset) offset
+        else Any.NONE ByteBuffer.null
 
     (* Monster *)
     let test t =
@@ -984,8 +984,8 @@ module Monster = struct
     (* Monster *)
     let any_unique_type t =
         let offset = ByteBuffer.__offset t.b t.pos 90 in
-        if ByteBuffer.not_null offset then AnyUniqueAliases.of_int (let offset = t.pos + offset in ByteBuffer.readUint8 t.b offset)
-        else AnyUniqueAliases.of_int (0)
+        if ByteBuffer.not_null offset then AnyUniqueAliases.of_int (let offset = t.pos + offset in ByteBuffer.readUint8 t.b offset) offset
+        else AnyUniqueAliases.NONE ByteBuffer.null
 
     (* Monster *)
     let any_unique t =
@@ -994,8 +994,8 @@ module Monster = struct
     (* Monster *)
     let any_ambiguous_type t =
         let offset = ByteBuffer.__offset t.b t.pos 94 in
-        if ByteBuffer.not_null offset then AnyAmbiguousAliases.of_int (let offset = t.pos + offset in ByteBuffer.readUint8 t.b offset)
-        else AnyAmbiguousAliases.of_int (0)
+        if ByteBuffer.not_null offset then AnyAmbiguousAliases.of_int (let offset = t.pos + offset in ByteBuffer.readUint8 t.b offset) offset
+        else AnyAmbiguousAliases.NONE ByteBuffer.null
 
     (* Monster *)
     let any_ambiguous t =
@@ -1017,8 +1017,8 @@ module Monster = struct
     (* Monster *)
     let signed_enum t =
         let offset = ByteBuffer.__offset t.b t.pos 100 in
-        if ByteBuffer.not_null offset then Race.of_int (let offset = t.pos + offset in ByteBuffer.readInt8 t.b offset)
-        else Race.of_int (-1)
+        if ByteBuffer.not_null offset then Race.of_int (let offset = t.pos + offset in ByteBuffer.readInt8 t.b offset) offset
+        else Race.None ByteBuffer.null
 
     let testrequirednestedflatbufferLength t =
         let offset = ByteBuffer.__offset t.b t.pos 102 in

@@ -103,19 +103,19 @@ end
 module Color = struct
      type t =
         | Red
-        | Green of unit ByteBuffer.offset
-        | Blue of unit ByteBuffer.offset
+        | Green
+        | Blue
 
     let of_int u offset = match u with
         | 0 -> Red
-        | 1 -> Green offset
-        | 2 -> Blue offset
+        | 1 -> Green
+        | 2 -> Blue
         | _ -> failwith "Invalid value"
 
     let to_int = function
         | Red -> 0
-        | Green _ -> 1
-        | Blue _ -> 2
+        | Green -> 1
+        | Blue -> 2
 
 end
 
