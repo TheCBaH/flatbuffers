@@ -459,10 +459,13 @@ class OcamlGenerator : public BaseGenerator {
                   GetScalarReceiver(struct_def, field.value.type);
     if (field.value.type.enum_def) {
       auto module_name = NormalizedName(*field.value.type.enum_def);
-      field_value = module_name + ".of_int (" + field_value + ") offset";
+      field_value = module_name + ".of_int (" + field_value + ")";
+      if (field.value.type.enum_def->is_union) {
+        field_value += " offset";
+      }
       if (auto val = field.value.type.enum_def->ReverseLookup(
               StringToInt(field.value.constant.c_str()), false)) {
-        default_value = module_name + "." + val->name + " ByteBuffer.null";
+        default_value = module_name + "." + val->name;
       }
     }
     code += Indent + Indent + "if ByteBuffer.not_null offset then " + field_value + "\n";
@@ -849,7 +852,11 @@ class OcamlGenerator : public BaseGenerator {
     code += Indent + " type t =\n";
     code += type;
     code += "\n";
-    code += Indent + "let of_int u offset = match u with\n";
+    code += Indent + "let of_int u";
+    if(enum_def.is_union) {
+      code += " offset";
+    }
+    code += " = match u with\n";
     code += of_int;
     code += "\n";
     code += Indent + "let to_int = function\n";
