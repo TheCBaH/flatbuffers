@@ -277,6 +277,7 @@ class OcamlGenerator : public BaseGenerator {
     } else {
       *code_ptr += Indent + "type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}\n\n";
     }
+    *code_ptr +=  Indent + "type offset = t ByteBuffer.offset\n\n";
     *code_ptr +=
         Indent + "let init b pos = {b;pos}\n\n";
     *code_ptr +=
@@ -322,10 +323,17 @@ class OcamlGenerator : public BaseGenerator {
   void EnumMember(const EnumVal ev, std::string &type, std::string &of_int,
                   std::string &to_int) {
     std::string name = NormalizedName(ev);
-    std::string value = NumToString(ev.GetAsInt64());
-    type += Indent + Indent + "| " + name + "\n";
-    of_int += Indent + Indent + "| " + value + " -> " + name + "\n";
-    to_int += Indent + Indent + "| " + name + " -> " + value + "\n";
+    auto val = ev.GetAsInt64();
+    std::string value = NumToString(val);
+    if (val==0) {
+      type += Indent + Indent + "| " + name + "\n";
+      of_int += Indent + Indent + "| " + value + " -> " + name + "\n";
+      to_int += Indent + Indent + "| " + name + " -> " + value + "\n";
+    } else {
+      type += Indent + Indent + "| " + name + " of " + name + ".t ByteBuffer.offset\n";
+      of_int += Indent + Indent + "| " + value + " -> " + name + "offset \n";
+      to_int += Indent + Indent + "| " + name + " _ -> " + value + "\n";
+    }
     return;
   }
 
@@ -841,7 +849,7 @@ class OcamlGenerator : public BaseGenerator {
     code += Indent + " type t =\n";
     code += type;
     code += "\n";
-    code += Indent + "let of_int = function\n";
+    code += Indent + "let of_int u offset = match u\n";
     code += of_int;
     code += "\n";
     code += Indent + "let to_int = function\n";

@@ -7,6 +7,8 @@ module MyGame = struct
 module InParentNamespace = struct
     type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
+type offset = t ByteBuffer.offset
+
     let init b pos = {b;pos}
 
     let of_union b pos = {b=b; pos=ByteBuffer.offset_of_union pos}
@@ -31,6 +33,8 @@ module Example = struct
 
 module TypeAliases = struct
     type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
+
+type offset = t ByteBuffer.offset
 
     let init b pos = {b;pos}
 
@@ -243,6 +247,8 @@ end
 module Ability = struct
     type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
+type offset = t ByteBuffer.offset
+
     let init b pos = {b;pos}
 
     let of_union b pos = {b=b; pos=ByteBuffer.offset_of_union pos}
@@ -267,6 +273,8 @@ end
 
 module Stat = struct
     type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
+
+type offset = t ByteBuffer.offset
 
     let init b pos = {b;pos}
 
@@ -320,6 +328,8 @@ end
 
 module Referrable = struct
     type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
+
+type offset = t ByteBuffer.offset
 
     let init b pos = {b;pos}
 
@@ -398,6 +408,8 @@ end
 module Test = struct
     type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
+type offset = t ByteBuffer.offset
+
     let init b pos = {b;pos}
 
     let of_union b pos = {b=b; pos=ByteBuffer.offset_of_union pos}
@@ -446,6 +458,8 @@ end
 module TestSimpleTableWithEnum = struct
     type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
+type offset = t ByteBuffer.offset
+
     let init b pos = {b;pos}
 
     let of_union b pos = {b=b; pos=ByteBuffer.offset_of_union pos}
@@ -478,6 +492,8 @@ end
 
 module StructOfStructs = struct
     type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
+
+type offset = t ByteBuffer.offset
 
     let init b pos = {b;pos}
 
@@ -516,6 +532,8 @@ end
 
 module Vec3 = struct
     type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
+
+type offset = t ByteBuffer.offset
 
     let init b pos = {b;pos}
 
@@ -572,6 +590,8 @@ end
 (*  an example documentation comment: "monster object"*)
 module Monster = struct
     type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
+
+type offset = t ByteBuffer.offset
 
     let init b pos = {b;pos}
 
@@ -1304,6 +1324,8 @@ module Example2 = struct
 
 module Monster = struct
     type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
+
+type offset = t ByteBuffer.offset
 
     let init b pos = {b;pos}
 
