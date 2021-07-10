@@ -9,7 +9,7 @@ module Sample = struct
 module Weapon = struct
     type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
-type offset = t ByteBuffer.offset
+    type offset = t ByteBuffer.offset
 
     let init b pos = {b;pos}
 
@@ -54,7 +54,7 @@ end
 module Vec3 = struct
     type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
-type offset = t ByteBuffer.offset
+    type offset = t ByteBuffer.offset
 
     let init b pos = {b;pos}
 
@@ -91,7 +91,7 @@ module Equipment = struct
 
     let of_int u offset = match u
         | 0 -> NONE
-        | 1 -> Weaponoffset 
+        | 1 -> Weaponoffset
         | _ -> failwith "Invalid value"
 
     let to_int = function
@@ -108,8 +108,8 @@ module Color = struct
 
     let of_int u offset = match u
         | 0 -> Red
-        | 1 -> Greenoffset 
-        | 2 -> Blueoffset 
+        | 1 -> Greenoffset
+        | 2 -> Blueoffset
         | _ -> failwith "Invalid value"
 
     let to_int = function
@@ -122,7 +122,7 @@ end
 module Monster = struct
     type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
-type offset = t ByteBuffer.offset
+    type offset = t ByteBuffer.offset
 
     let init b pos = {b;pos}
 

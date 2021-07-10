@@ -331,7 +331,7 @@ class OcamlGenerator : public BaseGenerator {
       to_int += Indent + Indent + "| " + name + " -> " + value + "\n";
     } else {
       type += Indent + Indent + "| " + name + " of " + name + ".t ByteBuffer.offset\n";
-      of_int += Indent + Indent + "| " + value + " -> " + name + "offset \n";
+      of_int += Indent + Indent + "| " + value + " -> " + name + "offset\n";
       to_int += Indent + Indent + "| " + name + " _ -> " + value + "\n";
     }
     return;
