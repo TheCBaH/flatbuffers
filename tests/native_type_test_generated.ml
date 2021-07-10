@@ -7,7 +7,7 @@ module Geometry = struct
 module Vector3DAlt = struct
     type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
-type offset = t ByteBuffer.offset
+    type offset = t ByteBuffer.offset
 
     let init b pos = {b;pos}
 
@@ -40,7 +40,7 @@ end
 module Vector3D = struct
     type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
-type offset = t ByteBuffer.offset
+    type offset = t ByteBuffer.offset
 
     let init b pos = {b;pos}
 
@@ -73,7 +73,7 @@ end
 module ApplicationData = struct
     type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
-type offset = t ByteBuffer.offset
+    type offset = t ByteBuffer.offset
 
     let init b pos = {b;pos}
 

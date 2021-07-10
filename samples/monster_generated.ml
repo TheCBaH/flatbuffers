@@ -87,11 +87,11 @@ end
 module Equipment = struct
      type t =
         | NONE
-        | Weapon of Weapon.t ByteBuffer.offset
+        | Weapon of unit ByteBuffer.offset
 
-    let of_int u offset = match u
+    let of_int u offset = match u with
         | 0 -> NONE
-        | 1 -> Weaponoffset
+        | 1 -> Weapon offset
         | _ -> failwith "Invalid value"
 
     let to_int = function
@@ -103,13 +103,13 @@ end
 module Color = struct
      type t =
         | Red
-        | Green of Green.t ByteBuffer.offset
-        | Blue of Blue.t ByteBuffer.offset
+        | Green of unit ByteBuffer.offset
+        | Blue of unit ByteBuffer.offset
 
-    let of_int u offset = match u
+    let of_int u offset = match u with
         | 0 -> Red
-        | 1 -> Greenoffset
-        | 2 -> Blueoffset
+        | 1 -> Green offset
+        | 2 -> Blue offset
         | _ -> failwith "Invalid value"
 
     let to_int = function
@@ -173,7 +173,7 @@ module Monster = struct
     let color t =
         let offset = ByteBuffer.__offset t.b t.pos 16 in
         if ByteBuffer.not_null offset then Color.of_int (let offset = t.pos + offset in ByteBuffer.readInt8 t.b offset)
-        else Color.Blue
+        else Color.of_int (2)
 
     let weaponsLength t =
         let offset = ByteBuffer.__offset t.b t.pos 18 in
@@ -193,7 +193,7 @@ module Monster = struct
     let equipped_type t =
         let offset = ByteBuffer.__offset t.b t.pos 20 in
         if ByteBuffer.not_null offset then Equipment.of_int (let offset = t.pos + offset in ByteBuffer.readUint8 t.b offset)
-        else Equipment.NONE
+        else Equipment.of_int (0)
 
     (* Monster *)
     let equipped t =

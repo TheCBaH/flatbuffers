@@ -330,8 +330,8 @@ class OcamlGenerator : public BaseGenerator {
       of_int += Indent + Indent + "| " + value + " -> " + name + "\n";
       to_int += Indent + Indent + "| " + name + " -> " + value + "\n";
     } else {
-      type += Indent + Indent + "| " + name + " of " + name + ".t ByteBuffer.offset\n";
-      of_int += Indent + Indent + "| " + value + " -> " + name + "offset\n";
+      type += Indent + Indent + "| " + name + " of unit ByteBuffer.offset\n";
+      of_int += Indent + Indent + "| " + value + " -> " + name + " offset\n";
       to_int += Indent + Indent + "| " + name + " _ -> " + value + "\n";
     }
     return;
@@ -462,7 +462,11 @@ class OcamlGenerator : public BaseGenerator {
       field_value = module_name + ".of_int (" + field_value + ")";
       if (auto val = field.value.type.enum_def->ReverseLookup(
               StringToInt(field.value.constant.c_str()), false)) {
-        default_value = module_name + "." + val->name;
+                if(0) {
+        default_value = module_name + "." + val->name + " ByteBuffer.null";
+                } else {
+        default_value = module_name + ".of_int (" + field.value.constant.c_str() + ")";
+                }
       }
     }
     code += Indent + Indent + "if ByteBuffer.not_null offset then " + field_value + "\n";
@@ -849,7 +853,7 @@ class OcamlGenerator : public BaseGenerator {
     code += Indent + " type t =\n";
     code += type;
     code += "\n";
-    code += Indent + "let of_int u offset = match u\n";
+    code += Indent + "let of_int u offset = match u with\n";
     code += of_int;
     code += "\n";
     code += Indent + "let to_int = function\n";

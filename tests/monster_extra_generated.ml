@@ -7,7 +7,7 @@ module MyGame = struct
 module MonsterExtra = struct
     type t = {b: ByteBuffer.t; pos: t ByteBuffer.offset}
 
-type offset = t ByteBuffer.offset
+    type offset = t ByteBuffer.offset
 
     let init b pos = {b;pos}
 
