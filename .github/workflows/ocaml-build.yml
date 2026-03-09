@@ -19,6 +19,9 @@ jobs:
     - name: setup
       run: |
         echo 'EXEC=${{ steps.devcontainer.outputs.exec }}' >> $GITHUB_ENV
+    - name: fix opam permissions
+      run: |
+        ${{ env.EXEC }} sudo sh -ceux 'chown -R $(id -u):$(id -g) ${OPAMROOT}/log'
     - name: build flatc
       run: |
         ${{ env.EXEC }} bash -c 'mkdir -p build && cd build && cmake .. -DFLATBUFFERS_BUILD_TESTS=OFF && make -j$(nproc) flatc'
