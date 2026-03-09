@@ -36,16 +36,16 @@ class Referrable(object):
         return 0
 
 def ReferrableStart(builder):
-    return builder.StartObject(1)
+    builder.StartObject(1)
 
 def Start(builder):
-    return ReferrableStart(builder)
+    ReferrableStart(builder)
 
 def ReferrableAddId(builder, id):
-    return builder.PrependUint64Slot(0, id, 0)
+    builder.PrependUint64Slot(0, id, 0)
 
 def AddId(builder, id):
-    return ReferrableAddId(builder, id)
+    ReferrableAddId(builder, id)
 
 def ReferrableEnd(builder):
     return builder.EndObject()
@@ -57,8 +57,11 @@ def End(builder):
 class ReferrableT(object):
 
     # ReferrableT
-    def __init__(self):
-        self.id = 0  # type: int
+    def __init__(
+        self,
+        id = 0,
+    ):
+        self.id = id  # type: int
 
     @classmethod
     def InitFromBuf(cls, buf, pos):

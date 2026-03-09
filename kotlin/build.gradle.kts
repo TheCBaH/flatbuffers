@@ -1,5 +1,6 @@
-group = "com.google.flatbuffers"
-version = "2.0.0-SNAPSHOT"
+import java.nio.charset.StandardCharsets
+import org.jetbrains.kotlin.gradle.dsl.KotlinCommonOptions
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 buildscript {
   repositories {
@@ -20,4 +21,24 @@ allprojects {
     google()
     mavenCentral()
   }
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.dsl.KotlinCompile<KotlinCommonOptions>>().configureEach {
+  kotlinOptions {
+    freeCompilerArgs +=
+      "-progressive" // https://kotlinlang.org/docs/whatsnew13.html#progressive-mode
+  }
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile>().configureEach {
+  kotlinOptions {
+    jvmTarget = JavaVersion.VERSION_1_8.toString()
+    freeCompilerArgs += "-Xjvm-default=all"
+  }
+}
+
+tasks.withType<JavaCompile> {
+  options.encoding = StandardCharsets.UTF_8.toString()
+  sourceCompatibility = JavaVersion.VERSION_1_8.toString()
+  targetCompatibility = JavaVersion.VERSION_1_8.toString()
 }

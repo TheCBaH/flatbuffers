@@ -29,10 +29,10 @@ class Monster(object):
         self._tab = flatbuffers.table.Table(buf, pos)
 
 def MonsterStart(builder):
-    return builder.StartObject(0)
+    builder.StartObject(0)
 
 def Start(builder):
-    return MonsterStart(builder)
+    MonsterStart(builder)
 
 def MonsterEnd(builder):
     return builder.EndObject()
@@ -44,7 +44,9 @@ def End(builder):
 class MonsterT(object):
 
     # MonsterT
-    def __init__(self):
+    def __init__(
+        self,
+    ):
         pass
 
     @classmethod

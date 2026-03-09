@@ -65,11 +65,7 @@ namespace Google.FlatBuffers
         // Create a .NET String from UTF-8 data stored inside the flatbuffer.
         public string __string(int offset)
         {
-            int stringOffset = bb.GetInt(offset);
-            if (stringOffset == 0)
-                return null;
-
-            offset += stringOffset;
+            offset += bb.GetInt(offset);
             var len = bb.GetInt(offset);
             var startPos = offset + sizeof(int);
             return bb.GetStringUTF8(startPos, len);
@@ -90,7 +86,7 @@ namespace Google.FlatBuffers
             return offset + bb.GetInt(offset) + sizeof(int);  // data starts after the length
         }
 
-#if ENABLE_SPAN_T && (UNSAFE_BYTEBUFFER || NETSTANDARD2_1)
+#if ENABLE_SPAN_T && UNSAFE_BYTEBUFFER
         // Get the data of a vector whoses offset is stored at "offset" in this object as an
         // Spant&lt;byte&gt;. If the vector is not present in the ByteBuffer,
         // then an empty span will be returned.
@@ -150,7 +146,7 @@ namespace Google.FlatBuffers
 
             var pos = this.__vector(o);
             var len = this.__vector_len(o);
-            return bb.ToArray<T>(pos, len);
+            return bb.ToArray<T>(pos, len * ByteBuffer.SizeOf<T>());
         }
 
         // Initialize any Table-derived type to point to the union at the given offset.
@@ -183,6 +179,12 @@ namespace Google.FlatBuffers
             var len_2 = bb.GetInt(offset_2);
             var startPos_1 = offset_1 + sizeof(int);
             var startPos_2 = offset_2 + sizeof(int);
+
+#if ENABLE_SPAN_T && UNSAFE_BYTEBUFFER
+            var span_1 = bb.ToReadOnlySpan(startPos_1, len_1);
+            var span_2 = bb.ToReadOnlySpan(startPos_2, len_2);
+            return span_1.SequenceCompareTo(span_2);
+#else
             var len = Math.Min(len_1, len_2);
             for(int i = 0; i < len; i++) {
                 byte b1 = bb.Get(i + startPos_1);
@@ -191,6 +193,7 @@ namespace Google.FlatBuffers
                     return b1 - b2;
             }
             return len_1 - len_2;
+#endif
         }
 
         // Compare string from the ByteBuffer with the string object
@@ -200,6 +203,11 @@ namespace Google.FlatBuffers
             var len_1 = bb.GetInt(offset_1);
             var len_2 = key.Length;
             var startPos_1 = offset_1 + sizeof(int);
+#if ENABLE_SPAN_T && UNSAFE_BYTEBUFFER
+            ReadOnlySpan<byte> span = bb.ToReadOnlySpan(startPos_1, len_1);
+            ReadOnlySpan<byte> keySpan = key;
+            return span.SequenceCompareTo(keySpan);
+#else
             var len = Math.Min(len_1, len_2);
             for (int i = 0; i < len; i++) {
                 byte b = bb.Get(i + startPos_1);
@@ -207,6 +215,7 @@ namespace Google.FlatBuffers
                     return b - key[i];
             }
             return len_1 - len_2;
+#endif
         }
     }
 }

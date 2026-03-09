@@ -19,7 +19,6 @@ import java.nio.ByteOrder
 import kotlin.math.sign
 
 @Suppress("unused")
-@kotlin.ExperimentalUnsignedTypes
 class Stat : Table() {
 
     fun __init(_i: Int, _bb: ByteBuffer)  {
@@ -38,8 +37,8 @@ class Stat : Table() {
                 null
             }
         }
-    val idAsByteBuffer : ByteBuffer get() = __vector_as_bytebuffer(4, 1)
-    fun idInByteBuffer(_bb: ByteBuffer) : ByteBuffer = __vector_in_bytebuffer(_bb, 4, 1)
+    val idAsByteBuffer : ByteBuffer? get() = __vector_as_bytebuffer(4, 1)
+    fun idInByteBuffer(_bb: ByteBuffer) : ByteBuffer? = __vector_in_bytebuffer(_bb, 4, 1)
     val val_ : Long
         get() {
             val o = __offset(6)
@@ -74,7 +73,7 @@ class Stat : Table() {
         return (val_1 - val_2).sign
     }
     companion object {
-        fun validateVersion() = Constants.FLATBUFFERS_23_3_3()
+        fun validateVersion() = Constants.FLATBUFFERS_25_12_19()
         fun getRootAsStat(_bb: ByteBuffer): Stat = getRootAsStat(_bb, Stat())
         fun getRootAsStat(_bb: ByteBuffer, obj: Stat): Stat {
             _bb.order(ByteOrder.LITTLE_ENDIAN)

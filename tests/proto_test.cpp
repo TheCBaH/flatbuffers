@@ -1,21 +1,26 @@
 #include "proto_test.h"
 
+#include "flatbuffers/code_generator.h"
+#include "idl_gen_fbs.h"
 #include "test_assert.h"
 
 namespace flatbuffers {
 namespace tests {
 
-void RunTest(const flatbuffers::IDLOptions &opts, const std::string &proto_path,
-             const std::string &proto_file, const std::string &golden_file,
+void RunTest(const flatbuffers::IDLOptions& opts, const std::string& proto_path,
+             const std::string& proto_file, const std::string& golden_file,
              const std::string import_proto_file) {
-  const char *include_directories[] = { proto_path.c_str(), nullptr };
+  const char* include_directories[] = {proto_path.c_str(), nullptr};
 
   // Parse proto.
   flatbuffers::Parser parser(opts);
   TEST_EQ(parser.Parse(proto_file.c_str(), include_directories), true);
 
   // Generate fbs.
-  auto fbs = flatbuffers::GenerateFBS(parser, "test");
+  std::unique_ptr<CodeGenerator> fbs_generator = NewFBSCodeGenerator(true);
+  std::string fbs;
+  TEST_EQ(fbs_generator->GenerateCodeString(parser, "test", fbs),
+          CodeGenerator::Status::OK);
 
   // Ensure generated file is parsable.
   flatbuffers::Parser parser2;
@@ -25,7 +30,11 @@ void RunTest(const flatbuffers::IDLOptions &opts, const std::string &proto_path,
     flatbuffers::Parser import_parser(opts);
     TEST_EQ(import_parser.Parse(import_proto_file.c_str(), include_directories),
             true);
-    auto import_fbs = flatbuffers::GenerateFBS(import_parser, "test");
+    std::string import_fbs;
+    TEST_EQ(
+        fbs_generator->GenerateCodeString(import_parser, "test", import_fbs),
+        CodeGenerator::Status::OK);
+    // auto import_fbs = flatbuffers::GenerateFBS(import_parser, "test", true);
     // Since `imported.fbs` isn't in the filesystem AbsolutePath can't figure it
     // out by itself. We manually construct it so Parser works.
     std::string imported_fbs = flatbuffers::PosixPath(
@@ -39,7 +48,7 @@ void RunTest(const flatbuffers::IDLOptions &opts, const std::string &proto_path,
   TEST_EQ_STR(fbs.c_str(), golden_file.c_str());
 }
 
-void proto_test(const std::string &proto_path, const std::string &proto_file) {
+void proto_test(const std::string& proto_path, const std::string& proto_file) {
   flatbuffers::IDLOptions opts;
   opts.include_dependence_headers = false;
   opts.proto_mode = true;
@@ -54,8 +63,8 @@ void proto_test(const std::string &proto_path, const std::string &proto_file) {
   RunTest(opts, proto_path, proto_file, golden_file);
 }
 
-void proto_test_id(const std::string &proto_path,
-                   const std::string &proto_file) {
+void proto_test_id(const std::string& proto_path,
+                   const std::string& proto_file) {
   flatbuffers::IDLOptions opts;
   opts.include_dependence_headers = false;
   opts.proto_mode = true;
@@ -71,8 +80,8 @@ void proto_test_id(const std::string &proto_path,
   RunTest(opts, proto_path, proto_file, golden_file);
 }
 
-void proto_test_union(const std::string &proto_path,
-                      const std::string &proto_file) {
+void proto_test_union(const std::string& proto_path,
+                      const std::string& proto_file) {
   // Parse proto with --oneof-union option.
   flatbuffers::IDLOptions opts;
   opts.include_dependence_headers = false;
@@ -87,8 +96,8 @@ void proto_test_union(const std::string &proto_path,
   RunTest(opts, proto_path, proto_file, golden_file);
 }
 
-void proto_test_union_id(const std::string &proto_path,
-                         const std::string &proto_file) {
+void proto_test_union_id(const std::string& proto_path,
+                         const std::string& proto_file) {
   // Parse proto with --oneof-union option.
   flatbuffers::IDLOptions opts;
   opts.include_dependence_headers = false;
@@ -105,8 +114,8 @@ void proto_test_union_id(const std::string &proto_path,
   RunTest(opts, proto_path, proto_file, golden_file);
 }
 
-void proto_test_union_suffix(const std::string &proto_path,
-                             const std::string &proto_file) {
+void proto_test_union_suffix(const std::string& proto_path,
+                             const std::string& proto_file) {
   flatbuffers::IDLOptions opts;
   opts.include_dependence_headers = false;
   opts.proto_mode = true;
@@ -122,8 +131,8 @@ void proto_test_union_suffix(const std::string &proto_path,
   RunTest(opts, proto_path, proto_file, golden_file);
 }
 
-void proto_test_union_suffix_id(const std::string &proto_path,
-                                const std::string &proto_file) {
+void proto_test_union_suffix_id(const std::string& proto_path,
+                                const std::string& proto_file) {
   flatbuffers::IDLOptions opts;
   opts.include_dependence_headers = false;
   opts.proto_mode = true;
@@ -140,9 +149,9 @@ void proto_test_union_suffix_id(const std::string &proto_path,
   RunTest(opts, proto_path, proto_file, golden_file);
 }
 
-void proto_test_include(const std::string &proto_path,
-                        const std::string &proto_file,
-                        const std::string &import_proto_file) {
+void proto_test_include(const std::string& proto_path,
+                        const std::string& proto_file,
+                        const std::string& import_proto_file) {
   flatbuffers::IDLOptions opts;
   opts.include_dependence_headers = true;
   opts.proto_mode = true;
@@ -157,9 +166,9 @@ void proto_test_include(const std::string &proto_path,
   RunTest(opts, proto_path, proto_file, golden_file, import_proto_file);
 }
 
-void proto_test_include_id(const std::string &proto_path,
-                           const std::string &proto_file,
-                           const std::string &import_proto_file) {
+void proto_test_include_id(const std::string& proto_path,
+                           const std::string& proto_file,
+                           const std::string& import_proto_file) {
   flatbuffers::IDLOptions opts;
   opts.include_dependence_headers = true;
   opts.proto_mode = true;
@@ -175,9 +184,9 @@ void proto_test_include_id(const std::string &proto_path,
   RunTest(opts, proto_path, proto_file, golden_file, import_proto_file);
 }
 
-void proto_test_include_union(const std::string &proto_path,
-                              const std::string &proto_file,
-                              const std::string &import_proto_file) {
+void proto_test_include_union(const std::string& proto_path,
+                              const std::string& proto_file,
+                              const std::string& import_proto_file) {
   flatbuffers::IDLOptions opts;
   opts.include_dependence_headers = true;
   opts.proto_mode = true;
@@ -193,9 +202,9 @@ void proto_test_include_union(const std::string &proto_path,
   RunTest(opts, proto_path, proto_file, golden_file, import_proto_file);
 }
 
-void proto_test_include_union_id(const std::string &proto_path,
-                                 const std::string &proto_file,
-                                 const std::string &import_proto_file) {
+void proto_test_include_union_id(const std::string& proto_path,
+                                 const std::string& proto_file,
+                                 const std::string& import_proto_file) {
   flatbuffers::IDLOptions opts;
   opts.include_dependence_headers = true;
   opts.proto_mode = true;
@@ -212,8 +221,8 @@ void proto_test_include_union_id(const std::string &proto_path,
   RunTest(opts, proto_path, proto_file, golden_file, import_proto_file);
 }
 
-void ParseCorruptedProto(const std::string &proto_path) {
-  const char *include_directories[] = { proto_path.c_str(), nullptr };
+void ParseCorruptedProto(const std::string& proto_path) {
+  const char* include_directories[] = {proto_path.c_str(), nullptr};
 
   flatbuffers::IDLOptions opts;
   opts.include_dependence_headers = true;
@@ -221,6 +230,8 @@ void ParseCorruptedProto(const std::string &proto_path) {
   opts.proto_oneof_union = true;
 
   std::string proto_file;
+
+  std::unique_ptr<CodeGenerator> fbs_generator = NewFBSCodeGenerator(true);
 
   // Parse proto with non positive id.
   {
@@ -230,8 +241,8 @@ void ParseCorruptedProto(const std::string &proto_path) {
                               false, &proto_file),
         true);
     TEST_EQ(parser.Parse(proto_file.c_str(), include_directories), true);
-    auto fbs = flatbuffers::GenerateFBS(parser, "test");
-    TEST_EQ(fbs.empty(), true);
+    TEST_NE(fbs_generator->GenerateCode(parser, "temp.fbs", "test"),
+            CodeGenerator::Status::OK);
   }
 
   // Parse proto with twice id.
@@ -241,8 +252,8 @@ void ParseCorruptedProto(const std::string &proto_path) {
                                   false, &proto_file),
             true);
     TEST_EQ(parser.Parse(proto_file.c_str(), include_directories), true);
-    auto fbs = flatbuffers::GenerateFBS(parser, "test");
-    TEST_EQ(fbs.empty(), true);
+    TEST_NE(fbs_generator->GenerateCode(parser, "temp.fbs", "test"),
+            CodeGenerator::Status::OK);
   }
 
   // Parse proto with using reserved id.
@@ -252,8 +263,8 @@ void ParseCorruptedProto(const std::string &proto_path) {
                                   false, &proto_file),
             true);
     TEST_EQ(parser.Parse(proto_file.c_str(), include_directories), true);
-    auto fbs = flatbuffers::GenerateFBS(parser, "test");
-    TEST_EQ(fbs.empty(), true);
+    TEST_NE(fbs_generator->GenerateCode(parser, "temp.fbs", "test"),
+            CodeGenerator::Status::OK);
   }
 
   // Parse proto with error on gap.
@@ -264,13 +275,14 @@ void ParseCorruptedProto(const std::string &proto_path) {
                                   &proto_file),
             true);
     TEST_EQ(parser.Parse(proto_file.c_str(), include_directories), true);
-    auto fbs = flatbuffers::GenerateFBS(parser, "test");
-    TEST_EQ(fbs.empty(), true);
+
+    TEST_NE(fbs_generator->GenerateCode(parser, "temp.fbs", "test"),
+            CodeGenerator::Status::OK);
   }
 }
 
 // Parse a .proto schema, output as .fbs
-void ParseProtoTest(const std::string &tests_data_path) {
+void ParseProtoTest(const std::string& tests_data_path) {
   auto proto_path = tests_data_path + "prototest/";
   std::string proto_file;
   TEST_EQ(
@@ -312,9 +324,9 @@ void ParseProtoBufAsciiTest() {
   TEST_EQ(parser.Parse("{ A [1 2] C { B:2 }}"), true);
   // Similarly, in text output, it should omit these.
   std::string text;
-  auto ok = flatbuffers::GenerateText(
-      parser, parser.builder_.GetBufferPointer(), &text);
-  TEST_EQ(ok, true);
+  auto err =
+      flatbuffers::GenText(parser, parser.builder_.GetBufferPointer(), &text);
+  TEST_NULL(err);
   TEST_EQ_STR(text.c_str(),
               "{\n  A [\n    1\n    2\n  ]\n  C {\n    B: 2\n  }\n}\n");
 }

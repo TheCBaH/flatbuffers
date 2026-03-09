@@ -1,19 +1,21 @@
 #include "reflection_test.h"
-#include "arrays_test_generated.h"
+
 #include "flatbuffers/minireflect.h"
 #include "flatbuffers/reflection.h"
 #include "flatbuffers/reflection_generated.h"
 #include "flatbuffers/verifier.h"
-#include "test_assert.h"
 #include "monster_test.h"
 #include "monster_test_generated.h"
+#include "test_assert.h"
+#include "tests/arrays_test_generated.h"
 
 namespace flatbuffers {
 namespace tests {
 
 using namespace MyGame::Example;
 
-void ReflectionTest(const std::string& tests_data_path, uint8_t *flatbuf, size_t length) {
+void ReflectionTest(const std::string& tests_data_path, uint8_t* flatbuf,
+                    size_t length) {
   // Load a binary schema.
   std::string bfbsfile;
   TEST_EQ(flatbuffers::LoadFile((tests_data_path + "monster_test.bfbs").c_str(),
@@ -22,11 +24,11 @@ void ReflectionTest(const std::string& tests_data_path, uint8_t *flatbuf, size_t
 
   // Verify it, just in case:
   flatbuffers::Verifier verifier(
-      reinterpret_cast<const uint8_t *>(bfbsfile.c_str()), bfbsfile.length());
+      reinterpret_cast<const uint8_t*>(bfbsfile.c_str()), bfbsfile.length());
   TEST_EQ(reflection::VerifySchemaBuffer(verifier), true);
 
   // Make sure the schema is what we expect it to be.
-  auto &schema = *reflection::GetSchema(bfbsfile.c_str());
+  auto& schema = *reflection::GetSchema(bfbsfile.c_str());
   auto root_table = schema.root_table();
 
   // Check the declaration files.
@@ -81,7 +83,7 @@ void ReflectionTest(const std::string& tests_data_path, uint8_t *flatbuf, size_t
   auto fields = root_table->fields();
   auto hp_field_ptr = fields->LookupByKey("hp");
   TEST_NOTNULL(hp_field_ptr);
-  auto &hp_field = *hp_field_ptr;
+  auto& hp_field = *hp_field_ptr;
   TEST_EQ_STR(hp_field.name()->c_str(), "hp");
   TEST_EQ(hp_field.id(), 2);
   TEST_EQ(hp_field.type()->base_type(), reflection::Short);
@@ -106,7 +108,7 @@ void ReflectionTest(const std::string& tests_data_path, uint8_t *flatbuf, size_t
   TEST_EQ(fields->LookupByKey("name")->optional(), false);
 
   // Now use it to dynamically access a buffer.
-  auto &root = *flatbuffers::GetAnyRoot(flatbuf);
+  auto& root = *flatbuffers::GetAnyRoot(flatbuf);
 
   // Verify the buffer first using reflection based verification
   TEST_EQ(flatbuffers::Verify(schema, *schema.root_table(), flatbuf, length),
@@ -167,7 +169,7 @@ void ReflectionTest(const std::string& tests_data_path, uint8_t *flatbuf, size_t
   // First we put the FlatBuffer inside an std::vector.
   std::vector<uint8_t> resizingbuf(flatbuf, flatbuf + length);
   // Find the field we want to modify.
-  auto &name_field = *fields->LookupByKey("name");
+  auto& name_field = *fields->LookupByKey("name");
   // Get the root.
   // This time we wrap the result from GetAnyRoot in a smartpointer that
   // will keep rroot valid as resizingbuf resizes.
@@ -178,7 +180,7 @@ void ReflectionTest(const std::string& tests_data_path, uint8_t *flatbuf, size_t
   // Here resizingbuf has changed, but rroot is still valid.
   TEST_EQ_STR(GetFieldS(**rroot, name_field)->c_str(), "totally new string");
   // Now lets extend a vector by 100 elements (10 -> 110).
-  auto &inventory_field = *fields->LookupByKey("inventory");
+  auto& inventory_field = *fields->LookupByKey("inventory");
   auto rinventory = flatbuffers::piv(
       flatbuffers::GetFieldV<uint8_t>(**rroot, inventory_field), resizingbuf);
   flatbuffers::ResizeVector<uint8_t>(schema, 110, 50, *rinventory,
@@ -191,7 +193,7 @@ void ReflectionTest(const std::string& tests_data_path, uint8_t *flatbuf, size_t
   // FlatBuffer of its own, then add that to an existing FlatBuffer:
   // As an example, let's add a string to an array of strings.
   // First, find our field:
-  auto &testarrayofstring_field = *fields->LookupByKey("testarrayofstring");
+  auto& testarrayofstring_field = *fields->LookupByKey("testarrayofstring");
   // Find the vector value:
   auto rtestarrayofstring = flatbuffers::piv(
       flatbuffers::GetFieldV<flatbuffers::Offset<flatbuffers::String>>(
@@ -216,8 +218,7 @@ void ReflectionTest(const std::string& tests_data_path, uint8_t *flatbuf, size_t
   TEST_EQ_STR(rtestarrayofstring->Get(2)->c_str(), "hank");
   // Test integrity of all resize operations above.
   flatbuffers::Verifier resize_verifier(
-      reinterpret_cast<const uint8_t *>(resizingbuf.data()),
-      resizingbuf.size());
+      reinterpret_cast<const uint8_t*>(resizingbuf.data()), resizingbuf.size());
   TEST_EQ(VerifyMonsterBuffer(resize_verifier), true);
 
   // Test buffer is valid using reflection as well
@@ -247,7 +248,7 @@ void ReflectionTest(const std::string& tests_data_path, uint8_t *flatbuf, size_t
           true);
 }
 
-void MiniReflectFlatBuffersTest(uint8_t *flatbuf) {
+void MiniReflectFlatBuffersTest(uint8_t* flatbuf) {
   auto s =
       flatbuffers::FlatBufferToString(flatbuf, Monster::MiniReflectTypeTable());
   TEST_EQ_STR(

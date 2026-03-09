@@ -114,22 +114,22 @@ class Service(object):
         return None
 
 def ServiceStart(builder):
-    return builder.StartObject(5)
+    builder.StartObject(5)
 
 def Start(builder):
-    return ServiceStart(builder)
+    ServiceStart(builder)
 
 def ServiceAddName(builder, name):
-    return builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
+    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
 
 def AddName(builder, name):
-    return ServiceAddName(builder, name)
+    ServiceAddName(builder, name)
 
 def ServiceAddCalls(builder, calls):
-    return builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(calls), 0)
+    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(calls), 0)
 
 def AddCalls(builder, calls):
-    return ServiceAddCalls(builder, calls)
+    ServiceAddCalls(builder, calls)
 
 def ServiceStartCallsVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
@@ -137,11 +137,17 @@ def ServiceStartCallsVector(builder, numElems):
 def StartCallsVector(builder, numElems):
     return ServiceStartCallsVector(builder, numElems)
 
+def ServiceCreateCallsVector(builder, data):
+    return builder.CreateVectorOfTables(data)
+
+def CreateCallsVector(builder, data):
+    return ServiceCreateCallsVector(builder, data)
+
 def ServiceAddAttributes(builder, attributes):
-    return builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(attributes), 0)
+    builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(attributes), 0)
 
 def AddAttributes(builder, attributes):
-    return ServiceAddAttributes(builder, attributes)
+    ServiceAddAttributes(builder, attributes)
 
 def ServiceStartAttributesVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
@@ -149,11 +155,17 @@ def ServiceStartAttributesVector(builder, numElems):
 def StartAttributesVector(builder, numElems):
     return ServiceStartAttributesVector(builder, numElems)
 
+def ServiceCreateAttributesVector(builder, data):
+    return builder.CreateVectorOfTables(data)
+
+def CreateAttributesVector(builder, data):
+    return ServiceCreateAttributesVector(builder, data)
+
 def ServiceAddDocumentation(builder, documentation):
-    return builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(documentation), 0)
+    builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(documentation), 0)
 
 def AddDocumentation(builder, documentation):
-    return ServiceAddDocumentation(builder, documentation)
+    ServiceAddDocumentation(builder, documentation)
 
 def ServiceStartDocumentationVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
@@ -161,11 +173,17 @@ def ServiceStartDocumentationVector(builder, numElems):
 def StartDocumentationVector(builder, numElems):
     return ServiceStartDocumentationVector(builder, numElems)
 
+def ServiceCreateDocumentationVector(builder, data):
+    return builder.CreateVectorOfTables(data)
+
+def CreateDocumentationVector(builder, data):
+    return ServiceCreateDocumentationVector(builder, data)
+
 def ServiceAddDeclarationFile(builder, declarationFile):
-    return builder.PrependUOffsetTRelativeSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(declarationFile), 0)
+    builder.PrependUOffsetTRelativeSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(declarationFile), 0)
 
 def AddDeclarationFile(builder, declarationFile):
-    return ServiceAddDeclarationFile(builder, declarationFile)
+    ServiceAddDeclarationFile(builder, declarationFile)
 
 def ServiceEnd(builder):
     return builder.EndObject()

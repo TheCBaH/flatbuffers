@@ -152,3 +152,12 @@ flatbuffers.pc
 cmake-build-debug/
 _deps/
 _build/
+**/.gradle/**
+kotlin/**/generated
+MODULE.bazel.lock
+
+# Ignore the generated docs
+docs/site
+
+# Ignore generated files
+*.fbs.h

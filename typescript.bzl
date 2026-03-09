@@ -2,7 +2,7 @@
 Rules for building typescript flatbuffers with Bazel.
 """
 
-load("@build_bazel_rules_nodejs//:index.bzl", "js_library")
+load("@aspect_rules_js//js:defs.bzl", "js_library")
 load(":build_defs.bzl", "flatbuffer_library_public")
 
 DEFAULT_FLATC_TS_ARGS = [
@@ -24,8 +24,7 @@ def flatbuffer_ts_library(
         flatc_args = DEFAULT_FLATC_TS_ARGS,
         visibility = None,
         restricted_to = None,
-        gen_reflections = False,
-        package_name = None):
+        gen_reflections = False):
     """Generates a ts_library rule for a given flatbuffer definition.
 
     Args:
@@ -46,10 +45,9 @@ def flatbuffer_ts_library(
         to use.
       gen_reflections: Optional, if true this will generate the flatbuffer
         reflection binaries for the schemas.
-      package_name: Optional, Package name to use for the generated code.
     """
     srcs_lib = "%s_srcs" % (name)
-    out_base = [s.replace(".fbs", "").split("/")[-1].split(":")[-1] for s in srcs]
+    out_base = [native.package_relative_label(s).name.removesuffix(".fbs") for s in srcs]
 
     if len(srcs) != 1:
         fail("flatbuffer_ts_library only supports one .fbs file per target currently.")
@@ -64,13 +62,16 @@ def flatbuffer_ts_library(
         language_flag = "--ts",
         includes = includes,
         include_paths = include_paths,
+        extra_env = "ESBUILD_BIN=$(ESBUILD_BIN)",
         flatc_args = flatc_args + ["--filename-suffix _generated"],
         compatible_with = compatible_with,
         restricted_to = restricted_to,
         reflection_name = reflection_name,
         reflection_visibility = visibility,
         target_compatible_with = target_compatible_with,
-        flatc_path = "@com_github_google_flatbuffers//ts:compile_flat_file",
+        flatc_path = Label("//ts:compile_flat_file"),
+        toolchains = ["@aspect_rules_esbuild//esbuild:resolved_toolchain"],
+        tools = ["@aspect_rules_esbuild//esbuild:resolved_toolchain"],
     )
     js_library(
         name = name,
@@ -79,7 +80,6 @@ def flatbuffer_ts_library(
         restricted_to = restricted_to,
         target_compatible_with = target_compatible_with,
         srcs = outs,
-        package_name = package_name,
     )
     native.filegroup(
         name = "%s_includes" % (name),

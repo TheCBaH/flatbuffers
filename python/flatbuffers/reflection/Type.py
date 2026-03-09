@@ -73,46 +73,46 @@ class Type(object):
         return 0
 
 def TypeStart(builder):
-    return builder.StartObject(6)
+    builder.StartObject(6)
 
 def Start(builder):
-    return TypeStart(builder)
+    TypeStart(builder)
 
 def TypeAddBaseType(builder, baseType):
-    return builder.PrependInt8Slot(0, baseType, 0)
+    builder.PrependInt8Slot(0, baseType, 0)
 
 def AddBaseType(builder, baseType):
-    return TypeAddBaseType(builder, baseType)
+    TypeAddBaseType(builder, baseType)
 
 def TypeAddElement(builder, element):
-    return builder.PrependInt8Slot(1, element, 0)
+    builder.PrependInt8Slot(1, element, 0)
 
 def AddElement(builder, element):
-    return TypeAddElement(builder, element)
+    TypeAddElement(builder, element)
 
 def TypeAddIndex(builder, index):
-    return builder.PrependInt32Slot(2, index, -1)
+    builder.PrependInt32Slot(2, index, -1)
 
 def AddIndex(builder, index):
-    return TypeAddIndex(builder, index)
+    TypeAddIndex(builder, index)
 
 def TypeAddFixedLength(builder, fixedLength):
-    return builder.PrependUint16Slot(3, fixedLength, 0)
+    builder.PrependUint16Slot(3, fixedLength, 0)
 
 def AddFixedLength(builder, fixedLength):
-    return TypeAddFixedLength(builder, fixedLength)
+    TypeAddFixedLength(builder, fixedLength)
 
 def TypeAddBaseSize(builder, baseSize):
-    return builder.PrependUint32Slot(4, baseSize, 4)
+    builder.PrependUint32Slot(4, baseSize, 4)
 
 def AddBaseSize(builder, baseSize):
-    return TypeAddBaseSize(builder, baseSize)
+    TypeAddBaseSize(builder, baseSize)
 
 def TypeAddElementSize(builder, elementSize):
-    return builder.PrependUint32Slot(5, elementSize, 0)
+    builder.PrependUint32Slot(5, elementSize, 0)
 
 def AddElementSize(builder, elementSize):
-    return TypeAddElementSize(builder, elementSize)
+    TypeAddElementSize(builder, elementSize)
 
 def TypeEnd(builder):
     return builder.EndObject()
