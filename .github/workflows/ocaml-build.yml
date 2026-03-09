@@ -1,0 +1,35 @@
+name: OCaml Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: true
+    - name: devcontainer
+      uses: ./.github/workflows/actions/devcontainer
+      id: devcontainer
+    - name: setup
+      run: |
+        echo 'EXEC=${{ steps.devcontainer.outputs.exec }}' >> $GITHUB_ENV
+    - name: build flatc
+      run: |
+        ${{ env.EXEC }} bash -c 'mkdir -p build && cd build && cmake .. -DFLATBUFFERS_BUILD_TESTS=OFF && make -j$(nproc) flatc'
+        ${{ env.EXEC }} cp build/flatc flatc
+        ${{ env.EXEC }} ./flatc --version
+    - name: install ocaml deps
+      run: |
+        ${{ env.EXEC }} opam install . --deps-only -t -y
+    - name: test
+      run: |
+        ${{ env.EXEC }} opam exec -- dune test
+    - name: benchmark
+      run: |
+        ${{ env.EXEC }} opam exec -- dune exec --profile=release --display=quiet ocaml/test/bench/fb_bench.exe
