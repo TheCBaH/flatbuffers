@@ -1,0 +1,69 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 7bf48e6a..5ddfba99 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -182,6 +182,7 @@ set(FlatBuffers_Compiler_SRCS
+   src/bfbs_gen.h
+   src/bfbs_gen_lua.h
+   src/bfbs_gen_nim.h
++  src/bfbs_gen_ocaml.h
+   src/bfbs_namer.h
+   include/codegen/idl_namer.h
+   include/codegen/namer.h
+@@ -194,6 +195,7 @@ set(FlatBuffers_Compiler_SRCS
+   src/annotated_binary_text_gen.cpp
+   src/bfbs_gen_lua.cpp
+   src/bfbs_gen_nim.cpp
++  src/bfbs_gen_ocaml.cpp
+   src/code_generators.cpp
+   grpc/src/compiler/schema_interface.h
+   grpc/src/compiler/cpp_generator.h
+diff --git a/include/flatbuffers/idl.h b/include/flatbuffers/idl.h
+index 9e58d4be..69284335 100644
+--- a/include/flatbuffers/idl.h
++++ b/include/flatbuffers/idl.h
+@@ -767,6 +767,7 @@ struct IDLOptions {
+     kNim = 1 << 17,
+     kProto = 1 << 18,
+     kKotlinKmp = 1 << 19,
++    kOCaml = 1 << 20,
+     kMAX
+   };
+ 
+diff --git a/src/flatc_main.cpp b/src/flatc_main.cpp
+index ce9b8c4a..f75a7289 100644
+--- a/src/flatc_main.cpp
++++ b/src/flatc_main.cpp
+@@ -19,6 +19,7 @@
+ 
+ #include "bfbs_gen_lua.h"
+ #include "bfbs_gen_nim.h"
++#include "bfbs_gen_ocaml.h"
+ #include "flatbuffers/base.h"
+ #include "flatbuffers/code_generator.h"
+ #include "flatbuffers/flatc.h"
+@@ -180,6 +181,11 @@ int main(int argc, const char* argv[]) {
+                                "Generate TypeScript code for tables/structs"},
+       flatbuffers::NewTsCodeGenerator());
+ 
++  flatc.RegisterCodeGenerator(
++      flatbuffers::FlatCOption{ "", "ocaml", "",
++                                "Generate OCaml code for tables/structs" },
++      flatbuffers::NewOCamlBfbsGenerator(flatbuffers_version));
++
+   // Create the FlatC options by parsing the command line arguments.
+   flatbuffers::FlatCOptions options =
+       flatc.ParseFromCommandLineArguments(argc, argv);
+diff --git a/src/idl_parser.cpp b/src/idl_parser.cpp
+index caeca93d..077908e4 100644
+--- a/src/idl_parser.cpp
++++ b/src/idl_parser.cpp
+@@ -2797,7 +2797,7 @@ bool Parser::SupportsOptionalScalars(const flatbuffers::IDLOptions& opts) {
+       IDLOptions::kKotlin | IDLOptions::kKotlinKmp | IDLOptions::kCpp |
+       IDLOptions::kJava | IDLOptions::kCSharp | IDLOptions::kTs |
+       IDLOptions::kBinary | IDLOptions::kGo | IDLOptions::kPython |
+-      IDLOptions::kJson | IDLOptions::kNim;
++      IDLOptions::kJson | IDLOptions::kNim | IDLOptions::kOCaml;
+   unsigned long langs = opts.lang_to_generate;
+   return (langs > 0 && langs < IDLOptions::kMAX) && !(langs & ~supported_langs);
+ }
