@@ -1,0 +1,10 @@
+{
+    "name": "GitHub CLI",
+    "id": "gh",
+    "version": "0.0.1",
+    "description": "Install GitHub CLI (gh)",
+    "options": {},
+    "installsAfter": [
+        "ghcr.io/devcontainers/features/common-utils"
+    ]
+}

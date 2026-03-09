@@ -16,13 +16,16 @@
         "./features/ocaml": {
             "packages": ""
         },
-        "./features/claude-code": {}
+        "./features/claude-code": {},
+        "./features/gh": {}
     },
     "customizations": {
         "vscode": {
             "extensions": [
                 "ocamllabs.ocaml-platform",
-                "anthropic.claude-code"
+                "anthropic.claude-code",
+                "github.vscode-github-actions",
+                "github.vscode-pull-request-github"
             ]
         }
     },
