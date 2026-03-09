@@ -4,11 +4,11 @@
 
 (rule
  (alias gen-sample)
- (deps (:schemas %{workspace_root}/samples/monster.fbs
-       %{workspace_root}/benchmarks/cpp/flatbuffers/bench.fbs
-       %{workspace_root}/tests/monster_test.fbs
-       %{workspace_root}/tests/monster_extra.fbs)
-  (:include (source_tree %{workspace_root}/tests/include_test)))
+ (deps (:schemas %{workspace_root}/flatbuffers/samples/monster.fbs
+       %{workspace_root}/flatbuffers/benchmarks/cpp/flatbuffers/bench.fbs
+       %{workspace_root}/flatbuffers/tests/monster_test.fbs
+       %{workspace_root}/flatbuffers/tests/monster_extra.fbs)
+  (:include (source_tree %{workspace_root}/flatbuffers/tests/include_test)))
  (targets monster.ml monster.mli
           bench.ml bench.mli
           monster_test.ml monster_test.mli
@@ -16,4 +16,4 @@
  (mode promote)
  (action
    (progn
-    (run flatc -I %{workspace_root}/tests/include_test --ocaml %{schemas}))))
+    (run flatc -I %{workspace_root}/flatbuffers/tests/include_test --ocaml %{schemas}))))

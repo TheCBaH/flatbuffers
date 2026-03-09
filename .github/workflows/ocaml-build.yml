@@ -24,15 +24,13 @@ jobs:
         ${{ env.EXEC }} bash -c '. /etc/bash.bashrc && sudo chown -R $(id -u):$(id -g) ${OPAMROOT}'
     - name: build flatc
       run: |
-        ${{ env.EXEC }} bash -c 'mkdir -p build && cd build && cmake .. -DFLATBUFFERS_BUILD_TESTS=OFF && make -j$(nproc) flatc'
-        ${{ env.EXEC }} cp build/flatc flatc
-        ${{ env.EXEC }} ./flatc --version
+        ${{ env.EXEC }} make flatc
     - name: install ocaml deps
       run: |
-        ${{ env.EXEC }} opam install . --deps-only -t -y
+        ${{ env.EXEC }} make deps
     - name: test
       run: |
-        ${{ env.EXEC }} opam exec -- dune test
+        ${{ env.EXEC }} make test
     - name: benchmark
       run: |
-        ${{ env.EXEC }} opam exec -- dune exec --profile=release --display=quiet ocaml/test/bench/fb_bench.exe
+        ${{ env.EXEC }} make bench

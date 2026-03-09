@@ -8,8 +8,8 @@
  (names sample_binary main_test)
  (modules :standard \ fixtures wire_data_test)
  (deps
-  (file ../../tests/monsterdata_test.mon)
-  (file ../../tests/monsterdata_python_wire.mon))
+  (file ../../flatbuffers/tests/monsterdata_test.mon)
+  (file ../../flatbuffers/tests/monsterdata_python_wire.mon))
  (libraries generated fixtures alcotest)
  (modes byte))
 
