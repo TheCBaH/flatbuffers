@@ -1,15 +1,9 @@
 # Flatbuffers OCaml Build Instructions
 
-## Prerequisites
-
-- OCaml >= 4.13 (check with `opam exec -- ocaml --version`)
-- opam (OCaml package manager)
-- cmake, g++, make (for building the `flatc` compiler)
-
 ## Step 1: Build the `flatc` Compiler (C++)
 
 ```bash
-cd /workspaces/ocaml-yamlt/flatbuffers
+cd /workspaces/flatbuffers
 mkdir -p build && cd build
 cmake .. -DFLATBUFFERS_BUILD_TESTS=OFF
 make -j$(nproc) flatc
