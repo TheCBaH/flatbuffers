@@ -73,6 +73,7 @@ Namer::Config OCamlDefaultConfig() {
            /*object_suffix=*/"",
            /*keyword_prefix=*/"",
            /*keyword_suffix=*/"_",
+           /*keywords_casing=*/Namer::Config::KeywordsCasing::CaseSensitive,
            /*filenames=*/Case::kSnake2,
            /*directories=*/Case::kKeep,
            /*output_path=*/"",
@@ -90,7 +91,9 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
         flatc_version_(flatc_version),
         namer_(OCamlDefaultConfig(), OCamlKeywords()) {}
 
-  Status GenerateFromSchema(const r::Schema *schema) FLATBUFFERS_OVERRIDE {
+  Status GenerateFromSchema(const r::Schema *schema,
+                            const CodeGenOptions &options) FLATBUFFERS_OVERRIDE {
+    options_ = options;
     // build single module tree for all definitions
     ForAllObjects(schema->objects(), [&](const r::Object *object) {
       auto node = AddNode(object->name()->str());
@@ -883,8 +886,10 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
         namer_.File(StripExtension(StripPath(root_file)));
     const std::string intf_file = impl_file + "i";
 
-    SaveFile(intf_file.c_str(), intf, false);
-    SaveFile(impl_file.c_str(), impl, false);
+    const std::string impl_path = options_.output_path + impl_file;
+    const std::string intf_path = options_.output_path + intf_file;
+    options_.file_saver->SaveFile(intf_path.c_str(), intf, false);
+    options_.file_saver->SaveFile(impl_path.c_str(), impl, false);
 
     root_node_ = {};
   }
@@ -894,6 +899,7 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
   std::map<std::string, std::string> enum_reader_idents_;
   const std::string flatc_version_;
   const BfbsNamer namer_;
+  CodeGenOptions options_;
 };
 }  // namespace
 
