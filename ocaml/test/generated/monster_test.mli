@@ -338,6 +338,7 @@ and MyGame : sig
       val testarrayoftables : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Vector.t) Rt.fbopt
       val enemy : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, t) Rt.fbopt
       val testnestedflatbuffer : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
+      val testnestedflatbuffer_as_monster : 'b Rt.buf -> ('b, t) Rt.fb -> t Rt.root option
       val testempty : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Stat.t) Rt.fbopt
       val testbool : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Bool.t
       val testhashs32_fnv1 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
@@ -374,6 +375,7 @@ and MyGame : sig
       val vector_of_enums : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Color.Vector.t) Rt.fbopt
       val signed_enum : 'b Rt.buf -> ('b, t) Rt.fb -> Race.t
       val testrequirednestedflatbuffer : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
+      val testrequirednestedflatbuffer_as_monster : 'b Rt.buf -> ('b, t) Rt.fb -> t Rt.root option
       val scalar_key_sorted_tables : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Stat.Vector.t) Rt.fbopt
       val native_inline : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Test.t) Rt.fbopt
       val long_enum_non_enum_default : 'b Rt.buf -> ('b, t) Rt.fb -> LongEnum.t

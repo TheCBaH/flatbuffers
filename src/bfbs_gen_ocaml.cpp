@@ -439,6 +439,40 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
                   " b o " + NumToString(field->offset()) + default_arg + "\n";
         }
       }
+
+      // generate nested flatbuffer accessor if applicable
+      if (!object->is_struct()) {
+        auto nested_type = GetNestedFlatbuffer(field);
+        if (!nested_type.empty()) {
+          auto nested_obj = FindObjectByName(nested_type, obj_name);
+          if (nested_obj) {
+            auto rel = NamespaceRelComponents(
+                nested_obj->name()->str(), obj_name);
+            // If empty (self-referential), use just "t"; otherwise qualify
+            std::string type_ref;
+            if (rel.empty()) {
+              type_ref = "t";
+            } else {
+              type_ref = namer_.Namespace(rel) + ".t";
+            }
+
+            // interface: returns a root of the nested type
+            intf += indent + "val " + namer_.Function(field_name) +
+                    "_as_" + namer_.Function(nested_type) +
+                    " : 'b Rt.buf -> ('b, t) " + RuntimeNS + ".fb -> " +
+                    type_ref + " " + RuntimeNS + ".root option\n";
+
+            // implementation: read vector, extract as nested root
+            impl += indent + "let[@inline] " + namer_.Function(field_name) +
+                    "_as_" + namer_.Function(nested_type) +
+                    " b o = " + RuntimeNS + ".Option.fold" +
+                    " ~none:None" +
+                    " ~some:(fun v -> Some (" + RuntimeNS +
+                    ".get_nested_root b v))" +
+                    " (" + namer_.Function(field_name) + " b o)\n";
+          }
+        }
+      }
     });
 
     if (!object->is_struct()) {
@@ -543,6 +577,42 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
     else
       // should be unreachable
       return "{{ ERROR GenerateDefault }}";
+  }
+
+  // Get the nested_flatbuffer attribute value from a field, or empty string
+  std::string GetNestedFlatbuffer(const r::Field *field) {
+    auto attrs = field->attributes();
+    if (!attrs) return "";
+    auto kv = attrs->LookupByKey("nested_flatbuffer");
+    if (!kv || !kv->value()) return "";
+    return kv->value()->str();
+  }
+
+  // Find an object by its short name (e.g. "Monster") matching the field's
+  // declaring namespace first, then falling back to any match
+  const r::Object *FindObjectByName(const std::string &name,
+                                     const std::string &in_ns) {
+    const r::Object *fallback = nullptr;
+    std::string ns_prefix;
+    // Extract namespace from in_ns (everything before last dot/component)
+    auto labels = NamespaceComponents(in_ns);
+    labels.pop_back();  // remove the type name itself
+
+    ForAllObjects(schema_->objects(), [&](const r::Object *obj) {
+      auto obj_name = obj->name()->str();
+      auto obj_labels = NamespaceComponents(obj_name);
+      if (obj_labels.back() == name) {
+        // Check if namespaces match
+        auto obj_ns = obj_labels;
+        obj_ns.pop_back();
+        if (obj_ns == labels) {
+          fallback = obj;  // exact namespace match
+        } else if (!fallback) {
+          fallback = obj;  // first match as fallback
+        }
+      }
+    });
+    return fallback;
   }
 
   // these are NOT represented by an offset (RT.fb, RT.fbopt) in the runtime:

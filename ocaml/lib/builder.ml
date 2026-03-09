@@ -271,6 +271,17 @@ let create_string b s =
   end_vector b
 ;;
 
+let create_nested_vector b (finished_buf : bytes) =
+  let len = Bytes.length finished_buf in
+  (* nested flatbuffers need alignment >= 4 for the root offset *)
+  prep b ~align:(Int.max vector_len_size 4) ~bytes:len;
+  ensure_capacity b vector_len_size;
+  Bytes.set_int32_le !(b.buf) (current b - vector_len_size) (Int32.of_int len);
+  Bytes.blit finished_buf 0 !(b.buf) (current b) len;
+  set_nested b true;
+  end_vector b
+;;
+
 let create_shared_string b s =
   match find_shared_string b s with
   | Some o -> o

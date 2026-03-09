@@ -74,6 +74,9 @@ module type Intf = sig
     module Vector : VectorS with type 'b elt := ('b, t) fb and type builder_elt := t wip
   end
 
+  (** Create a nested flatbuffer vector from a finished buffer *)
+  val create_nested_vector : Builder.t -> bytes -> 'a wip
+
   (** Flat options for offsets *)
   module Option : sig
     type ('b, 't) t = ('b, 't) fbopt
@@ -106,6 +109,8 @@ module type Intf_impl = sig
 
   val get_identifier : ?off:int -> ?size_prefixed:bool -> 'b Primitives.t -> 'b -> string
   val get_root : ?off:int -> ?size_prefixed:bool -> 'b Primitives.t -> 'b -> 'a root
+  val get_nested_root : 'b buf -> Read.offset -> 'a root
+  val create_nested_vector : Builder.t -> bytes -> Builder.offset
 
   module type VectorS = sig
     type t

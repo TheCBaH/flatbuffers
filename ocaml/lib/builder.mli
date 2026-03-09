@@ -40,3 +40,4 @@ val create_vector_ref : t -> offset array -> offset
 val create_vector_struct : (t -> int -> 'a -> unit) -> size:int -> t -> 'a array -> offset
 val create_string : t -> string -> offset
 val create_shared_string : t -> string -> offset
+val create_nested_vector : t -> bytes -> offset

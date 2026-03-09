@@ -232,6 +232,13 @@ let get_identifier ?(off = 0) ?(size_prefixed = false) (t: 'b Primitives.t) (b: 
   Primitives.get_string t b ~off:ident_start ~len:4
 ;;
 
+let[@inline] get_nested_root (type b) (Buf (vt, b) : b buf) (vec_off : Read.offset) : 'a root =
+  let s = vt.get_string b vec_off in
+  get_root Primitives.String s
+;;
+
+let create_nested_vector = Builder.create_nested_vector
+
 module Option = struct
   type ('b, 't) t = ('b, 't) fbopt
 
