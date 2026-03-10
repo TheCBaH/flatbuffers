@@ -239,6 +239,37 @@ let[@inline] get_nested_root (type b) (Buf (vt, b) : b buf) (vec_off : Read.offs
 
 let create_nested_vector = Builder.create_nested_vector
 
+let[@inline] lookup_by_key_ref (Buf (vt, b)) vec_off cmp =
+  let len = vt.length_vec b vec_off in
+  let rec search lo hi =
+    if lo >= hi then -1
+    else
+      let mid = lo + (hi - lo) / 2 in
+      let elt = vt.get_vec_ref b vec_off mid in
+      let c = cmp elt in
+      if c = 0 then elt
+      else if c < 0 then search (mid + 1) hi
+      else search lo mid
+  in
+  search 0 len
+;;
+
+let[@inline] lookup_by_key_struct ~size (Buf (vt, b)) vec_off cmp =
+  let tag = Read.TStruct { sz = size; align = 0 } in
+  let len = vt.length_vec b vec_off in
+  let rec search lo hi =
+    if lo >= hi then -1
+    else
+      let mid = lo + (hi - lo) / 2 in
+      let elt = vt.get_vec tag b vec_off mid in
+      let c = cmp elt in
+      if c = 0 then elt
+      else if c < 0 then search (mid + 1) hi
+      else search lo mid
+  in
+  search 0 len
+;;
+
 module Option = struct
   type ('b, 't) t = ('b, 't) fbopt
 

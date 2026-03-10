@@ -475,6 +475,115 @@ let check_nested_defaults () =
   Alcotest.(check bool) "inventory absent" true (Rt.Option.is_none (Monster.inventory nbuf nm))
 ;;
 
+let check_key_lookup_stat () =
+  let open Fixtures.Monster_test in
+  let open MyGame.Example in
+  let b = Rt.Builder.create () in
+  (* Build 3 Stat tables with sorted counts: 10, 20, 30 *)
+  let stats =
+    [| (10, 100L); (20, 200L); (30, 300L) |]
+    |> Array.map (fun (count, value) ->
+      let id = Rt.String.create b (Printf.sprintf "stat_%d" count) in
+      Stat.Builder.(start b |> add_id id |> add_count count |> add_val_ value |> finish))
+  in
+  let stats_vec = Stat.Vector.create b stats in
+  let name = Rt.String.create b "KeyLookup" in
+  let wip =
+    Monster.Builder.(
+      start b |> add_name name |> add_scalar_key_sorted_tables stats_vec |> finish)
+  in
+  let buf = Monster.finish_buf Flatbuffers.Primitives.Bytes b wip in
+  let (Rt.Root (buf, m)) = Monster.root Flatbuffers.Primitives.Bytes buf in
+  let vec = Rt.Option.get (Monster.scalar_key_sorted_tables buf m) in
+  (* Lookup existing keys *)
+  let found = Stat.lookup_by_key buf vec 20 in
+  Alcotest.(check bool) "found count=20" true (Rt.Option.is_some found);
+  let found = Rt.Option.get found in
+  Alcotest.(check int) "count" 20 (Stat.count buf found);
+  Alcotest.(check int64) "val" 200L (Stat.val_ buf found);
+  (* Lookup first *)
+  let found = Stat.lookup_by_key buf vec 10 in
+  Alcotest.(check bool) "found count=10" true (Rt.Option.is_some found);
+  Alcotest.(check int) "count" 10 (Stat.count buf (Rt.Option.get found));
+  (* Lookup last *)
+  let found = Stat.lookup_by_key buf vec 30 in
+  Alcotest.(check bool) "found count=30" true (Rt.Option.is_some found);
+  Alcotest.(check int64) "val" 300L (Stat.val_ buf (Rt.Option.get found))
+;;
+
+let check_key_lookup_not_found () =
+  let open Fixtures.Monster_test in
+  let open MyGame.Example in
+  let b = Rt.Builder.create () in
+  let stats =
+    [| 10; 20; 30 |]
+    |> Array.map (fun count ->
+      let id = Rt.String.create b "x" in
+      Stat.Builder.(start b |> add_id id |> add_count count |> finish))
+  in
+  let stats_vec = Stat.Vector.create b stats in
+  let name = Rt.String.create b "NotFound" in
+  let wip =
+    Monster.Builder.(
+      start b |> add_name name |> add_scalar_key_sorted_tables stats_vec |> finish)
+  in
+  let buf = Monster.finish_buf Flatbuffers.Primitives.Bytes b wip in
+  let (Rt.Root (buf, m)) = Monster.root Flatbuffers.Primitives.Bytes buf in
+  let vec = Rt.Option.get (Monster.scalar_key_sorted_tables buf m) in
+  (* Lookup non-existing key *)
+  Alcotest.(check bool) "not found 15" true (Rt.Option.is_none (Stat.lookup_by_key buf vec 15));
+  Alcotest.(check bool) "not found 0" true (Rt.Option.is_none (Stat.lookup_by_key buf vec 0));
+  Alcotest.(check bool) "not found 99" true (Rt.Option.is_none (Stat.lookup_by_key buf vec 99))
+;;
+
+let check_key_lookup_struct () =
+  let open Fixtures.Monster_test in
+  let open MyGame.Example in
+  let b = Rt.Builder.create () in
+  (* Ability struct: (id:uint, distance:uint), sorted by id *)
+  let abilities = Ability.Vector.create b [| (1l, 10l); (3l, 30l); (5l, 50l) |] in
+  let name = Rt.String.create b "AbilityLookup" in
+  let wip =
+    Monster.Builder.(
+      start b |> add_name name |> add_testarrayofsortedstruct abilities |> finish)
+  in
+  let buf = Monster.finish_buf Flatbuffers.Primitives.Bytes b wip in
+  let (Rt.Root (buf, m)) = Monster.root Flatbuffers.Primitives.Bytes buf in
+  let vec = Rt.Option.get (Monster.testarrayofsortedstruct buf m) in
+  (* Lookup existing *)
+  let found = Ability.lookup_by_key buf vec 3l in
+  Alcotest.(check bool) "found id=3" true (Rt.Option.is_some found);
+  let found = Rt.Option.get found in
+  Alcotest.(check int32) "id" 3l (Ability.id buf found);
+  Alcotest.(check int32) "distance" 30l (Ability.distance buf found);
+  (* Lookup first and last *)
+  Alcotest.(check bool) "found id=1" true (Rt.Option.is_some (Ability.lookup_by_key buf vec 1l));
+  Alcotest.(check bool) "found id=5" true (Rt.Option.is_some (Ability.lookup_by_key buf vec 5l));
+  (* Not found *)
+  Alcotest.(check bool) "not found id=2" true (Rt.Option.is_none (Ability.lookup_by_key buf vec 2l));
+  Alcotest.(check bool) "not found id=0" true (Rt.Option.is_none (Ability.lookup_by_key buf vec 0l))
+;;
+
+let check_key_lookup_single_element () =
+  let open Fixtures.Monster_test in
+  let open MyGame.Example in
+  let b = Rt.Builder.create () in
+  let stats =
+    [| Stat.Builder.(let id = Rt.String.create b "only" in start b |> add_id id |> add_count 42 |> finish) |]
+  in
+  let stats_vec = Stat.Vector.create b stats in
+  let name = Rt.String.create b "Single" in
+  let wip =
+    Monster.Builder.(
+      start b |> add_name name |> add_scalar_key_sorted_tables stats_vec |> finish)
+  in
+  let buf = Monster.finish_buf Flatbuffers.Primitives.Bytes b wip in
+  let (Rt.Root (buf, m)) = Monster.root Flatbuffers.Primitives.Bytes buf in
+  let vec = Rt.Option.get (Monster.scalar_key_sorted_tables buf m) in
+  Alcotest.(check bool) "found single" true (Rt.Option.is_some (Stat.lookup_by_key buf vec 42));
+  Alcotest.(check bool) "not found other" true (Rt.Option.is_none (Stat.lookup_by_key buf vec 41))
+;;
+
 let check_extension_ident () =
   let open Fixtures.Monster_test in
   let open MyGame.Example in
@@ -513,5 +622,9 @@ let test_cases =
     ; test_case "Nested testrequired field" `Quick check_nested_testrequired
     ; test_case "Nested with builder reset" `Quick check_nested_builder_reset
     ; test_case "Nested default values" `Quick check_nested_defaults
+    ; test_case "Key lookup on sorted table vector" `Quick check_key_lookup_stat
+    ; test_case "Key lookup not found" `Quick check_key_lookup_not_found
+    ; test_case "Key lookup on sorted struct vector" `Quick check_key_lookup_struct
+    ; test_case "Key lookup single element" `Quick check_key_lookup_single_element
     ]
 ;;

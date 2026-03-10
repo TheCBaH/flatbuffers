@@ -111,6 +111,8 @@ module type Intf_impl = sig
   val get_root : ?off:int -> ?size_prefixed:bool -> 'b Primitives.t -> 'b -> 'a root
   val get_nested_root : 'b buf -> Read.offset -> 'a root
   val create_nested_vector : Builder.t -> bytes -> Builder.offset
+  val lookup_by_key_ref : 'b buf -> Read.offset -> (Read.offset -> int) -> Read.offset
+  val lookup_by_key_struct : size:int -> 'b buf -> Read.offset -> (Read.offset -> int) -> Read.offset
 
   module type VectorS = sig
     type t

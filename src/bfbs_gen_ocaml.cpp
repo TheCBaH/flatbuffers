@@ -475,6 +475,56 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
       }
     });
 
+    // generate lookup_by_key if object has a key field
+    {
+      const r::Field *key_field = nullptr;
+      ForAllFields(object, /*reverse=*/false, [&](const r::Field *field) {
+        if (field->key()) key_field = field;
+      });
+
+      if (key_field) {
+        const std::string key_name = namer_.Field(*key_field);
+        const r::BaseType key_type = key_field->type()->base_type();
+        const bool is_string_key = (key_type == r::String);
+
+        // Determine key type for interface
+        std::string key_type_str;
+        if (is_string_key) {
+          key_type_str = "string";
+        } else {
+          key_type_str = GenerateType(key_field->type(), obj_name);
+        }
+
+        // interface
+        intf += indent + "val lookup_by_key : 'b " + RuntimeNS +
+                ".buf -> ('b, Vector.t) " + RuntimeNS + ".fb -> " +
+                key_type_str + " -> ('b, t) " + RuntimeNS + ".fbopt\n";
+
+        // implementation
+        std::string cmp_expr;
+        if (is_string_key) {
+          cmp_expr = "String.compare (" + RuntimeNS +
+                     ".String.to_string buf (" + namer_.Function(key_name) +
+                     " buf elt)) key";
+        } else {
+          cmp_expr = "compare (" + namer_.Function(key_name) +
+                     " buf elt) key";
+        }
+
+        if (object->is_struct()) {
+          impl += indent + "let[@inline] lookup_by_key buf vec_off key = " +
+                  RuntimeNS + ".lookup_by_key_struct ~size:" +
+                  NumToString(object->bytesize()) + " " +
+                  "buf vec_off " +
+                  "(fun elt -> " + cmp_expr + ")\n";
+        } else {
+          impl += indent + "let[@inline] lookup_by_key buf vec_off key = " +
+                  RuntimeNS + ".lookup_by_key_ref buf vec_off " +
+                  "(fun elt -> " + cmp_expr + ")\n";
+        }
+      }
+    }
+
     if (!object->is_struct()) {
       // generate builder
       const std::string indent2 = Indent(level + 1);

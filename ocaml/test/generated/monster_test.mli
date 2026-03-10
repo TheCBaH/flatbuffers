@@ -280,6 +280,7 @@ and MyGame : sig
       val id : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fbopt
       val val_ : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Long.t
       val count : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UShort.t
+      val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.UShort.t -> ('b, t) Rt.fbopt
 
       module Builder : sig
         type t
@@ -299,6 +300,7 @@ and MyGame : sig
       module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
       val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+      val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.ULong.t -> ('b, t) Rt.fbopt
 
       module Builder : sig
         type t
@@ -388,6 +390,7 @@ and MyGame : sig
       val negative_inf_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
       val negative_infinity_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
       val double_inf_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+      val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> string -> ('b, t) Rt.fbopt
 
       module Builder : sig
         type t
@@ -469,6 +472,7 @@ and MyGame : sig
 
       val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
       val distance : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
+      val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.UInt.t -> ('b, t) Rt.fbopt
     end
   end (* Example *)
 end (* MyGame *)

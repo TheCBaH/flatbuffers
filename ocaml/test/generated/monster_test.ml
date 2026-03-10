@@ -361,6 +361,7 @@ module MyGame = struct
       let[@inline] id b o = Rt.Ref.read_table_opt b o 4
       let[@inline] val_ b o = Rt.Long.(read_table_default b o 6 ~default:(of_default 0L))
       let[@inline] count b o = Rt.UShort.(read_table_default b o 8 ~default:(of_default 0L))
+      let[@inline] lookup_by_key buf vec_off key = Rt.lookup_by_key_ref buf vec_off (fun elt -> compare (count buf elt) key)
 
       module Builder = struct
         type t = Rt.Builder.t
@@ -379,6 +380,7 @@ module MyGame = struct
       module Vector = Rt.Ref.Vector
 
       let[@inline] id b o = Rt.ULong.(read_table_default b o 4 ~default:(of_default 0L))
+      let[@inline] lookup_by_key buf vec_off key = Rt.lookup_by_key_ref buf vec_off (fun elt -> compare (id buf elt) key)
 
       module Builder = struct
         type t = Rt.Builder.t
@@ -463,6 +465,7 @@ module MyGame = struct
       let[@inline] negative_inf_default b o = Rt.Float.(read_table_default b o 122 ~default:(of_default neg_infinity))
       let[@inline] negative_infinity_default b o = Rt.Float.(read_table_default b o 124 ~default:(of_default neg_infinity))
       let[@inline] double_inf_default b o = Rt.Double.(read_table_default b o 126 ~default:(of_default infinity))
+      let[@inline] lookup_by_key buf vec_off key = Rt.lookup_by_key_ref buf vec_off (fun elt -> String.compare (Rt.String.to_string buf (name buf elt)) key)
 
       module Builder = struct
         type t = Rt.Builder.t
@@ -543,6 +546,7 @@ module MyGame = struct
 
       let[@inline] id b s = Rt.UInt.read_offset b s 0
       let[@inline] distance b s = Rt.UInt.read_offset b s 4
+      let[@inline] lookup_by_key buf vec_off key = Rt.lookup_by_key_struct ~size:8 buf vec_off (fun elt -> compare (id buf elt) key)
     end
   end (* Example *)
 end (* MyGame *)
