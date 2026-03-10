@@ -164,7 +164,7 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
   std::string LanguageName() const override { return "OCaml"; }
 
   uint64_t SupportedAdvancedFeatures() const FLATBUFFERS_OVERRIDE {
-    return r::OptionalScalars;
+    return r::AdvancedArrayFeatures | r::OptionalScalars;
   }
 
  private:
@@ -248,12 +248,41 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
       ForAllFields(object, /*reverse=*/false, [&](const r::Field *field) {
         const auto arg_name = namer_.Variable(field->name()->str());
         set_args += (first_field ? "" : ", ") + arg_name + "_";
-        set_body += indent + "  " + StructSetFn(field->type()) + " b (i + " +
-                    NumToString(field->offset()) + ") " + arg_name + "_;\n";
+
+        if (field->type()->base_type() == r::Array) {
+          auto elem_type = field->type()->element();
+          uint32_t elem_size = field->type()->element_size();
+          std::string set_fn;
+          if (IsScalar(elem_type)) {
+            set_fn = RuntimeNS + ".Builder.set_scalar T" +
+                     r::EnumNameBaseType(elem_type);
+          } else if (elem_type == r::Obj) {
+            auto obj = GetObject(field->type(), true);
+            set_fn = StructSetIdent(obj);
+            elem_size = obj->bytesize();
+          }
+          set_body += indent + "  Array.iteri (fun j_ v_ -> " + set_fn +
+                      " b (i + " + NumToString(field->offset()) +
+                      " + j_ * " + NumToString(elem_size) +
+                      ") v_) " + arg_name + "_;\n";
+        } else {
+          set_body += indent + "  " + StructSetFn(field->type()) + " b (i + " +
+                      NumToString(field->offset()) + ") " + arg_name + "_;\n";
+        }
         if (field->padding() != 0) {
+          auto pad_offset = field->offset();
+          if (field->type()->base_type() == r::Array) {
+            uint32_t actual_elem_size = field->type()->element_size();
+            if (field->type()->element() == r::Obj) {
+              actual_elem_size = GetObject(field->type(), true)->bytesize();
+            }
+            pad_offset += field->type()->fixed_length() * actual_elem_size;
+          } else {
+            pad_offset += field->type()->base_size();
+          }
           set_body +=
               indent + "  Rt.Builder.set_padding b (i + " +
-              NumToString(field->offset() + field->type()->base_size()) + ") " +
+              NumToString(pad_offset) + ") " +
               NumToString(field->padding()) + ";\n";
         }
 
@@ -394,6 +423,46 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
 
       const std::string field_name = namer_.Field(*field);
       const r::BaseType field_type = field->type()->base_type();
+
+      // fixed-length array fields (only in structs)
+      if (field_type == r::Array && object->is_struct()) {
+        auto fixed_len = field->type()->fixed_length();
+        auto elem_type = field->type()->element();
+        // element_size from reflection is the base type size, not the
+        // struct bytesize. Use the object's bytesize for struct elements.
+        uint32_t elem_size = field->type()->element_size();
+        if (elem_type == r::Obj) {
+          elem_size = GetObject(field->type(), true)->bytesize();
+        }
+
+        // length constant
+        intf += indent + "val " + namer_.Function(field_name) +
+                "_length : int\n";
+        impl += indent + "let " + namer_.Function(field_name) +
+                "_length = " + NumToString(fixed_len) + "\n";
+
+        // element reader type for interface
+        std::string elem_reader_type;
+        if (IsImmediateType(field->type(), true)) {
+          elem_reader_type =
+              GenerateIntfNs(field->type(), obj_name, true) + ".t";
+        } else {
+          elem_reader_type = "('b, " +
+              GenerateIntfNs(field->type(), obj_name, true) +
+              ".t) " + RuntimeNS + ".fb";
+        }
+
+        // indexed accessor
+        intf += indent + "val " + namer_.Function(field_name) +
+                " : 'b " + RuntimeNS + ".buf -> ('b, t) " + RuntimeNS +
+                ".fb -> int -> " + elem_reader_type + "\n";
+        impl += indent + "let[@inline] " + namer_.Function(field_name) +
+                " b s i = " +
+                GenerateImplNs(field->type(), true) +
+                ".read_offset b s (" + NumToString(field->offset()) +
+                " + i * " + NumToString(elem_size) + ")\n";
+        return;
+      }
 
       // generate accessor interface
       if (field_type == r::Union) {
@@ -758,7 +827,23 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
     bool first = true;
     std::string res = "(";
     ForAllFields(object, /*reverse=*/false, [&](const r::Field *field) {
-      if (IsScalar(field->type()->base_type()) ||
+      if (field->type()->base_type() == r::Array) {
+        auto elem_type = field->type()->element();
+        std::string elem_repr;
+        if (IsScalar(elem_type)) {
+          auto ns = intf ? GenerateIntfNs(field->type(), in_ns, true)
+                         : GenerateImplNs(field->type(), true);
+          elem_repr = ns + ".t";
+        } else if (elem_type == r::Obj) {
+          auto obj = GetObject(field->type(), true);
+          if (intf) {
+            elem_repr = GenerateIntfNs(field->type(), in_ns, true) + ".t";
+          } else {
+            elem_repr = StructReprArgTypes(obj, in_ns, false);
+          }
+        }
+        res += (first ? "" : " * ") + elem_repr + " array";
+      } else if (IsScalar(field->type()->base_type()) ||
           (IsStruct(field->type()) && intf)) {
         res += (first ? "" : " * ") + GenerateType(field->type(), in_ns, intf);
       } else if (IsStruct(field->type()) && !intf) {

@@ -30,6 +30,18 @@ index 9e58d4be..69284335 100644
      kMAX
    };
  
+diff --git a/src/flatc.cpp b/src/flatc.cpp
+index ee34044f..18bbc41e 100644
+--- a/src/flatc.cpp
++++ b/src/flatc.cpp
+@@ -780,6 +780,7 @@ FlatCOptions FlatCompiler::ParseFromCommandLineArguments(int argc,
+         auto is_binary_schema = code_generator->SupportsBfbsGeneration();
+         opts.binary_schema_comments = is_binary_schema;
+         options.requires_bfbs = is_binary_schema;
++        opts.binary_schema_builtins = opts.binary_schema_builtins || is_binary_schema;
+         options.generators.push_back(std::move(code_generator));
+       }
+     } else {
 diff --git a/src/flatc_main.cpp b/src/flatc_main.cpp
 index ce9b8c4a..f75a7289 100644
 --- a/src/flatc_main.cpp
@@ -54,20 +66,8 @@ index ce9b8c4a..f75a7289 100644
    // Create the FlatC options by parsing the command line arguments.
    flatbuffers::FlatCOptions options =
        flatc.ParseFromCommandLineArguments(argc, argv);
-diff --git a/src/flatc.cpp b/src/flatc.cpp
-index fbb25f09..fbb25f10 100644
---- a/src/flatc.cpp
-+++ b/src/flatc.cpp
-@@ -780,6 +780,7 @@ FlatCOptions FlatCompiler::ParseFromCommandLineArguments(int argc,
-         auto is_binary_schema = code_generator->SupportsBfbsGeneration();
-         opts.binary_schema_comments = is_binary_schema;
-         options.requires_bfbs = is_binary_schema;
-+        opts.binary_schema_builtins = opts.binary_schema_builtins || is_binary_schema;
-         options.generators.push_back(std::move(code_generator));
-       }
-     } else {
 diff --git a/src/idl_parser.cpp b/src/idl_parser.cpp
-index caeca93d..077908e4 100644
+index caeca93d..596d0760 100644
 --- a/src/idl_parser.cpp
 +++ b/src/idl_parser.cpp
 @@ -2797,7 +2797,7 @@ bool Parser::SupportsOptionalScalars(const flatbuffers::IDLOptions& opts) {
@@ -79,3 +79,12 @@ index caeca93d..077908e4 100644
    unsigned long langs = opts.lang_to_generate;
    return (langs > 0 && langs < IDLOptions::kMAX) && !(langs & ~supported_langs);
  }
+@@ -2827,7 +2827,7 @@ bool Parser::SupportsAdvancedArrayFeatures() const {
+           ~(IDLOptions::kCpp | IDLOptions::kPython | IDLOptions::kJava |
+             IDLOptions::kCSharp | IDLOptions::kJsonSchema | IDLOptions::kJson |
+             IDLOptions::kBinary | IDLOptions::kRust | IDLOptions::kTs |
+-            IDLOptions::kSwift)) == 0;
++            IDLOptions::kSwift | IDLOptions::kOCaml)) == 0;
+ }
+ 
+ bool Parser::Supports64BitOffsets() const {

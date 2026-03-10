@@ -7,12 +7,14 @@
  (deps (:schemas %{workspace_root}/flatbuffers/samples/monster.fbs
        %{workspace_root}/flatbuffers/benchmarks/cpp/flatbuffers/bench.fbs
        %{workspace_root}/flatbuffers/tests/monster_test.fbs
-       %{workspace_root}/flatbuffers/tests/monster_extra.fbs)
+       %{workspace_root}/flatbuffers/tests/monster_extra.fbs
+       %{workspace_root}/flatbuffers/tests/arrays_test.fbs)
   (:include (source_tree %{workspace_root}/flatbuffers/tests/include_test)))
  (targets monster.ml monster.mli
           bench.ml bench.mli
           monster_test.ml monster_test.mli
-          monster_extra.ml monster_extra.mli)
+          monster_extra.ml monster_extra.mli
+          arrays_test.ml arrays_test.mli)
  (mode promote)
  (action
    (progn
