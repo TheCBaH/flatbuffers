@@ -52,12 +52,15 @@ module MyGame = struct
         | x -> "<MyGame.Example.TestEnum: " ^ (Int64.to_string x) ^ ">"
 
       module Vector = Rt.Byte.Vector
+      module Vector64 = Rt.Byte.Vector64
     end
 
     module NestedStruct = struct
       type t = (Rt.Int.t array * Rt.Byte.t * Rt.Byte.t array * Rt.Long.t array)
 
       module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 32 let set = Struct.set_nested_struct__13 end)
+
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 32 let set = Struct.set_nested_struct__13 end)
 
       let a_length = 2
       let[@inline] a b s i = Rt.Int.read_offset b s (0 + i * 4)
@@ -72,6 +75,8 @@ module MyGame = struct
       type t = (Rt.UByte.t array * Rt.Float.t array * Rt.Bool.t array * (Rt.Int.t array * Rt.Byte.t * Rt.Byte.t array * Rt.Long.t array) array * Rt.Byte.t array)
 
       module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 2496 let set = Struct.set_large_array_struct__15 end)
+
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 2496 let set = Struct.set_large_array_struct__15 end)
 
       let d_length = 64
       let[@inline] d b s i = Rt.UByte.read_offset b s (0 + i * 1)
@@ -89,6 +94,8 @@ module MyGame = struct
       type t
 
       module Vector = Rt.Ref.Vector
+
+      module Vector64 = Rt.Ref64.Vector
 
       let extension = Some "mon"
       let identifier = Some "ARRT"
@@ -111,6 +118,8 @@ module MyGame = struct
       type t = (Rt.Float.t * Rt.Int.t array * Rt.Byte.t * (Rt.Int.t array * Rt.Byte.t * Rt.Byte.t array * Rt.Long.t array) array * Rt.Int.t * Rt.Long.t array)
 
       module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 160 let set = Struct.set_array_struct__14 end)
+
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 160 let set = Struct.set_array_struct__14 end)
 
       let[@inline] a b s = Rt.Float.read_offset b s 0
       let b_length = 15

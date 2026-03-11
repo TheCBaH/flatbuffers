@@ -73,6 +73,8 @@ module TableA = struct
 
   module Vector = Rt.Ref.Vector
 
+  module Vector64 = Rt.Ref64.Vector
+
   let[@inline] b b o = Rt.Ref.read_table_opt b o 4
 
   module Builder = struct
@@ -97,12 +99,15 @@ module MyGame = struct
         | x -> "<MyGame.OtherNameSpace.FromInclude: " ^ (Int64.to_string x) ^ ">"
 
       module Vector = Rt.Long.Vector
+      module Vector64 = Rt.Long.Vector64
     end
 
     module Unused = struct
       type t = (Rt.Int.t)
 
       module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 4 let set = Struct.set_unused__9 end)
+
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 4 let set = Struct.set_unused__9 end)
 
       let[@inline] a b s = Rt.Int.read_offset b s 0
     end
@@ -111,6 +116,8 @@ module MyGame = struct
       type t
 
       module Vector = Rt.Ref.Vector
+
+      module Vector64 = Rt.Ref64.Vector
 
       let[@inline] a b o = Rt.Ref.read_table_opt b o 4
 
@@ -129,6 +136,8 @@ module MyGame = struct
 
     module Vector = Rt.Ref.Vector
 
+    module Vector64 = Rt.Ref64.Vector
+
 
     module Builder = struct
       type t = Rt.Builder.t
@@ -143,6 +152,8 @@ module MyGame = struct
       type t
 
       module Vector = Rt.Ref.Vector
+
+      module Vector64 = Rt.Ref64.Vector
 
 
       module Builder = struct
@@ -172,6 +183,7 @@ module MyGame = struct
         | x -> "<MyGame.Example.Race: " ^ (Int64.to_string x) ^ ">"
 
       module Vector = Rt.Byte.Vector
+      module Vector64 = Rt.Byte.Vector64
     end
 
     module LongEnum = struct
@@ -189,6 +201,7 @@ module MyGame = struct
         | x -> "<MyGame.Example.LongEnum: " ^ (Int64.to_string x) ^ ">"
 
       module Vector = Rt.ULong.Vector
+      module Vector64 = Rt.ULong.Vector64
     end
 
     module Color = struct
@@ -206,6 +219,7 @@ module MyGame = struct
         | x -> "<MyGame.Example.Color: " ^ (Int64.to_string x) ^ ">"
 
       module Vector = Rt.UByte.Vector
+      module Vector64 = Rt.UByte.Vector64
     end
 
     module AnyUniqueAliases = struct
@@ -264,6 +278,8 @@ module MyGame = struct
 
       module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 32 let set = Struct.set_vec3__8 end)
 
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 32 let set = Struct.set_vec3__8 end)
+
       let[@inline] x b s = Rt.Float.read_offset b s 0
       let[@inline] y b s = Rt.Float.read_offset b s 4
       let[@inline] z b s = Rt.Float.read_offset b s 8
@@ -276,6 +292,8 @@ module MyGame = struct
       type t
 
       module Vector = Rt.Ref.Vector
+
+      module Vector64 = Rt.Ref64.Vector
 
       let[@inline] i8 b o = Rt.Byte.(read_table_default b o 4 ~default:(of_default 0L))
       let[@inline] u8 b o = Rt.UByte.(read_table_default b o 6 ~default:(of_default 0L))
@@ -315,6 +333,8 @@ module MyGame = struct
 
       module Vector = Rt.Ref.Vector
 
+      module Vector64 = Rt.Ref64.Vector
+
       let[@inline] color b o = Rt.UByte.(read_table_default b o 4 ~default:(of_default 2L))
 
       module Builder = struct
@@ -331,6 +351,8 @@ module MyGame = struct
 
       module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 4 let set = Struct.set_test__5 end)
 
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 4 let set = Struct.set_test__5 end)
+
       let[@inline] a b s = Rt.Short.read_offset b s 0
       let[@inline] b b s = Rt.Byte.read_offset b s 2
     end
@@ -340,6 +362,8 @@ module MyGame = struct
 
       module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 20 let set = Struct.set_struct_of_structs_of_structs__7 end)
 
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 20 let set = Struct.set_struct_of_structs_of_structs__7 end)
+
       let[@inline] a b s = Rt.Struct.read_offset b s 0
     end
 
@@ -347,6 +371,8 @@ module MyGame = struct
       type t = ((Rt.UInt.t * Rt.UInt.t) * (Rt.Short.t * Rt.Byte.t) * (Rt.UInt.t * Rt.UInt.t))
 
       module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 20 let set = Struct.set_struct_of_structs__6 end)
+
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 20 let set = Struct.set_struct_of_structs__6 end)
 
       let[@inline] a b s = Rt.Struct.read_offset b s 0
       let[@inline] b b s = Rt.Struct.read_offset b s 8
@@ -357,6 +383,8 @@ module MyGame = struct
       type t
 
       module Vector = Rt.Ref.Vector
+
+      module Vector64 = Rt.Ref64.Vector
 
       let[@inline] id b o = Rt.Ref.read_table_opt b o 4
       let[@inline] val_ b o = Rt.Long.(read_table_default b o 6 ~default:(of_default 0L))
@@ -379,6 +407,8 @@ module MyGame = struct
 
       module Vector = Rt.Ref.Vector
 
+      module Vector64 = Rt.Ref64.Vector
+
       let[@inline] id b o = Rt.ULong.(read_table_default b o 4 ~default:(of_default 0L))
       let[@inline] lookup_by_key buf vec_off key = Rt.lookup_by_key_ref buf vec_off (fun elt -> compare (id buf elt) key)
 
@@ -395,6 +425,8 @@ module MyGame = struct
       type t
 
       module Vector = Rt.Ref.Vector
+
+      module Vector64 = Rt.Ref64.Vector
 
       let extension = Some "mon"
       let identifier = Some "MONS"
@@ -543,6 +575,8 @@ module MyGame = struct
       type t = (Rt.UInt.t * Rt.UInt.t)
 
       module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 8 let set = Struct.set_ability__4 end)
+
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 8 let set = Struct.set_ability__4 end)
 
       let[@inline] id b s = Rt.UInt.read_offset b s 0
       let[@inline] distance b s = Rt.UInt.read_offset b s 4

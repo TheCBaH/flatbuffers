@@ -188,6 +188,21 @@ let push_slot_ref f x b =
   b
 ;;
 
+(* convert offset to 64-bit relative *)
+let set_uoffset64 b i o =
+  let i' = current b + i in
+  let b' = !(b.buf) in
+  Bytes.set_int64_le b' i' (Int64.of_int (Bytes.length b' - o - i'))
+;;
+
+let push_slot_ref64 f x b =
+  let size = 8 in
+  prep ~align:size ~bytes:size b;
+  set_uoffset64 b 0 x;
+  save_slot ~id:f b;
+  b
+;;
+
 let[@inline] push_slot_union ft fo t o b =
   let size = 4 in
   prep ~align:1 ~bytes:1 b;
@@ -250,6 +265,52 @@ let create_vector_ref b a =
     set_uoffset b (i * size) a.(i)
   done;
   end_vector b
+;;
+
+(* 64-bit length vector *)
+let vector64_len_size = 8
+
+let start_vector64 b ~n_elts ~elt_size =
+  prep b ~align:(Int.max vector64_len_size elt_size) ~bytes:(n_elts * elt_size);
+  ensure_capacity b vector64_len_size;
+  Bytes.set_int64_le !(b.buf) (current b - vector64_len_size) (Int64.of_int n_elts);
+  set_nested b true
+;;
+
+let end_vector64 b =
+  assert (b.nested_start = b.length);
+  set_nested b false;
+  b.length <- b.length + vector64_len_size;
+  current_offset b
+;;
+
+let create_vector_ref64 b a =
+  let size = 8 in
+  let len = Array.length a in
+  start_vector64 b ~n_elts:len ~elt_size:size;
+  for i = 0 to len - 1 do
+    set_uoffset64 b (i * size) a.(i)
+  done;
+  end_vector64 b
+;;
+
+let create_vector64 t b a =
+  let size = Primitives.size_scalar t in
+  let len = Array.length a in
+  start_vector64 b ~n_elts:len ~elt_size:size;
+  for i = 0 to len - 1 do
+    set_scalar t b (i * size) a.(i)
+  done;
+  end_vector64 b
+;;
+
+let create_vector64_struct set ~size b a =
+  let len = Array.length a in
+  start_vector64 b ~n_elts:len ~elt_size:size;
+  for i = 0 to len - 1 do
+    set b (i * size) a.(i)
+  done;
+  end_vector64 b
 ;;
 
 let create_vector_struct set ~size b a =

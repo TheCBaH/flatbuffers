@@ -14,6 +14,8 @@ module MyGame = struct
 
     module Vector = Rt.Ref.Vector
 
+    module Vector64 = Rt.Ref64.Vector
+
     let extension = Some "mon"
     let identifier = Some "MONE"
     let has_identifier ?(size_prefixed = false) ?(off = 0) p b = Rt.get_identifier p b ~size_prefixed ~off = Option.get identifier

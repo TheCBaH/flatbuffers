@@ -3,6 +3,7 @@ type offset = int
 type _ tag =
   | TScalar : 'a Primitives.ty -> 'a tag
   | TRef : offset tag
+  | TRef64 : offset tag
   | TStruct :
       { sz : int
       ; align : int
@@ -18,6 +19,8 @@ val read_table_default : 'a Primitives.ty -> 'b Primitives.t -> 'b -> offset -> 
 val read_table_opt : 'a Primitives.ty -> 'b Primitives.t -> 'b -> int -> int -> 'a option
 
 val read_table_opt_ref : 'a Primitives.t -> 'a -> int -> int -> offset
+val read_table_ref64 : 'a Primitives.t -> 'a -> int -> int -> offset
+val read_table_opt_ref64 : 'a Primitives.t -> 'a -> int -> int -> offset
 val read_table_struct : 'a Primitives.t -> 'a -> int -> int -> int
 val read_table_opt_struct : 'a Primitives.t -> 'a -> int -> int -> int
 
@@ -28,6 +31,14 @@ val to_list_vec : 'a tag -> 'b Primitives.t -> 'b -> int -> 'a list
 val to_array_vec : 'a tag -> 'b Primitives.t -> 'b -> int -> 'a array
 val to_seq_vec : 'a tag -> 'b Primitives.t -> 'b -> int -> 'a Seq.t
 val iter_vec : 'a tag -> 'b Primitives.t -> 'b -> ('a -> unit) -> int -> unit
+
+(** Vector64 ops *)
+val length_vec64 : 'a Primitives.t -> 'a -> int -> int
+val get_vec64 : 'a tag -> 'b Primitives.t -> 'b -> int -> int -> 'a
+val to_list_vec64 : 'a tag -> 'b Primitives.t -> 'b -> int -> 'a list
+val to_array_vec64 : 'a tag -> 'b Primitives.t -> 'b -> int -> 'a array
+val to_seq_vec64 : 'a tag -> 'b Primitives.t -> 'b -> int -> 'a Seq.t
+val iter_vec64 : 'a tag -> 'b Primitives.t -> 'b -> ('a -> unit) -> int -> unit
 
 (** Other *)
 val get_string : 'b Primitives.t -> 'b -> offset -> string

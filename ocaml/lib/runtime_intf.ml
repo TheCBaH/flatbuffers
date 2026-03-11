@@ -46,6 +46,7 @@ module type Intf = sig
     type t
 
     module Vector : VectorS with type 'b elt := t and type builder_elt := t
+    module Vector64 : VectorS with type 'b elt := t and type builder_elt := t
   end
 
   (** Scalars *)
@@ -142,6 +143,7 @@ module type Intf_impl = sig
     val to_default : t -> default
 
     module Vector : VectorS with type 'b elt := t and type builder_elt := t
+    module Vector64 : VectorS with type 'b elt := t and type builder_elt := t
   end
 
   module Bool : ScalarS with type default := bool and type t = Primitives.T.bool
@@ -177,6 +179,13 @@ module type Intf_impl = sig
       val size : int
       val set : Builder.t -> int -> builder_elt -> unit
     end) : VectorS with type 'b elt := Read.offset and type builder_elt := T.builder_elt
+
+    module Vector64 (T : sig
+      type builder_elt
+
+      val size : int
+      val set : Builder.t -> int -> builder_elt -> unit
+    end) : VectorS with type 'b elt := Read.offset and type builder_elt := T.builder_elt
   end
 
   module Ref : sig
@@ -184,6 +193,15 @@ module type Intf_impl = sig
     val read_table_opt : 'b buf -> Read.offset -> int -> Read.offset
     val push_slot : int -> Builder.offset -> Builder.t -> Builder.t
     val push_union : int -> int -> UByte.t -> Builder.offset -> Builder.t -> Builder.t
+
+    module Vector :
+      VectorS with type 'b elt := Read.offset and type builder_elt := Builder.offset
+  end
+
+  module Ref64 : sig
+    val read_table : 'b buf -> Read.offset -> int -> Read.offset
+    val read_table_opt : 'b buf -> Read.offset -> int -> Read.offset
+    val push_slot : int -> Builder.offset -> Builder.t -> Builder.t
 
     module Vector :
       VectorS with type 'b elt := Read.offset and type builder_elt := Builder.offset

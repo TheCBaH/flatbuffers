@@ -12,6 +12,8 @@ module rec TableA : sig
 
   module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
+  module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
   val b : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, MyGame.OtherNameSpace.TableB.t) Rt.fbopt
 
   module Builder : sig
@@ -33,6 +35,7 @@ and MyGame : sig
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
     end
 
     (* Struct MyGame.OtherNameSpace.Unused (//include_test/sub/include_test2.fbs) *)
@@ -40,6 +43,8 @@ and MyGame : sig
       type t = (Rt.Int.t)
 
       module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
       val a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
     end
@@ -49,6 +54,8 @@ and MyGame : sig
       type t
 
       module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
       val a : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, TableA.t) Rt.fbopt
 
@@ -68,6 +75,8 @@ and MyGame : sig
 
     module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
 
     module Builder : sig
       type t
@@ -83,6 +92,8 @@ and MyGame : sig
       type t
 
       module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
 
       module Builder : sig
@@ -106,6 +117,7 @@ and MyGame : sig
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
     end
 
     (* Enum MyGame.Example.LongEnum (//monster_test.fbs) *)
@@ -118,6 +130,7 @@ and MyGame : sig
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
     end
 
     (** Composite components of Monster color.
@@ -136,6 +149,7 @@ and MyGame : sig
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
     end
 
     (* Union MyGame.Example.AnyUniqueAliases (//monster_test.fbs) *)
@@ -177,6 +191,8 @@ and MyGame : sig
 
       module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
       val x : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
       val y : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
       val z : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
@@ -190,6 +206,8 @@ and MyGame : sig
       type t
 
       module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
       val i8 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Byte.t
       val u8 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UByte.t
@@ -230,6 +248,8 @@ and MyGame : sig
 
       module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
       val color : 'b Rt.buf -> ('b, t) Rt.fb -> Color.t
 
       module Builder : sig
@@ -247,6 +267,8 @@ and MyGame : sig
 
       module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
       val a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
       val b : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Byte.t
     end
@@ -257,6 +279,8 @@ and MyGame : sig
 
       module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
       val a : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, StructOfStructs.t) Rt.fb
     end
 
@@ -265,6 +289,8 @@ and MyGame : sig
       type t = (Ability.t * Test.t * Ability.t)
 
       module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
       val a : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Ability.t) Rt.fb
       val b : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Test.t) Rt.fb
@@ -276,6 +302,8 @@ and MyGame : sig
       type t
 
       module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
       val id : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fbopt
       val val_ : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Long.t
@@ -299,6 +327,8 @@ and MyGame : sig
 
       module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
       val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
       val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.ULong.t -> ('b, t) Rt.fbopt
 
@@ -318,6 +348,8 @@ and MyGame : sig
       type t
 
       module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
       val extension : string option
       val identifier : string option
@@ -469,6 +501,8 @@ and MyGame : sig
       type t = (Rt.UInt.t * Rt.UInt.t)
 
       module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
       val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
       val distance : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t

@@ -36,6 +36,15 @@ type 'b vt =
   ; to_array_vec_ref : 'b -> Read.offset -> Read.offset array
   ; to_seq_vec_ref : 'b -> Read.offset -> Read.offset Seq.t
   ; iter_vec_ref : 'b -> (Read.offset -> unit) -> Read.offset -> unit
+  (* ref64 *)
+  ; read_table_ref64 : 'b -> Read.offset -> int -> Read.offset
+  ; read_table_opt_ref64 : 'b -> Read.offset -> int -> Read.offset
+  ; length_vec64 : 'b -> Read.offset -> int
+  ; get_vec_ref64 : 'b -> Read.offset -> int -> Read.offset
+  ; to_list_vec_ref64 : 'b -> Read.offset -> Read.offset list
+  ; to_array_vec_ref64 : 'b -> Read.offset -> Read.offset array
+  ; to_seq_vec_ref64 : 'b -> Read.offset -> Read.offset Seq.t
+  ; iter_vec_ref64 : 'b -> (Read.offset -> unit) -> Read.offset -> unit
   (* struct *)
   ; read_table_struct : 'b -> Read.offset -> int -> Read.offset
   ; read_table_opt_struct : 'b -> Read.offset -> int -> Read.offset
@@ -45,6 +54,12 @@ type 'b vt =
   ; to_array_vec : 'a. 'a Read.tag -> 'b -> int -> 'a array
   ; to_seq_vec : 'a. 'a Read.tag -> 'b -> int -> 'a Seq.t
   ; iter_vec : 'a. 'a Read.tag -> 'b -> ('a -> unit) -> int -> unit
+  (* generic 64-bit vector ops *)
+  ; get_vec64 : 'a. 'a Read.tag -> 'b -> int -> int -> 'a
+  ; to_list_vec64 : 'a. 'a Read.tag -> 'b -> int -> 'a list
+  ; to_array_vec64 : 'a. 'a Read.tag -> 'b -> int -> 'a array
+  ; to_seq_vec64 : 'a. 'a Read.tag -> 'b -> int -> 'a Seq.t
+  ; iter_vec64 : 'a. 'a Read.tag -> 'b -> ('a -> unit) -> int -> unit
   }
 
 type 'b buf = Buf : 'a vt * 'a -> 'b buf
@@ -100,6 +115,15 @@ end
   ; to_array_vec_ref = (fun b i -> Read.to_array_vec TRef prim_ b i)[@inline] \
   ; to_seq_vec_ref = (fun b i -> Read.to_seq_vec  TRef prim_ b i)[@inline] \
   ; iter_vec_ref = (fun b f i -> Read.iter_vec TRef prim_ b f i)[@inline] \
+  (* ref64 *) \
+  ; read_table_ref64 = (fun b i n -> Read.read_table_ref64 prim_ b i n) \
+  ; read_table_opt_ref64 = (fun b i n -> Read.read_table_opt_ref64 prim_ b i n) \
+  ; length_vec64 = (fun b i -> Read.length_vec64 prim_ b i) \
+  ; get_vec_ref64 = (fun b i j -> Read.get_vec64 TRef64 prim_ b i j)[@inline] \
+  ; to_list_vec_ref64 = (fun b i -> Read.to_list_vec64 TRef64 prim_ b i)[@inline] \
+  ; to_array_vec_ref64 = (fun b i -> Read.to_array_vec64 TRef64 prim_ b i)[@inline] \
+  ; to_seq_vec_ref64 = (fun b i -> Read.to_seq_vec64 TRef64 prim_ b i)[@inline] \
+  ; iter_vec_ref64 = (fun b f i -> Read.iter_vec64 TRef64 prim_ b f i)[@inline] \
   (* struct *) \
   ; read_table_struct = (fun b i n -> Read.read_table_struct prim_ b i n) \
   ; read_table_opt_struct = (fun b i n -> Read.read_table_opt_struct prim_ b i n) \
@@ -109,6 +133,12 @@ end
   ; to_array_vec = (fun t b i -> Read.to_array_vec t prim_ b i)[@inline] \
   ; to_seq_vec = (fun t b i -> Read.to_seq_vec t prim_ b i)[@inline] \
   ; iter_vec = (fun t b f i -> Read.iter_vec t prim_ b f i)[@inline] \
+  (* generic 64-bit vector ops *) \
+  ; get_vec64 = (fun t b i j -> Read.get_vec64 t prim_ b i j)[@inline] \
+  ; to_list_vec64 = (fun t b i -> Read.to_list_vec64 t prim_ b i)[@inline] \
+  ; to_array_vec64 = (fun t b i -> Read.to_array_vec64 t prim_ b i)[@inline] \
+  ; to_seq_vec64 = (fun t b i -> Read.to_seq_vec64 t prim_ b i)[@inline] \
+  ; iter_vec64 = (fun t b f i -> Read.iter_vec64 t prim_ b f i)[@inline] \
   }
 
 let vt_bytes = VT(Primitives.Bytes)
@@ -143,6 +173,17 @@ module name_ = struct \
     let[@inline] to_seq (Buf (vt, b)) i = vt.CONCAT(to_seq_vec_,ty_) b i \
     let[@inline] iter (Buf (vt, b)) f i = vt.CONCAT(iter_vec_,ty_) b f i \
     let[@inline] create b a = Builder.create_vector CONCAT(T,name_) b a \
+  end \
+  module Vector64 = struct \
+    type t \
+    let tag_ = Read.TScalar CONCAT(T,name_) \
+    let[@inline] length (Buf (vt, b)) i = vt.length_vec64 b i \
+    let[@inline] get (Buf (vt, b)) i j = vt.get_vec64 tag_ b i j \
+    let[@inline] to_list (Buf (vt, b)) i = vt.to_list_vec64 tag_ b i \
+    let[@inline] to_array (Buf (vt, b)) i = vt.to_array_vec64 tag_ b i \
+    let[@inline] to_seq (Buf (vt, b)) i = vt.to_seq_vec64 tag_ b i \
+    let[@inline] iter (Buf (vt, b)) f i = vt.iter_vec64 tag_ b f i \
+    let[@inline] create b a = Builder.create_vector64 CONCAT(T,name_) b a \
   end \
 end
 
@@ -191,6 +232,24 @@ module Struct = struct
     let[@inline] create b a = Builder.create_vector_struct T.set ~size:T.size b a
   end
 
+  module Vector64 (T : sig
+    type builder_elt
+
+    val size : int
+    val set : Builder.t -> int -> builder_elt -> unit
+  end) =
+  struct
+    type t
+    let tag = Read.TStruct { sz = T.size; align = 0 }
+    let[@inline] length (Buf (vt, b)) i = vt.length_vec64 b i
+    let[@inline] get (Buf (vt, b)) i j = vt.get_vec64 tag b i j
+    let[@inline] to_list (Buf (vt, b)) i = vt.to_list_vec64 tag b i
+    let[@inline] to_array (Buf (vt, b)) i = vt.to_array_vec64 tag b i
+    let[@inline] to_seq (Buf (vt, b)) i = vt.to_seq_vec64 tag b i
+    let[@inline] iter (Buf (vt, b)) f i = vt.iter_vec64 tag b f i
+    let[@inline] create b a = Builder.create_vector64_struct T.set ~size:T.size b a
+  end
+
 end
 
 module Ref = struct
@@ -208,6 +267,23 @@ module Ref = struct
     let[@inline] to_seq (Buf (vt, b)) i = vt.to_seq_vec_ref b i
     let[@inline] iter (Buf (vt, b)) f i = vt.iter_vec_ref b f i
     let[@inline] create b a = Builder.create_vector_ref b a
+  end
+end
+
+module Ref64 = struct
+  let[@inline] read_table (Buf (vt, b)) i n = vt.read_table_ref64 b i n
+  let[@inline] read_table_opt (Buf (vt, b)) i n = vt.read_table_opt_ref64 b i n
+  let[@inline] push_slot f x b = Builder.push_slot_ref64 f x b
+
+  module Vector = struct
+    type t
+    let[@inline] length (Buf (vt, b)) i = vt.length_vec64 b i
+    let[@inline] get (Buf (vt, b)) i j = vt.get_vec_ref64 b i j
+    let[@inline] to_list (Buf (vt, b)) i = vt.to_list_vec_ref64 b i
+    let[@inline] to_array (Buf (vt, b)) i = vt.to_array_vec_ref64 b i
+    let[@inline] to_seq (Buf (vt, b)) i = vt.to_seq_vec_ref64 b i
+    let[@inline] iter (Buf (vt, b)) f i = vt.iter_vec_ref64 b f i
+    let[@inline] create b a = Builder.create_vector_ref64 b a
   end
 end
 

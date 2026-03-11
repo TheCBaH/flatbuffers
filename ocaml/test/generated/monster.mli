@@ -27,6 +27,7 @@ module rec MyGame : sig
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
     end
 
     (* Table MyGame.Sample.Weapon (//monster.fbs) *)
@@ -34,6 +35,8 @@ module rec MyGame : sig
       type t
 
       module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
       val name : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fbopt
       val damage : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
@@ -54,6 +57,8 @@ module rec MyGame : sig
 
       module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
       val x : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
       val y : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
       val z : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
@@ -64,6 +69,8 @@ module rec MyGame : sig
       type t
 
       module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
       val extension : string option
       val identifier : string option

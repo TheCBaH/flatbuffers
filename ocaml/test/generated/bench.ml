@@ -41,12 +41,15 @@ module BenchmarksFlatbuffers = struct
       | x -> "<benchmarks_flatbuffers.Enum: " ^ (Int64.to_string x) ^ ">"
 
     module Vector = Rt.Short.Vector
+    module Vector64 = Rt.Short.Vector64
   end
 
   module FooBarContainer = struct
     type t
 
     module Vector = Rt.Ref.Vector
+
+    module Vector64 = Rt.Ref64.Vector
 
     let extension = None
     let identifier = None
@@ -75,6 +78,8 @@ module BenchmarksFlatbuffers = struct
 
     module Vector = Rt.Ref.Vector
 
+    module Vector64 = Rt.Ref64.Vector
+
     let[@inline] sibling b o = Rt.Struct.read_table_opt b o 4
     let[@inline] name b o = Rt.Ref.read_table_opt b o 6
     let[@inline] rating b o = Rt.Double.(read_table_default b o 8 ~default:(of_default 0.0))
@@ -97,6 +102,8 @@ module BenchmarksFlatbuffers = struct
 
     module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 16 let set = Struct.set_foo__2 end)
 
+    module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 16 let set = Struct.set_foo__2 end)
+
     let[@inline] id b s = Rt.ULong.read_offset b s 0
     let[@inline] count b s = Rt.Short.read_offset b s 8
     let[@inline] prefix b s = Rt.Byte.read_offset b s 10
@@ -107,6 +114,8 @@ module BenchmarksFlatbuffers = struct
     type t = ((Rt.ULong.t * Rt.Short.t * Rt.Byte.t * Rt.UInt.t) * Rt.Int.t * Rt.Float.t * Rt.UShort.t)
 
     module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 32 let set = Struct.set_bar__3 end)
+
+    module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 32 let set = Struct.set_bar__3 end)
 
     let[@inline] parent b s = Rt.Struct.read_offset b s 0
     let[@inline] time b s = Rt.Int.read_offset b s 16

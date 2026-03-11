@@ -18,6 +18,7 @@ module rec MyGame : sig
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
     end
 
     (* Struct MyGame.Example.NestedStruct (//arrays_test.fbs) *)
@@ -25,6 +26,8 @@ module rec MyGame : sig
       type t = (Rt.Int.t array * TestEnum.t * TestEnum.t array * Rt.Long.t array)
 
       module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
       val a_length : int
       val a : 'b Rt.buf -> ('b, t) Rt.fb -> int -> Rt.Int.t
@@ -40,6 +43,8 @@ module rec MyGame : sig
       type t = (Rt.UByte.t array * Rt.Float.t array * Rt.Bool.t array * NestedStruct.t array * TestEnum.t array)
 
       module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
       val d_length : int
       val d : 'b Rt.buf -> ('b, t) Rt.fb -> int -> Rt.UByte.t
@@ -58,6 +63,8 @@ module rec MyGame : sig
       type t
 
       module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
       val extension : string option
       val identifier : string option
@@ -81,6 +88,8 @@ module rec MyGame : sig
       type t = (Rt.Float.t * Rt.Int.t array * Rt.Byte.t * NestedStruct.t array * Rt.Int.t * Rt.Long.t array)
 
       module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
       val a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
       val b_length : int

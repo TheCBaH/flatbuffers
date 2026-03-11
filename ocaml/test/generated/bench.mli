@@ -17,6 +17,7 @@ module rec BenchmarksFlatbuffers : sig
     val to_string : t -> string
 
     module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+    module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
   end
 
   (* Table benchmarks_flatbuffers.FooBarContainer (//bench.fbs) *)
@@ -24,6 +25,8 @@ module rec BenchmarksFlatbuffers : sig
     type t
 
     module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
     val extension : string option
     val identifier : string option
@@ -53,6 +56,8 @@ module rec BenchmarksFlatbuffers : sig
 
     module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
     val sibling : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Bar.t) Rt.fbopt
     val name : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fbopt
     val rating : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
@@ -76,6 +81,8 @@ module rec BenchmarksFlatbuffers : sig
 
     module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
     val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
     val count : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
     val prefix : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Byte.t
@@ -87,6 +94,8 @@ module rec BenchmarksFlatbuffers : sig
     type t = (Foo.t * Rt.Int.t * Rt.Float.t * Rt.UShort.t)
 
     module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
     val parent : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Foo.t) Rt.fb
     val time : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t

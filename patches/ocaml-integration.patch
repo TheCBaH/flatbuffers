@@ -67,7 +67,7 @@ index ce9b8c4a..f75a7289 100644
    flatbuffers::FlatCOptions options =
        flatc.ParseFromCommandLineArguments(argc, argv);
 diff --git a/src/idl_parser.cpp b/src/idl_parser.cpp
-index caeca93d..596d0760 100644
+index caeca93d..0909696d 100644
 --- a/src/idl_parser.cpp
 +++ b/src/idl_parser.cpp
 @@ -2797,7 +2797,7 @@ bool Parser::SupportsOptionalScalars(const flatbuffers::IDLOptions& opts) {
@@ -79,7 +79,7 @@ index caeca93d..596d0760 100644
    unsigned long langs = opts.lang_to_generate;
    return (langs > 0 && langs < IDLOptions::kMAX) && !(langs & ~supported_langs);
  }
-@@ -2827,7 +2827,7 @@ bool Parser::SupportsAdvancedArrayFeatures() const {
+@@ -2827,12 +2827,13 @@ bool Parser::SupportsAdvancedArrayFeatures() const {
            ~(IDLOptions::kCpp | IDLOptions::kPython | IDLOptions::kJava |
              IDLOptions::kCSharp | IDLOptions::kJsonSchema | IDLOptions::kJson |
              IDLOptions::kBinary | IDLOptions::kRust | IDLOptions::kTs |
@@ -88,3 +88,10 @@ index caeca93d..596d0760 100644
  }
  
  bool Parser::Supports64BitOffsets() const {
+   return (opts.lang_to_generate &
+-          ~(IDLOptions::kCpp | IDLOptions::kJson | IDLOptions::kBinary)) == 0;
++          ~(IDLOptions::kCpp | IDLOptions::kJson | IDLOptions::kBinary |
++            IDLOptions::kOCaml)) == 0;
+ }
+ 
+ bool Parser::SupportsUnionUnderlyingType() const {

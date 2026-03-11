@@ -46,6 +46,16 @@ let[@inline] get_uoffset (type b) (prim : b t) (b : b) i =
   Util.int32_unsigned_to_int i
 ;;
 
+let[@inline] get_uoffset64 (type b) (prim : b t) (b : b) i =
+  let i =
+    match prim with
+    | Bytes -> Bytes.get_int64_le b i
+    | String -> String.get_int64_le b i
+    | Bigstring -> Bigstringaf.get_int64_le b i
+  in
+  Int64.to_int i
+;;
+
 let[@inline] get_voffset (type b) (prim : b t) (b : b) i =
   match prim with
   | Bytes -> Bytes.get_uint16_le b i

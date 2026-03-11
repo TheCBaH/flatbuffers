@@ -54,12 +54,15 @@ module MyGame = struct
         | x -> "<MyGame.Sample.Color: " ^ (Int64.to_string x) ^ ">"
 
       module Vector = Rt.Byte.Vector
+      module Vector64 = Rt.Byte.Vector64
     end
 
     module Weapon = struct
       type t
 
       module Vector = Rt.Ref.Vector
+
+      module Vector64 = Rt.Ref64.Vector
 
       let[@inline] name b o = Rt.Ref.read_table_opt b o 4
       let[@inline] damage b o = Rt.Short.(read_table_default b o 6 ~default:(of_default 0L))
@@ -79,6 +82,8 @@ module MyGame = struct
 
       module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 12 let set = Struct.set_vec3__0 end)
 
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 12 let set = Struct.set_vec3__0 end)
+
       let[@inline] x b s = Rt.Float.read_offset b s 0
       let[@inline] y b s = Rt.Float.read_offset b s 4
       let[@inline] z b s = Rt.Float.read_offset b s 8
@@ -88,6 +93,8 @@ module MyGame = struct
       type t
 
       module Vector = Rt.Ref.Vector
+
+      module Vector64 = Rt.Ref64.Vector
 
       let extension = None
       let identifier = None

@@ -21,6 +21,7 @@ type _ t =
 
 val get_string : 'b t -> 'b -> off:int -> len:int -> string
 val get_uoffset : 'b t -> 'b -> int -> int
+val get_uoffset64 : 'b t -> 'b -> int -> int
 val get_voffset : 'b t -> 'b -> int -> int
 val get_soffset : 'b t -> 'b -> int -> int
 

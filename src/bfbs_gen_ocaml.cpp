@@ -333,6 +333,10 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
               "module Vector : Rt.VectorS with type 'b elt := t and type "
               "builder_elt := t\n";
       impl += "\n" + indent + "module Vector = " + ns + ".Vector\n";
+      intf += indent +
+              "module Vector64 : Rt.VectorS with type 'b elt := t and type "
+              "builder_elt := t\n";
+      impl += indent + "module Vector64 = " + ns + ".Vector64\n";
     }
   }
 
@@ -356,19 +360,31 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
     // vector module
     if (object->is_struct()) {
       // TODO(dmitrig): use minalign as well?
+      std::string struct_functor_arg =
+              " (struct type builder_elt = t let size = " +
+              NumToString(object->bytesize()) + " let set = Struct." +
+              StructSetIdent(object) + " end)";
       intf += indent +
               "module Vector : Rt.VectorS with type 'b elt := ('b, t) " +
               RuntimeNS + ".fb and type builder_elt := t\n\n";
       impl += indent + "module Vector = " + RuntimeNS +
-              ".Struct.Vector (struct type builder_elt = t let size = " +
-              NumToString(object->bytesize()) + " let set = Struct." +
-              StructSetIdent(object) + " end)\n\n";
+              ".Struct.Vector" + struct_functor_arg + "\n\n";
+      intf += indent +
+              "module Vector64 : Rt.VectorS with type 'b elt := ('b, t) " +
+              RuntimeNS + ".fb and type builder_elt := t\n\n";
+      impl += indent + "module Vector64 = " + RuntimeNS +
+              ".Struct.Vector64" + struct_functor_arg + "\n\n";
     } else {
       intf += indent +
               "module Vector : Rt.VectorS with type 'b elt := ('b, t) " +
               RuntimeNS + ".fb and type builder_elt := " + "t " + RuntimeNS +
               ".wip" + "\n\n";
       impl += indent + "module Vector = " + RuntimeNS + ".Ref.Vector\n\n";
+      intf += indent +
+              "module Vector64 : Rt.VectorS with type 'b elt := ('b, t) " +
+              RuntimeNS + ".fb and type builder_elt := " + "t " + RuntimeNS +
+              ".wip" + "\n\n";
+      impl += indent + "module Vector64 = " + RuntimeNS + ".Ref64.Vector\n\n";
     }
 
     // root table
@@ -495,6 +511,7 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
                   UnionTypeFieldSuffix() + " b o)" + args + " o\n";
         } else {
           std::string getter_fn, default_arg;
+          bool is_offset64 = field->offset64();
           if (field->optional()) {
             getter_fn = ".read_table_opt";
           } else if (field->required()) {
@@ -504,8 +521,9 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
             default_arg = " ~default:(" + GenerateDefault(field) + "))";
           }
           impl += indent + "let[@inline] " + namer_.Function(field_name) +
-                  " b o = " + GenerateImplNs(field->type()) + getter_fn +
-                  " b o " + NumToString(field->offset()) + default_arg + "\n";
+                  " b o = " + GenerateImplNs(field->type(), false, is_offset64) +
+                  getter_fn + " b o " + NumToString(field->offset()) +
+                  default_arg + "\n";
         }
       }
 
@@ -639,6 +657,7 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
         } else {
           // struct fields take an extra arg
           std::string push_fn, repr_arg, default_arg;
+          bool is_offset64 = field->offset64();
           if (IsStruct(field->type())) {
             auto object = GetObject(field->type());
             repr_arg = " Struct." + StructSetIdent(object) + " " +
@@ -652,8 +671,8 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
             push_fn = ".push_slot";
           }
           impl += indent2 + "let add_" + namer_.Function(field_name) + " = " +
-                  GenerateImplNs(field->type()) + push_fn + repr_arg + " " +
-                  NumToString(field->id()) + default_arg + "\n";
+                  GenerateImplNs(field->type(), false, is_offset64) + push_fn +
+                  repr_arg + " " + NumToString(field->id()) + default_arg + "\n";
           intf += indent2 + "val add_" + namer_.Function(field_name) + " : " +
                   GenerateBuilderType(field->type(), obj_ns) + " -> t -> t\n";
         }
@@ -749,10 +768,10 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
         element_type ? type->element() : type->base_type();
     if ((IsScalar(base_type) && type->index() < 0) || base_type == r::String) {
       return RuntimeNS + "." + r::EnumNameBaseType(base_type);
-    } else if (base_type == r::Vector) {
+    } else if (base_type == r::Vector || base_type == r::Vector64) {
       auto ns = GenerateIntfNs(type, in_ns, /*elt_type=*/true);
       if (!ns.empty()) ns += ".";
-      return ns + "Vector";
+      return ns + (base_type == r::Vector64 ? "Vector64" : "Vector");
     } else if (base_type == r::Obj) {
       auto object = GetObject(type, element_type);
       return namer_.Namespace(
@@ -766,20 +785,22 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
     }
   }
 
-  // namespace of reader implementations: Rt.Ref, Rt.Struct, or Rt.Scalar
-  std::string GenerateImplNs(const r::Type *type, bool element_type = false) {
+  // namespace of reader implementations: Rt.Ref, Rt.Ref64, Rt.Struct, or Rt.Scalar
+  std::string GenerateImplNs(const r::Type *type, bool element_type = false,
+                              bool offset64 = false) {
     const r::BaseType base_type =
         element_type ? type->element() : type->base_type();
     if (IsScalar(base_type)) {
       return RuntimeNS + "." + r::EnumNameBaseType(base_type);
-    } else if (base_type == r::Vector || base_type == r::String) {
-      return RuntimeNS + ".Ref";
+    } else if (base_type == r::Vector || base_type == r::Vector64 ||
+               base_type == r::String) {
+      return RuntimeNS + ((offset64 || base_type == r::Vector64) ? ".Ref64" : ".Ref");
     } else if (base_type == r::Obj) {
       auto object = GetObject(type, element_type);
       if (object->is_struct())
         return RuntimeNS + ".Struct";
       else
-        return RuntimeNS + ".Ref";
+        return RuntimeNS + (offset64 ? ".Ref64" : ".Ref");
     } else if (base_type == r::Union) {
       const auto enum_def = GetEnum(type);
       return GenerateImplNs(enum_def->underlying_type());
