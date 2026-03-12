@@ -8,8 +8,124 @@
 
 module Rt = Flatbuffers.Runtime
 
-module MyGame = struct
-  module MonsterExtra = struct
+module rec MyGame : sig
+  (* Table MyGame.MonsterExtra (//monster_extra.fbs) *)
+  module rec MonsterExtra : sig
+    type t
+
+    module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+    val extension : string option
+    val identifier : string option
+    val has_identifier : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> bool
+    val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+    val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
+
+    val d0 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+    val d1 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+    val d2 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+    val d3 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+    val f0 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+    val f1 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+    val f2 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+    val f3 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+    val dvec : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Double.Vector.t) Rt.fbopt
+    val fvec : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Float.Vector.t) Rt.fbopt
+
+    module Builder : sig
+      type t
+
+      val start : Rt.Builder.t -> t
+      val finish : t -> MonsterExtra.t Rt.wip
+      val add_d0 : Rt.Double.t -> t -> t
+      val add_d1 : Rt.Double.t -> t -> t
+      val add_d2 : Rt.Double.t -> t -> t
+      val add_d3 : Rt.Double.t -> t -> t
+      val add_f0 : Rt.Float.t -> t -> t
+      val add_f1 : Rt.Float.t -> t -> t
+      val add_f2 : Rt.Float.t -> t -> t
+      val add_f3 : Rt.Float.t -> t -> t
+      val add_dvec : Rt.Double.Vector.t Rt.wip -> t -> t
+      val add_fvec : Rt.Float.Vector.t Rt.wip -> t -> t
+    end
+
+    type obj = {
+      d0 : Rt.Double.t;
+      d1 : Rt.Double.t;
+      d2 : Rt.Double.t;
+      d3 : Rt.Double.t;
+      f0 : Rt.Float.t;
+      f1 : Rt.Float.t;
+      f2 : Rt.Float.t;
+      f3 : Rt.Float.t;
+      dvec : Rt.Double.t array;
+      fvec : Rt.Float.t array;
+    }
+
+    val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+    val pack : Rt.Builder.t -> obj -> t Rt.wip
+  end
+end = struct
+  (* Table MyGame.MonsterExtra (//monster_extra.fbs) *)
+  module rec MonsterExtra : sig
+    type t
+
+    module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+    val extension : string option
+    val identifier : string option
+    val has_identifier : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> bool
+    val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+    val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
+
+    val d0 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+    val d1 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+    val d2 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+    val d3 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+    val f0 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+    val f1 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+    val f2 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+    val f3 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+    val dvec : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Double.Vector.t) Rt.fbopt
+    val fvec : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Float.Vector.t) Rt.fbopt
+
+    module Builder : sig
+      type t
+
+      val start : Rt.Builder.t -> t
+      val finish : t -> MonsterExtra.t Rt.wip
+      val add_d0 : Rt.Double.t -> t -> t
+      val add_d1 : Rt.Double.t -> t -> t
+      val add_d2 : Rt.Double.t -> t -> t
+      val add_d3 : Rt.Double.t -> t -> t
+      val add_f0 : Rt.Float.t -> t -> t
+      val add_f1 : Rt.Float.t -> t -> t
+      val add_f2 : Rt.Float.t -> t -> t
+      val add_f3 : Rt.Float.t -> t -> t
+      val add_dvec : Rt.Double.Vector.t Rt.wip -> t -> t
+      val add_fvec : Rt.Float.Vector.t Rt.wip -> t -> t
+    end
+
+    type obj = {
+      d0 : Rt.Double.t;
+      d1 : Rt.Double.t;
+      d2 : Rt.Double.t;
+      d3 : Rt.Double.t;
+      f0 : Rt.Float.t;
+      f1 : Rt.Float.t;
+      f2 : Rt.Float.t;
+      f3 : Rt.Float.t;
+      dvec : Rt.Double.t array;
+      fvec : Rt.Float.t array;
+    }
+
+    val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+    val pack : Rt.Builder.t -> obj -> t Rt.wip
+  end = struct
     type t
 
     module Vector = Rt.Ref.Vector
@@ -49,5 +165,47 @@ module MyGame = struct
       let add_dvec = Rt.Ref.push_slot 8
       let add_fvec = Rt.Ref.push_slot 9
     end
+
+    type obj = {
+      d0 : Rt.Double.t;
+      d1 : Rt.Double.t;
+      d2 : Rt.Double.t;
+      d3 : Rt.Double.t;
+      f0 : Rt.Float.t;
+      f1 : Rt.Float.t;
+      f2 : Rt.Float.t;
+      f3 : Rt.Float.t;
+      dvec : Rt.Double.t array;
+      fvec : Rt.Float.t array;
+    }
+
+    let unpack b__ o__ : obj = {
+      d0 = d0 b__ o__;
+      d1 = d1 b__ o__;
+      d2 = d2 b__ o__;
+      d3 = d3 b__ o__;
+      f0 = f0 b__ o__;
+      f1 = f1 b__ o__;
+      f2 = f2 b__ o__;
+      f3 = f3 b__ o__;
+      dvec = Rt.Option.fold ~none:[||] ~some:(fun v -> Rt.Double.Vector.to_array b__ v) (dvec b__ o__);
+      fvec = Rt.Option.fold ~none:[||] ~some:(fun v -> Rt.Float.Vector.to_array b__ v) (fvec b__ o__);
+    }
+
+    let pack b__ (obj : obj) =
+      let dvec' = Rt.Double.Vector.create b__ obj.dvec in
+      let fvec' = Rt.Float.Vector.create b__ obj.fvec in
+      let t = Builder.start b__ in
+      let t = Builder.add_d0 obj.d0 t in
+      let t = Builder.add_d1 obj.d1 t in
+      let t = Builder.add_d2 obj.d2 t in
+      let t = Builder.add_d3 obj.d3 t in
+      let t = Builder.add_f0 obj.f0 t in
+      let t = Builder.add_f1 obj.f1 t in
+      let t = Builder.add_f2 obj.f2 t in
+      let t = Builder.add_f3 obj.f3 t in
+      let t = Builder.add_dvec dvec' t in
+      let t = Builder.add_fvec fvec' t in
+      Builder.finish t
   end
 end (* MyGame *)

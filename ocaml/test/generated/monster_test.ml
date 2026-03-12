@@ -68,51 +68,876 @@ module Union = struct
     | _ -> default t
 end
 
-module TableA = struct
-  type t
+module rec MyGame : sig
+  module rec Example2 : sig
+    (* Table MyGame.Example2.Monster (//monster_test.fbs) *)
+    module rec Monster : sig
+      type t
 
-  module Vector = Rt.Ref.Vector
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
-  module Vector64 = Rt.Ref64.Vector
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
-  let[@inline] b b o = Rt.Ref.read_table_opt b o 4
 
-  module Builder = struct
-    type t = Rt.Builder.t
+      module Builder : sig
+        type t
 
-    let start b = Rt.Builder.start_table b ~n_fields:1
-    let finish b = Rt.Builder.end_table b
-    let add_b = Rt.Ref.push_slot 0
-  end
-end
+        val start : Rt.Builder.t -> t
+        val finish : t -> Monster.t Rt.wip
+      end
 
-module MyGame = struct
-  module OtherNameSpace = struct
-    module FromInclude = struct
-      type t = Rt.Long.t
+      type obj = unit
 
-      let include_val = Rt.Long.of_default 0L
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end
+  end (* Example2 *)
 
-      let to_string e =
-        match Rt.Long.to_default e with
-        | 0L -> "include_val"
-        | x -> "<MyGame.OtherNameSpace.FromInclude: " ^ (Int64.to_string x) ^ ">"
+  (* Table MyGame.InParentNamespace (//monster_test.fbs) *)
+  and InParentNamespace : sig
+    type t
 
-      module Vector = Rt.Long.Vector
-      module Vector64 = Rt.Long.Vector64
+    module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+
+    module Builder : sig
+      type t
+
+      val start : Rt.Builder.t -> t
+      val finish : t -> InParentNamespace.t Rt.wip
     end
 
-    module Unused = struct
+    type obj = unit
+
+    val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+    val pack : Rt.Builder.t -> obj -> t Rt.wip
+  end
+
+  and OtherNameSpace : sig
+    (* Table MyGame.OtherNameSpace.TableB (//include_test/sub/include_test2.fbs) *)
+    module rec TableB : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      val a : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, TableA.t) Rt.fbopt
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> TableB.t Rt.wip
+        val add_a : TableA.t Rt.wip -> t -> t
+      end
+
+      type obj = {
+        a : TableA.obj option;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end
+
+    (* Struct MyGame.OtherNameSpace.Unused (//include_test/sub/include_test2.fbs) *)
+    and Unused : sig
       type t = (Rt.Int.t)
 
-      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 4 let set = Struct.set_unused__9 end)
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
-      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 4 let set = Struct.set_unused__9 end)
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
-      let[@inline] a b s = Rt.Int.read_offset b s 0
+      val a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+
+      type obj = {
+        a : Rt.Int.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
     end
 
-    module TableB = struct
+    (* Enum MyGame.OtherNameSpace.FromInclude (//include_test/sub/include_test2.fbs) *)
+    and FromInclude : sig
+      type t = Rt.Long.t
+
+      val include_val : t
+      val to_string : t -> string
+
+      module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
+    end
+  end (* OtherNameSpace *)
+
+  and Example : sig
+    (* Struct MyGame.Example.Ability (//monster_test.fbs) *)
+    module rec Ability : sig
+      type t = (Rt.UInt.t * Rt.UInt.t)
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
+      val distance : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
+      val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.UInt.t -> ('b, t) Rt.fbopt
+
+      type obj = {
+        id : Rt.UInt.t;
+        distance : Rt.UInt.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
+    end
+
+    (* Table MyGame.Example.Referrable (//monster_test.fbs) *)
+    and Referrable : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+      val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.ULong.t -> ('b, t) Rt.fbopt
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> Referrable.t Rt.wip
+        val add_id : Rt.ULong.t -> t -> t
+      end
+
+      type obj = {
+        id : Rt.ULong.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end
+
+    (* Table MyGame.Example.Stat (//monster_test.fbs) *)
+    and Stat : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      val id : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fbopt
+      val val_ : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Long.t
+      val count : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UShort.t
+      val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.UShort.t -> ('b, t) Rt.fbopt
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> Stat.t Rt.wip
+        val add_id : Rt.String.t Rt.wip -> t -> t
+        val add_val_ : Rt.Long.t -> t -> t
+        val add_count : Rt.UShort.t -> t -> t
+      end
+
+      type obj = {
+        id : string option;
+        val_ : Rt.Long.t;
+        count : Rt.UShort.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end
+
+    (* Struct MyGame.Example.Test (//monster_test.fbs) *)
+    and Test : sig
+      type t = (Rt.Short.t * Rt.Byte.t)
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      val a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+      val b : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Byte.t
+
+      type obj = {
+        a : Rt.Short.t;
+        b : Rt.Byte.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
+    end
+
+    (* Table MyGame.Example.TypeAliases (//monster_test.fbs) *)
+    and TypeAliases : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      val i8 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Byte.t
+      val u8 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UByte.t
+      val i16 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+      val u16 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UShort.t
+      val i32 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+      val u32 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
+      val i64 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Long.t
+      val u64 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+      val f32 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val f64 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+      val v8 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Byte.Vector.t) Rt.fbopt
+      val vf64 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Double.Vector.t) Rt.fbopt
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> TypeAliases.t Rt.wip
+        val add_i8 : Rt.Byte.t -> t -> t
+        val add_u8 : Rt.UByte.t -> t -> t
+        val add_i16 : Rt.Short.t -> t -> t
+        val add_u16 : Rt.UShort.t -> t -> t
+        val add_i32 : Rt.Int.t -> t -> t
+        val add_u32 : Rt.UInt.t -> t -> t
+        val add_i64 : Rt.Long.t -> t -> t
+        val add_u64 : Rt.ULong.t -> t -> t
+        val add_f32 : Rt.Float.t -> t -> t
+        val add_f64 : Rt.Double.t -> t -> t
+        val add_v8 : Rt.Byte.Vector.t Rt.wip -> t -> t
+        val add_vf64 : Rt.Double.Vector.t Rt.wip -> t -> t
+      end
+
+      type obj = {
+        i8 : Rt.Byte.t;
+        u8 : Rt.UByte.t;
+        i16 : Rt.Short.t;
+        u16 : Rt.UShort.t;
+        i32 : Rt.Int.t;
+        u32 : Rt.UInt.t;
+        i64 : Rt.Long.t;
+        u64 : Rt.ULong.t;
+        f32 : Rt.Float.t;
+        f64 : Rt.Double.t;
+        v8 : Rt.Byte.t array;
+        vf64 : Rt.Double.t array;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end
+
+    (* Union MyGame.Example.Any (//monster_test.fbs) *)
+    and Any : sig
+      type t = Rt.UType.t
+
+      val none : t
+      val monster : t
+      val test_simple_table_with_enum : t
+      val my_game_example2_monster : t
+      val to_string : t -> string
+
+      type obj = [
+        | `None_
+        | `Monster of Monster.obj
+        | `TestSimpleTableWithEnum of TestSimpleTableWithEnum.obj
+        | `MyGameExample2Monster of Example2.Monster.obj
+      ]
+    end
+
+    (* Union MyGame.Example.AnyAmbiguousAliases (//monster_test.fbs) *)
+    and AnyAmbiguousAliases : sig
+      type t = Rt.UType.t
+
+      val none : t
+      val m1 : t
+      val m2 : t
+      val m3 : t
+      val to_string : t -> string
+
+      type obj = [
+        | `None_
+        | `M1 of Monster.obj
+        | `M2 of Monster.obj
+        | `M3 of Monster.obj
+      ]
+    end
+
+    (* Union MyGame.Example.AnyUniqueAliases (//monster_test.fbs) *)
+    and AnyUniqueAliases : sig
+      type t = Rt.UType.t
+
+      val none : t
+      val m : t
+      val ts : t
+      val m2 : t
+      val to_string : t -> string
+
+      type obj = [
+        | `None_
+        | `M of Monster.obj
+        | `Ts of TestSimpleTableWithEnum.obj
+        | `M2 of Example2.Monster.obj
+      ]
+    end
+
+    (** Composite components of Monster color.
+
+        Enum MyGame.Example.Color (//monster_test.fbs) *)
+    and Color : sig
+      type t = Rt.UByte.t
+
+      val red : t
+
+      (** \brief color Green Green is bit_flag with value (1u << 1) *)
+      val green : t
+
+      (** \brief color Blue (1u << 3) *)
+      val blue : t
+      val to_string : t -> string
+
+      module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
+    end
+
+    (* Enum MyGame.Example.LongEnum (//monster_test.fbs) *)
+    and LongEnum : sig
+      type t = Rt.ULong.t
+
+      val long_one : t
+      val long_two : t
+      val long_big : t
+      val to_string : t -> string
+
+      module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
+    end
+
+    (* Enum MyGame.Example.Race (//monster_test.fbs) *)
+    and Race : sig
+      type t = Rt.Byte.t
+
+      val none : t
+      val human : t
+      val dwarf : t
+      val elf : t
+      val to_string : t -> string
+
+      module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
+    end
+
+    (* Struct MyGame.Example.StructOfStructs (//monster_test.fbs) *)
+    and StructOfStructs : sig
+      type t = (Ability.t * Test.t * Ability.t)
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      val a : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Ability.t) Rt.fb
+      val b : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Test.t) Rt.fb
+      val c : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Ability.t) Rt.fb
+
+      type obj = {
+        a : Ability.obj;
+        b : Test.obj;
+        c : Ability.obj;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
+    end
+
+    (* Table MyGame.Example.TestSimpleTableWithEnum (//monster_test.fbs) *)
+    and TestSimpleTableWithEnum : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      val color : 'b Rt.buf -> ('b, t) Rt.fb -> Color.t
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> TestSimpleTableWithEnum.t Rt.wip
+        val add_color : Color.t -> t -> t
+      end
+
+      type obj = {
+        color : Color.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end
+
+    (* Struct MyGame.Example.Vec3 (//monster_test.fbs) *)
+    and Vec3 : sig
+      type t = (Rt.Float.t * Rt.Float.t * Rt.Float.t * Rt.Double.t * Color.t * Test.t)
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      val x : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val y : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val z : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val test1 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+      val test2 : 'b Rt.buf -> ('b, t) Rt.fb -> Color.t
+      val test3 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Test.t) Rt.fb
+
+      type obj = {
+        x : Rt.Float.t;
+        y : Rt.Float.t;
+        z : Rt.Float.t;
+        test1 : Rt.Double.t;
+        test2 : Color.t;
+        test3 : Test.obj;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
+    end
+
+    (* Struct MyGame.Example.StructOfStructsOfStructs (//monster_test.fbs) *)
+    and StructOfStructsOfStructs : sig
+      type t = (StructOfStructs.t)
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      val a : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, StructOfStructs.t) Rt.fb
+
+      type obj = {
+        a : StructOfStructs.obj;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
+    end
+
+    (** an example documentation comment: "monster object"
+
+        Table MyGame.Example.Monster (//monster_test.fbs) *)
+    and Monster : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      val extension : string option
+      val identifier : string option
+      val has_identifier : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> bool
+      val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+      val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
+
+      val pos : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Vec3.t) Rt.fbopt
+      val mana : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+      val hp : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+      val name : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fb
+      val inventory : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
+      val color : 'b Rt.buf -> ('b, t) Rt.fb -> Color.t
+      val test_type : 'b Rt.buf -> ('b, t) Rt.fb -> Any.t
+      val test : ?none:'a -> ?monster:(('b, t) Rt.fb -> 'a) -> ?test_simple_table_with_enum:(('b, TestSimpleTableWithEnum.t) Rt.fb -> 'a) -> ?my_game_example2_monster:(('b, Example2.Monster.t) Rt.fb -> 'a) -> default:(Any.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a
+      val test4 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Test.Vector.t) Rt.fbopt
+      val testarrayofstring : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.Vector.t) Rt.fbopt
+
+      (** an example documentation comment: this will end up in the generated code multiline too *)
+      val testarrayoftables : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Vector.t) Rt.fbopt
+      val enemy : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, t) Rt.fbopt
+      val testnestedflatbuffer : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
+      val testnestedflatbuffer_as_monster : 'b Rt.buf -> ('b, t) Rt.fb -> t Rt.root option
+      val testempty : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Stat.t) Rt.fbopt
+      val testbool : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Bool.t
+      val testhashs32_fnv1 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+      val testhashu32_fnv1 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
+      val testhashs64_fnv1 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Long.t
+      val testhashu64_fnv1 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+      val testhashs32_fnv1_a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+      val testhashu32_fnv1_a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
+      val testhashs64_fnv1_a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Long.t
+      val testhashu64_fnv1_a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+      val testarrayofbools : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Bool.Vector.t) Rt.fbopt
+      val testf : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val testf2 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val testf3 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val testarrayofstring2 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.Vector.t) Rt.fbopt
+      val testarrayofsortedstruct : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Ability.Vector.t) Rt.fbopt
+      val flex : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
+      val test5 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Test.Vector.t) Rt.fbopt
+      val vector_of_longs : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Long.Vector.t) Rt.fbopt
+      val vector_of_doubles : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Double.Vector.t) Rt.fbopt
+      val parent_namespace_test : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, InParentNamespace.t) Rt.fbopt
+      val vector_of_referrables : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Referrable.Vector.t) Rt.fbopt
+      val single_weak_reference : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+      val vector_of_weak_references : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.ULong.Vector.t) Rt.fbopt
+      val vector_of_strong_referrables : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Referrable.Vector.t) Rt.fbopt
+      val co_owning_reference : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+      val vector_of_co_owning_references : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.ULong.Vector.t) Rt.fbopt
+      val non_owning_reference : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+      val vector_of_non_owning_references : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.ULong.Vector.t) Rt.fbopt
+      val any_unique_type : 'b Rt.buf -> ('b, t) Rt.fb -> AnyUniqueAliases.t
+      val any_unique : ?none:'a -> ?m:(('b, t) Rt.fb -> 'a) -> ?ts:(('b, TestSimpleTableWithEnum.t) Rt.fb -> 'a) -> ?m2:(('b, Example2.Monster.t) Rt.fb -> 'a) -> default:(AnyUniqueAliases.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a
+      val any_ambiguous_type : 'b Rt.buf -> ('b, t) Rt.fb -> AnyAmbiguousAliases.t
+      val any_ambiguous : ?none:'a -> ?m1:(('b, t) Rt.fb -> 'a) -> ?m2:(('b, t) Rt.fb -> 'a) -> ?m3:(('b, t) Rt.fb -> 'a) -> default:(AnyAmbiguousAliases.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a
+      val vector_of_enums : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Color.Vector.t) Rt.fbopt
+      val signed_enum : 'b Rt.buf -> ('b, t) Rt.fb -> Race.t
+      val testrequirednestedflatbuffer : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
+      val testrequirednestedflatbuffer_as_monster : 'b Rt.buf -> ('b, t) Rt.fb -> t Rt.root option
+      val scalar_key_sorted_tables : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Stat.Vector.t) Rt.fbopt
+      val native_inline : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Test.t) Rt.fbopt
+      val long_enum_non_enum_default : 'b Rt.buf -> ('b, t) Rt.fb -> LongEnum.t
+      val long_enum_normal_default : 'b Rt.buf -> ('b, t) Rt.fb -> LongEnum.t
+      val nan_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val inf_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val positive_inf_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val infinity_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val positive_infinity_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val negative_inf_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val negative_infinity_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val double_inf_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+      val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> string -> ('b, t) Rt.fbopt
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> Monster.t Rt.wip
+        val add_pos : Vec3.t -> t -> t
+        val add_mana : Rt.Short.t -> t -> t
+        val add_hp : Rt.Short.t -> t -> t
+        val add_name : Rt.String.t Rt.wip -> t -> t
+        val add_inventory : Rt.UByte.Vector.t Rt.wip -> t -> t
+        val add_color : Color.t -> t -> t
+        val add_test_monster : Monster.t Rt.wip -> t -> t
+        val add_test_test_simple_table_with_enum : TestSimpleTableWithEnum.t Rt.wip -> t -> t
+        val add_test_my_game_example2_monster : Example2.Monster.t Rt.wip -> t -> t
+        val add_test4 : Test.Vector.t Rt.wip -> t -> t
+        val add_testarrayofstring : Rt.String.Vector.t Rt.wip -> t -> t
+        val add_testarrayoftables : Monster.Vector.t Rt.wip -> t -> t
+        val add_enemy : Monster.t Rt.wip -> t -> t
+        val add_testnestedflatbuffer : Rt.UByte.Vector.t Rt.wip -> t -> t
+        val add_testempty : Stat.t Rt.wip -> t -> t
+        val add_testbool : Rt.Bool.t -> t -> t
+        val add_testhashs32_fnv1 : Rt.Int.t -> t -> t
+        val add_testhashu32_fnv1 : Rt.UInt.t -> t -> t
+        val add_testhashs64_fnv1 : Rt.Long.t -> t -> t
+        val add_testhashu64_fnv1 : Rt.ULong.t -> t -> t
+        val add_testhashs32_fnv1_a : Rt.Int.t -> t -> t
+        val add_testhashu32_fnv1_a : Rt.UInt.t -> t -> t
+        val add_testhashs64_fnv1_a : Rt.Long.t -> t -> t
+        val add_testhashu64_fnv1_a : Rt.ULong.t -> t -> t
+        val add_testarrayofbools : Rt.Bool.Vector.t Rt.wip -> t -> t
+        val add_testf : Rt.Float.t -> t -> t
+        val add_testf2 : Rt.Float.t -> t -> t
+        val add_testf3 : Rt.Float.t -> t -> t
+        val add_testarrayofstring2 : Rt.String.Vector.t Rt.wip -> t -> t
+        val add_testarrayofsortedstruct : Ability.Vector.t Rt.wip -> t -> t
+        val add_flex : Rt.UByte.Vector.t Rt.wip -> t -> t
+        val add_test5 : Test.Vector.t Rt.wip -> t -> t
+        val add_vector_of_longs : Rt.Long.Vector.t Rt.wip -> t -> t
+        val add_vector_of_doubles : Rt.Double.Vector.t Rt.wip -> t -> t
+        val add_parent_namespace_test : InParentNamespace.t Rt.wip -> t -> t
+        val add_vector_of_referrables : Referrable.Vector.t Rt.wip -> t -> t
+        val add_single_weak_reference : Rt.ULong.t -> t -> t
+        val add_vector_of_weak_references : Rt.ULong.Vector.t Rt.wip -> t -> t
+        val add_vector_of_strong_referrables : Referrable.Vector.t Rt.wip -> t -> t
+        val add_co_owning_reference : Rt.ULong.t -> t -> t
+        val add_vector_of_co_owning_references : Rt.ULong.Vector.t Rt.wip -> t -> t
+        val add_non_owning_reference : Rt.ULong.t -> t -> t
+        val add_vector_of_non_owning_references : Rt.ULong.Vector.t Rt.wip -> t -> t
+        val add_any_unique_m : Monster.t Rt.wip -> t -> t
+        val add_any_unique_ts : TestSimpleTableWithEnum.t Rt.wip -> t -> t
+        val add_any_unique_m2 : Example2.Monster.t Rt.wip -> t -> t
+        val add_any_ambiguous_m1 : Monster.t Rt.wip -> t -> t
+        val add_any_ambiguous_m2 : Monster.t Rt.wip -> t -> t
+        val add_any_ambiguous_m3 : Monster.t Rt.wip -> t -> t
+        val add_vector_of_enums : Color.Vector.t Rt.wip -> t -> t
+        val add_signed_enum : Race.t -> t -> t
+        val add_testrequirednestedflatbuffer : Rt.UByte.Vector.t Rt.wip -> t -> t
+        val add_scalar_key_sorted_tables : Stat.Vector.t Rt.wip -> t -> t
+        val add_native_inline : Test.t -> t -> t
+        val add_long_enum_non_enum_default : LongEnum.t -> t -> t
+        val add_long_enum_normal_default : LongEnum.t -> t -> t
+        val add_nan_default : Rt.Float.t -> t -> t
+        val add_inf_default : Rt.Float.t -> t -> t
+        val add_positive_inf_default : Rt.Float.t -> t -> t
+        val add_infinity_default : Rt.Float.t -> t -> t
+        val add_positive_infinity_default : Rt.Float.t -> t -> t
+        val add_negative_inf_default : Rt.Float.t -> t -> t
+        val add_negative_infinity_default : Rt.Float.t -> t -> t
+        val add_double_inf_default : Rt.Double.t -> t -> t
+      end
+
+      type obj = {
+        pos : Vec3.obj option;
+        mana : Rt.Short.t;
+        hp : Rt.Short.t;
+        name : string;
+        inventory : Rt.UByte.t array;
+        color : Color.t;
+        test : Any.obj;
+        test4 : Test.obj array;
+        testarrayofstring : string array;
+        testarrayoftables : obj array;
+        enemy : obj option;
+        testnestedflatbuffer : Rt.UByte.t array;
+        testempty : Stat.obj option;
+        testbool : Rt.Bool.t;
+        testhashs32_fnv1 : Rt.Int.t;
+        testhashu32_fnv1 : Rt.UInt.t;
+        testhashs64_fnv1 : Rt.Long.t;
+        testhashu64_fnv1 : Rt.ULong.t;
+        testhashs32_fnv1_a : Rt.Int.t;
+        testhashu32_fnv1_a : Rt.UInt.t;
+        testhashs64_fnv1_a : Rt.Long.t;
+        testhashu64_fnv1_a : Rt.ULong.t;
+        testarrayofbools : Rt.Bool.t array;
+        testf : Rt.Float.t;
+        testf2 : Rt.Float.t;
+        testf3 : Rt.Float.t;
+        testarrayofstring2 : string array;
+        testarrayofsortedstruct : Ability.obj array;
+        flex : Rt.UByte.t array;
+        test5 : Test.obj array;
+        vector_of_longs : Rt.Long.t array;
+        vector_of_doubles : Rt.Double.t array;
+        parent_namespace_test : InParentNamespace.obj option;
+        vector_of_referrables : Referrable.obj array;
+        single_weak_reference : Rt.ULong.t;
+        vector_of_weak_references : Rt.ULong.t array;
+        vector_of_strong_referrables : Referrable.obj array;
+        co_owning_reference : Rt.ULong.t;
+        vector_of_co_owning_references : Rt.ULong.t array;
+        non_owning_reference : Rt.ULong.t;
+        vector_of_non_owning_references : Rt.ULong.t array;
+        any_unique : AnyUniqueAliases.obj;
+        any_ambiguous : AnyAmbiguousAliases.obj;
+        vector_of_enums : Color.t array;
+        signed_enum : Race.t;
+        testrequirednestedflatbuffer : Rt.UByte.t array;
+        scalar_key_sorted_tables : Stat.obj array;
+        native_inline : Test.obj option;
+        long_enum_non_enum_default : LongEnum.t;
+        long_enum_normal_default : LongEnum.t;
+        nan_default : Rt.Float.t;
+        inf_default : Rt.Float.t;
+        positive_inf_default : Rt.Float.t;
+        infinity_default : Rt.Float.t;
+        positive_infinity_default : Rt.Float.t;
+        negative_inf_default : Rt.Float.t;
+        negative_infinity_default : Rt.Float.t;
+        double_inf_default : Rt.Double.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end
+  end (* Example *)
+end = struct
+  module rec Example2 : sig
+    (* Table MyGame.Example2.Monster (//monster_test.fbs) *)
+    module rec Monster : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> Monster.t Rt.wip
+      end
+
+      type obj = unit
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end
+  end = struct
+    (* Table MyGame.Example2.Monster (//monster_test.fbs) *)
+    module rec Monster : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> Monster.t Rt.wip
+      end
+
+      type obj = unit
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end = struct
+      type t
+
+      module Vector = Rt.Ref.Vector
+
+      module Vector64 = Rt.Ref64.Vector
+
+
+      module Builder = struct
+        type t = Rt.Builder.t
+
+        let start b = Rt.Builder.start_table b ~n_fields:0
+        let finish b = Rt.Builder.end_table b
+      end
+
+      type obj = unit
+
+      let unpack _b _o = ()
+      let pack b () =
+        let t = Builder.start b in
+        Builder.finish t
+    end
+  end (* Example2 *)
+
+  (* Table MyGame.InParentNamespace (//monster_test.fbs) *)
+  and InParentNamespace : sig
+    type t
+
+    module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+
+    module Builder : sig
+      type t
+
+      val start : Rt.Builder.t -> t
+      val finish : t -> InParentNamespace.t Rt.wip
+    end
+
+    type obj = unit
+
+    val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+    val pack : Rt.Builder.t -> obj -> t Rt.wip
+  end = struct
+    type t
+
+    module Vector = Rt.Ref.Vector
+
+    module Vector64 = Rt.Ref64.Vector
+
+
+    module Builder = struct
+      type t = Rt.Builder.t
+
+      let start b = Rt.Builder.start_table b ~n_fields:0
+      let finish b = Rt.Builder.end_table b
+    end
+
+    type obj = unit
+
+    let unpack _b _o = ()
+    let pack b () =
+      let t = Builder.start b in
+      Builder.finish t
+  end
+
+  and OtherNameSpace : sig
+    (* Table MyGame.OtherNameSpace.TableB (//include_test/sub/include_test2.fbs) *)
+    module rec TableB : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      val a : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, TableA.t) Rt.fbopt
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> TableB.t Rt.wip
+        val add_a : TableA.t Rt.wip -> t -> t
+      end
+
+      type obj = {
+        a : TableA.obj option;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end
+
+    (* Struct MyGame.OtherNameSpace.Unused (//include_test/sub/include_test2.fbs) *)
+    and Unused : sig
+      type t = (Rt.Int.t)
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      val a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+
+      type obj = {
+        a : Rt.Int.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
+    end
+
+    (* Enum MyGame.OtherNameSpace.FromInclude (//include_test/sub/include_test2.fbs) *)
+    and FromInclude : sig
+      type t = Rt.Long.t
+
+      val include_val : t
+      val to_string : t -> string
+
+      module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
+    end
+  end = struct
+    (* Table MyGame.OtherNameSpace.TableB (//include_test/sub/include_test2.fbs) *)
+    module rec TableB : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      val a : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, TableA.t) Rt.fbopt
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> TableB.t Rt.wip
+        val add_a : TableA.t Rt.wip -> t -> t
+      end
+
+      type obj = {
+        a : TableA.obj option;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end = struct
       type t
 
       module Vector = Rt.Ref.Vector
@@ -128,167 +953,929 @@ module MyGame = struct
         let finish b = Rt.Builder.end_table b
         let add_a = Rt.Ref.push_slot 0
       end
+
+      type obj = {
+        a : TableA.obj option;
+      }
+
+      let unpack b__ o__ : obj = {
+        a = Rt.Option.fold ~none:None ~some:(fun x -> Some (TableA.unpack b__ x)) (a b__ o__);
+      }
+
+      let pack b__ (obj : obj) =
+        let a' = Option.map (fun x -> TableA.pack b__ x) obj.a in
+        let t = Builder.start b__ in
+        let t = match a' with None -> t | Some off -> Builder.add_a off t in
+        Builder.finish t
+    end
+
+    (* Struct MyGame.OtherNameSpace.Unused (//include_test/sub/include_test2.fbs) *)
+    and Unused : sig
+      type t = (Rt.Int.t)
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      val a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+
+      type obj = {
+        a : Rt.Int.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
+    end = struct
+      type t = (Rt.Int.t)
+
+      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 4 let set = Struct.set_unused__9 end)
+
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 4 let set = Struct.set_unused__9 end)
+
+      let[@inline] a b s = Rt.Int.read_offset b s 0
+
+      type obj = {
+        a : Rt.Int.t;
+      }
+
+      let unpack b__ s__ : obj = {
+        a = a b__ s__;
+      }
+
+      let pack (obj : obj) = obj.a
+    end
+
+    (* Enum MyGame.OtherNameSpace.FromInclude (//include_test/sub/include_test2.fbs) *)
+    and FromInclude : sig
+      type t = Rt.Long.t
+
+      val include_val : t
+      val to_string : t -> string
+
+      module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
+    end = struct
+      type t = Rt.Long.t
+
+      let include_val = Rt.Long.of_default 0L
+
+      let to_string e =
+        match Rt.Long.to_default e with
+        | 0L -> "include_val"
+        | x -> "<MyGame.OtherNameSpace.FromInclude: " ^ (Int64.to_string x) ^ ">"
+
+      module Vector = Rt.Long.Vector
+      module Vector64 = Rt.Long.Vector64
     end
   end (* OtherNameSpace *)
 
-  module InParentNamespace = struct
-    type t
+  and Example : sig
+    (* Struct MyGame.Example.Ability (//monster_test.fbs) *)
+    module rec Ability : sig
+      type t = (Rt.UInt.t * Rt.UInt.t)
 
-    module Vector = Rt.Ref.Vector
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
-    module Vector64 = Rt.Ref64.Vector
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
+      val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
+      val distance : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
+      val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.UInt.t -> ('b, t) Rt.fbopt
 
-    module Builder = struct
-      type t = Rt.Builder.t
+      type obj = {
+        id : Rt.UInt.t;
+        distance : Rt.UInt.t;
+      }
 
-      let start b = Rt.Builder.start_table b ~n_fields:0
-      let finish b = Rt.Builder.end_table b
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
     end
-  end
 
-  module Example2 = struct
-    module Monster = struct
+    (* Table MyGame.Example.Referrable (//monster_test.fbs) *)
+    and Referrable : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+      val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.ULong.t -> ('b, t) Rt.fbopt
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> Referrable.t Rt.wip
+        val add_id : Rt.ULong.t -> t -> t
+      end
+
+      type obj = {
+        id : Rt.ULong.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end
+
+    (* Table MyGame.Example.Stat (//monster_test.fbs) *)
+    and Stat : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      val id : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fbopt
+      val val_ : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Long.t
+      val count : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UShort.t
+      val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.UShort.t -> ('b, t) Rt.fbopt
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> Stat.t Rt.wip
+        val add_id : Rt.String.t Rt.wip -> t -> t
+        val add_val_ : Rt.Long.t -> t -> t
+        val add_count : Rt.UShort.t -> t -> t
+      end
+
+      type obj = {
+        id : string option;
+        val_ : Rt.Long.t;
+        count : Rt.UShort.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end
+
+    (* Struct MyGame.Example.Test (//monster_test.fbs) *)
+    and Test : sig
+      type t = (Rt.Short.t * Rt.Byte.t)
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      val a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+      val b : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Byte.t
+
+      type obj = {
+        a : Rt.Short.t;
+        b : Rt.Byte.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
+    end
+
+    (* Table MyGame.Example.TypeAliases (//monster_test.fbs) *)
+    and TypeAliases : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      val i8 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Byte.t
+      val u8 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UByte.t
+      val i16 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+      val u16 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UShort.t
+      val i32 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+      val u32 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
+      val i64 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Long.t
+      val u64 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+      val f32 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val f64 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+      val v8 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Byte.Vector.t) Rt.fbopt
+      val vf64 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Double.Vector.t) Rt.fbopt
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> TypeAliases.t Rt.wip
+        val add_i8 : Rt.Byte.t -> t -> t
+        val add_u8 : Rt.UByte.t -> t -> t
+        val add_i16 : Rt.Short.t -> t -> t
+        val add_u16 : Rt.UShort.t -> t -> t
+        val add_i32 : Rt.Int.t -> t -> t
+        val add_u32 : Rt.UInt.t -> t -> t
+        val add_i64 : Rt.Long.t -> t -> t
+        val add_u64 : Rt.ULong.t -> t -> t
+        val add_f32 : Rt.Float.t -> t -> t
+        val add_f64 : Rt.Double.t -> t -> t
+        val add_v8 : Rt.Byte.Vector.t Rt.wip -> t -> t
+        val add_vf64 : Rt.Double.Vector.t Rt.wip -> t -> t
+      end
+
+      type obj = {
+        i8 : Rt.Byte.t;
+        u8 : Rt.UByte.t;
+        i16 : Rt.Short.t;
+        u16 : Rt.UShort.t;
+        i32 : Rt.Int.t;
+        u32 : Rt.UInt.t;
+        i64 : Rt.Long.t;
+        u64 : Rt.ULong.t;
+        f32 : Rt.Float.t;
+        f64 : Rt.Double.t;
+        v8 : Rt.Byte.t array;
+        vf64 : Rt.Double.t array;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end
+
+    (* Union MyGame.Example.Any (//monster_test.fbs) *)
+    and Any : sig
+      type t = Rt.UType.t
+
+      val none : t
+      val monster : t
+      val test_simple_table_with_enum : t
+      val my_game_example2_monster : t
+      val to_string : t -> string
+
+      type obj = [
+        | `None_
+        | `Monster of Monster.obj
+        | `TestSimpleTableWithEnum of TestSimpleTableWithEnum.obj
+        | `MyGameExample2Monster of Example2.Monster.obj
+      ]
+    end
+
+    (* Union MyGame.Example.AnyAmbiguousAliases (//monster_test.fbs) *)
+    and AnyAmbiguousAliases : sig
+      type t = Rt.UType.t
+
+      val none : t
+      val m1 : t
+      val m2 : t
+      val m3 : t
+      val to_string : t -> string
+
+      type obj = [
+        | `None_
+        | `M1 of Monster.obj
+        | `M2 of Monster.obj
+        | `M3 of Monster.obj
+      ]
+    end
+
+    (* Union MyGame.Example.AnyUniqueAliases (//monster_test.fbs) *)
+    and AnyUniqueAliases : sig
+      type t = Rt.UType.t
+
+      val none : t
+      val m : t
+      val ts : t
+      val m2 : t
+      val to_string : t -> string
+
+      type obj = [
+        | `None_
+        | `M of Monster.obj
+        | `Ts of TestSimpleTableWithEnum.obj
+        | `M2 of Example2.Monster.obj
+      ]
+    end
+
+    (** Composite components of Monster color.
+
+        Enum MyGame.Example.Color (//monster_test.fbs) *)
+    and Color : sig
+      type t = Rt.UByte.t
+
+      val red : t
+
+      (** \brief color Green Green is bit_flag with value (1u << 1) *)
+      val green : t
+
+      (** \brief color Blue (1u << 3) *)
+      val blue : t
+      val to_string : t -> string
+
+      module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
+    end
+
+    (* Enum MyGame.Example.LongEnum (//monster_test.fbs) *)
+    and LongEnum : sig
+      type t = Rt.ULong.t
+
+      val long_one : t
+      val long_two : t
+      val long_big : t
+      val to_string : t -> string
+
+      module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
+    end
+
+    (* Enum MyGame.Example.Race (//monster_test.fbs) *)
+    and Race : sig
+      type t = Rt.Byte.t
+
+      val none : t
+      val human : t
+      val dwarf : t
+      val elf : t
+      val to_string : t -> string
+
+      module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
+    end
+
+    (* Struct MyGame.Example.StructOfStructs (//monster_test.fbs) *)
+    and StructOfStructs : sig
+      type t = (Ability.t * Test.t * Ability.t)
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      val a : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Ability.t) Rt.fb
+      val b : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Test.t) Rt.fb
+      val c : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Ability.t) Rt.fb
+
+      type obj = {
+        a : Ability.obj;
+        b : Test.obj;
+        c : Ability.obj;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
+    end
+
+    (* Table MyGame.Example.TestSimpleTableWithEnum (//monster_test.fbs) *)
+    and TestSimpleTableWithEnum : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      val color : 'b Rt.buf -> ('b, t) Rt.fb -> Color.t
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> TestSimpleTableWithEnum.t Rt.wip
+        val add_color : Color.t -> t -> t
+      end
+
+      type obj = {
+        color : Color.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end
+
+    (* Struct MyGame.Example.Vec3 (//monster_test.fbs) *)
+    and Vec3 : sig
+      type t = (Rt.Float.t * Rt.Float.t * Rt.Float.t * Rt.Double.t * Color.t * Test.t)
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      val x : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val y : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val z : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val test1 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+      val test2 : 'b Rt.buf -> ('b, t) Rt.fb -> Color.t
+      val test3 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Test.t) Rt.fb
+
+      type obj = {
+        x : Rt.Float.t;
+        y : Rt.Float.t;
+        z : Rt.Float.t;
+        test1 : Rt.Double.t;
+        test2 : Color.t;
+        test3 : Test.obj;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
+    end
+
+    (* Struct MyGame.Example.StructOfStructsOfStructs (//monster_test.fbs) *)
+    and StructOfStructsOfStructs : sig
+      type t = (StructOfStructs.t)
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      val a : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, StructOfStructs.t) Rt.fb
+
+      type obj = {
+        a : StructOfStructs.obj;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
+    end
+
+    (** an example documentation comment: "monster object"
+
+        Table MyGame.Example.Monster (//monster_test.fbs) *)
+    and Monster : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      val extension : string option
+      val identifier : string option
+      val has_identifier : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> bool
+      val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+      val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
+
+      val pos : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Vec3.t) Rt.fbopt
+      val mana : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+      val hp : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+      val name : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fb
+      val inventory : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
+      val color : 'b Rt.buf -> ('b, t) Rt.fb -> Color.t
+      val test_type : 'b Rt.buf -> ('b, t) Rt.fb -> Any.t
+      val test : ?none:'a -> ?monster:(('b, t) Rt.fb -> 'a) -> ?test_simple_table_with_enum:(('b, TestSimpleTableWithEnum.t) Rt.fb -> 'a) -> ?my_game_example2_monster:(('b, Example2.Monster.t) Rt.fb -> 'a) -> default:(Any.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a
+      val test4 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Test.Vector.t) Rt.fbopt
+      val testarrayofstring : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.Vector.t) Rt.fbopt
+
+      (** an example documentation comment: this will end up in the generated code multiline too *)
+      val testarrayoftables : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Vector.t) Rt.fbopt
+      val enemy : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, t) Rt.fbopt
+      val testnestedflatbuffer : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
+      val testnestedflatbuffer_as_monster : 'b Rt.buf -> ('b, t) Rt.fb -> t Rt.root option
+      val testempty : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Stat.t) Rt.fbopt
+      val testbool : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Bool.t
+      val testhashs32_fnv1 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+      val testhashu32_fnv1 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
+      val testhashs64_fnv1 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Long.t
+      val testhashu64_fnv1 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+      val testhashs32_fnv1_a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+      val testhashu32_fnv1_a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
+      val testhashs64_fnv1_a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Long.t
+      val testhashu64_fnv1_a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+      val testarrayofbools : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Bool.Vector.t) Rt.fbopt
+      val testf : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val testf2 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val testf3 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val testarrayofstring2 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.Vector.t) Rt.fbopt
+      val testarrayofsortedstruct : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Ability.Vector.t) Rt.fbopt
+      val flex : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
+      val test5 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Test.Vector.t) Rt.fbopt
+      val vector_of_longs : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Long.Vector.t) Rt.fbopt
+      val vector_of_doubles : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Double.Vector.t) Rt.fbopt
+      val parent_namespace_test : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, InParentNamespace.t) Rt.fbopt
+      val vector_of_referrables : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Referrable.Vector.t) Rt.fbopt
+      val single_weak_reference : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+      val vector_of_weak_references : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.ULong.Vector.t) Rt.fbopt
+      val vector_of_strong_referrables : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Referrable.Vector.t) Rt.fbopt
+      val co_owning_reference : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+      val vector_of_co_owning_references : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.ULong.Vector.t) Rt.fbopt
+      val non_owning_reference : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+      val vector_of_non_owning_references : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.ULong.Vector.t) Rt.fbopt
+      val any_unique_type : 'b Rt.buf -> ('b, t) Rt.fb -> AnyUniqueAliases.t
+      val any_unique : ?none:'a -> ?m:(('b, t) Rt.fb -> 'a) -> ?ts:(('b, TestSimpleTableWithEnum.t) Rt.fb -> 'a) -> ?m2:(('b, Example2.Monster.t) Rt.fb -> 'a) -> default:(AnyUniqueAliases.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a
+      val any_ambiguous_type : 'b Rt.buf -> ('b, t) Rt.fb -> AnyAmbiguousAliases.t
+      val any_ambiguous : ?none:'a -> ?m1:(('b, t) Rt.fb -> 'a) -> ?m2:(('b, t) Rt.fb -> 'a) -> ?m3:(('b, t) Rt.fb -> 'a) -> default:(AnyAmbiguousAliases.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a
+      val vector_of_enums : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Color.Vector.t) Rt.fbopt
+      val signed_enum : 'b Rt.buf -> ('b, t) Rt.fb -> Race.t
+      val testrequirednestedflatbuffer : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
+      val testrequirednestedflatbuffer_as_monster : 'b Rt.buf -> ('b, t) Rt.fb -> t Rt.root option
+      val scalar_key_sorted_tables : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Stat.Vector.t) Rt.fbopt
+      val native_inline : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Test.t) Rt.fbopt
+      val long_enum_non_enum_default : 'b Rt.buf -> ('b, t) Rt.fb -> LongEnum.t
+      val long_enum_normal_default : 'b Rt.buf -> ('b, t) Rt.fb -> LongEnum.t
+      val nan_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val inf_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val positive_inf_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val infinity_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val positive_infinity_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val negative_inf_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val negative_infinity_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val double_inf_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+      val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> string -> ('b, t) Rt.fbopt
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> Monster.t Rt.wip
+        val add_pos : Vec3.t -> t -> t
+        val add_mana : Rt.Short.t -> t -> t
+        val add_hp : Rt.Short.t -> t -> t
+        val add_name : Rt.String.t Rt.wip -> t -> t
+        val add_inventory : Rt.UByte.Vector.t Rt.wip -> t -> t
+        val add_color : Color.t -> t -> t
+        val add_test_monster : Monster.t Rt.wip -> t -> t
+        val add_test_test_simple_table_with_enum : TestSimpleTableWithEnum.t Rt.wip -> t -> t
+        val add_test_my_game_example2_monster : Example2.Monster.t Rt.wip -> t -> t
+        val add_test4 : Test.Vector.t Rt.wip -> t -> t
+        val add_testarrayofstring : Rt.String.Vector.t Rt.wip -> t -> t
+        val add_testarrayoftables : Monster.Vector.t Rt.wip -> t -> t
+        val add_enemy : Monster.t Rt.wip -> t -> t
+        val add_testnestedflatbuffer : Rt.UByte.Vector.t Rt.wip -> t -> t
+        val add_testempty : Stat.t Rt.wip -> t -> t
+        val add_testbool : Rt.Bool.t -> t -> t
+        val add_testhashs32_fnv1 : Rt.Int.t -> t -> t
+        val add_testhashu32_fnv1 : Rt.UInt.t -> t -> t
+        val add_testhashs64_fnv1 : Rt.Long.t -> t -> t
+        val add_testhashu64_fnv1 : Rt.ULong.t -> t -> t
+        val add_testhashs32_fnv1_a : Rt.Int.t -> t -> t
+        val add_testhashu32_fnv1_a : Rt.UInt.t -> t -> t
+        val add_testhashs64_fnv1_a : Rt.Long.t -> t -> t
+        val add_testhashu64_fnv1_a : Rt.ULong.t -> t -> t
+        val add_testarrayofbools : Rt.Bool.Vector.t Rt.wip -> t -> t
+        val add_testf : Rt.Float.t -> t -> t
+        val add_testf2 : Rt.Float.t -> t -> t
+        val add_testf3 : Rt.Float.t -> t -> t
+        val add_testarrayofstring2 : Rt.String.Vector.t Rt.wip -> t -> t
+        val add_testarrayofsortedstruct : Ability.Vector.t Rt.wip -> t -> t
+        val add_flex : Rt.UByte.Vector.t Rt.wip -> t -> t
+        val add_test5 : Test.Vector.t Rt.wip -> t -> t
+        val add_vector_of_longs : Rt.Long.Vector.t Rt.wip -> t -> t
+        val add_vector_of_doubles : Rt.Double.Vector.t Rt.wip -> t -> t
+        val add_parent_namespace_test : InParentNamespace.t Rt.wip -> t -> t
+        val add_vector_of_referrables : Referrable.Vector.t Rt.wip -> t -> t
+        val add_single_weak_reference : Rt.ULong.t -> t -> t
+        val add_vector_of_weak_references : Rt.ULong.Vector.t Rt.wip -> t -> t
+        val add_vector_of_strong_referrables : Referrable.Vector.t Rt.wip -> t -> t
+        val add_co_owning_reference : Rt.ULong.t -> t -> t
+        val add_vector_of_co_owning_references : Rt.ULong.Vector.t Rt.wip -> t -> t
+        val add_non_owning_reference : Rt.ULong.t -> t -> t
+        val add_vector_of_non_owning_references : Rt.ULong.Vector.t Rt.wip -> t -> t
+        val add_any_unique_m : Monster.t Rt.wip -> t -> t
+        val add_any_unique_ts : TestSimpleTableWithEnum.t Rt.wip -> t -> t
+        val add_any_unique_m2 : Example2.Monster.t Rt.wip -> t -> t
+        val add_any_ambiguous_m1 : Monster.t Rt.wip -> t -> t
+        val add_any_ambiguous_m2 : Monster.t Rt.wip -> t -> t
+        val add_any_ambiguous_m3 : Monster.t Rt.wip -> t -> t
+        val add_vector_of_enums : Color.Vector.t Rt.wip -> t -> t
+        val add_signed_enum : Race.t -> t -> t
+        val add_testrequirednestedflatbuffer : Rt.UByte.Vector.t Rt.wip -> t -> t
+        val add_scalar_key_sorted_tables : Stat.Vector.t Rt.wip -> t -> t
+        val add_native_inline : Test.t -> t -> t
+        val add_long_enum_non_enum_default : LongEnum.t -> t -> t
+        val add_long_enum_normal_default : LongEnum.t -> t -> t
+        val add_nan_default : Rt.Float.t -> t -> t
+        val add_inf_default : Rt.Float.t -> t -> t
+        val add_positive_inf_default : Rt.Float.t -> t -> t
+        val add_infinity_default : Rt.Float.t -> t -> t
+        val add_positive_infinity_default : Rt.Float.t -> t -> t
+        val add_negative_inf_default : Rt.Float.t -> t -> t
+        val add_negative_infinity_default : Rt.Float.t -> t -> t
+        val add_double_inf_default : Rt.Double.t -> t -> t
+      end
+
+      type obj = {
+        pos : Vec3.obj option;
+        mana : Rt.Short.t;
+        hp : Rt.Short.t;
+        name : string;
+        inventory : Rt.UByte.t array;
+        color : Color.t;
+        test : Any.obj;
+        test4 : Test.obj array;
+        testarrayofstring : string array;
+        testarrayoftables : obj array;
+        enemy : obj option;
+        testnestedflatbuffer : Rt.UByte.t array;
+        testempty : Stat.obj option;
+        testbool : Rt.Bool.t;
+        testhashs32_fnv1 : Rt.Int.t;
+        testhashu32_fnv1 : Rt.UInt.t;
+        testhashs64_fnv1 : Rt.Long.t;
+        testhashu64_fnv1 : Rt.ULong.t;
+        testhashs32_fnv1_a : Rt.Int.t;
+        testhashu32_fnv1_a : Rt.UInt.t;
+        testhashs64_fnv1_a : Rt.Long.t;
+        testhashu64_fnv1_a : Rt.ULong.t;
+        testarrayofbools : Rt.Bool.t array;
+        testf : Rt.Float.t;
+        testf2 : Rt.Float.t;
+        testf3 : Rt.Float.t;
+        testarrayofstring2 : string array;
+        testarrayofsortedstruct : Ability.obj array;
+        flex : Rt.UByte.t array;
+        test5 : Test.obj array;
+        vector_of_longs : Rt.Long.t array;
+        vector_of_doubles : Rt.Double.t array;
+        parent_namespace_test : InParentNamespace.obj option;
+        vector_of_referrables : Referrable.obj array;
+        single_weak_reference : Rt.ULong.t;
+        vector_of_weak_references : Rt.ULong.t array;
+        vector_of_strong_referrables : Referrable.obj array;
+        co_owning_reference : Rt.ULong.t;
+        vector_of_co_owning_references : Rt.ULong.t array;
+        non_owning_reference : Rt.ULong.t;
+        vector_of_non_owning_references : Rt.ULong.t array;
+        any_unique : AnyUniqueAliases.obj;
+        any_ambiguous : AnyAmbiguousAliases.obj;
+        vector_of_enums : Color.t array;
+        signed_enum : Race.t;
+        testrequirednestedflatbuffer : Rt.UByte.t array;
+        scalar_key_sorted_tables : Stat.obj array;
+        native_inline : Test.obj option;
+        long_enum_non_enum_default : LongEnum.t;
+        long_enum_normal_default : LongEnum.t;
+        nan_default : Rt.Float.t;
+        inf_default : Rt.Float.t;
+        positive_inf_default : Rt.Float.t;
+        infinity_default : Rt.Float.t;
+        positive_infinity_default : Rt.Float.t;
+        negative_inf_default : Rt.Float.t;
+        negative_infinity_default : Rt.Float.t;
+        double_inf_default : Rt.Double.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end
+  end = struct
+    (* Struct MyGame.Example.Ability (//monster_test.fbs) *)
+    module rec Ability : sig
+      type t = (Rt.UInt.t * Rt.UInt.t)
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
+      val distance : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
+      val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.UInt.t -> ('b, t) Rt.fbopt
+
+      type obj = {
+        id : Rt.UInt.t;
+        distance : Rt.UInt.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
+    end = struct
+      type t = (Rt.UInt.t * Rt.UInt.t)
+
+      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 8 let set = Struct.set_ability__4 end)
+
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 8 let set = Struct.set_ability__4 end)
+
+      let[@inline] id b s = Rt.UInt.read_offset b s 0
+      let[@inline] distance b s = Rt.UInt.read_offset b s 4
+      let[@inline] lookup_by_key buf vec_off key = Rt.lookup_by_key_struct ~size:8 buf vec_off (fun elt -> compare (id buf elt) key)
+
+      type obj = {
+        id : Rt.UInt.t;
+        distance : Rt.UInt.t;
+      }
+
+      let unpack b__ s__ : obj = {
+        id = id b__ s__;
+        distance = distance b__ s__;
+      }
+
+      let pack (obj : obj) = (obj.id, obj.distance)
+    end
+
+    (* Table MyGame.Example.Referrable (//monster_test.fbs) *)
+    and Referrable : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+      val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.ULong.t -> ('b, t) Rt.fbopt
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> Referrable.t Rt.wip
+        val add_id : Rt.ULong.t -> t -> t
+      end
+
+      type obj = {
+        id : Rt.ULong.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end = struct
       type t
 
       module Vector = Rt.Ref.Vector
 
       module Vector64 = Rt.Ref64.Vector
 
+      let[@inline] id b o = Rt.ULong.(read_table_default b o 4 ~default:(of_default 0L))
+      let[@inline] lookup_by_key buf vec_off key = Rt.lookup_by_key_ref buf vec_off (fun elt -> compare (id buf elt) key)
 
       module Builder = struct
         type t = Rt.Builder.t
 
-        let start b = Rt.Builder.start_table b ~n_fields:0
+        let start b = Rt.Builder.start_table b ~n_fields:1
         let finish b = Rt.Builder.end_table b
+        let add_id = Rt.ULong.(push_slot_default 0 ~default:(of_default 0L))
       end
-    end
-  end (* Example2 *)
 
-  module Example = struct
-    module Race = struct
-      type t = Rt.Byte.t
+      type obj = {
+        id : Rt.ULong.t;
+      }
 
-      let none = Rt.Byte.of_default (-1L)
-      let human = Rt.Byte.of_default 0L
-      let dwarf = Rt.Byte.of_default 1L
-      let elf = Rt.Byte.of_default 2L
+      let unpack b__ o__ : obj = {
+        id = id b__ o__;
+      }
 
-      let to_string e =
-        match Rt.Byte.to_default e with
-        | (-1L) -> "none"
-        | 0L -> "human"
-        | 1L -> "dwarf"
-        | 2L -> "elf"
-        | x -> "<MyGame.Example.Race: " ^ (Int64.to_string x) ^ ">"
-
-      module Vector = Rt.Byte.Vector
-      module Vector64 = Rt.Byte.Vector64
+      let pack b__ (obj : obj) =
+        let t = Builder.start b__ in
+        let t = Builder.add_id obj.id t in
+        Builder.finish t
     end
 
-    module LongEnum = struct
-      type t = Rt.ULong.t
+    (* Table MyGame.Example.Stat (//monster_test.fbs) *)
+    and Stat : sig
+      type t
 
-      let long_one = Rt.ULong.of_default 2L
-      let long_two = Rt.ULong.of_default 4L
-      let long_big = Rt.ULong.of_default 1099511627776L
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
-      let to_string e =
-        match Rt.ULong.to_default e with
-        | 2L -> "long_one"
-        | 4L -> "long_two"
-        | 1099511627776L -> "long_big"
-        | x -> "<MyGame.Example.LongEnum: " ^ (Int64.to_string x) ^ ">"
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
-      module Vector = Rt.ULong.Vector
-      module Vector64 = Rt.ULong.Vector64
+      val id : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fbopt
+      val val_ : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Long.t
+      val count : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UShort.t
+      val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.UShort.t -> ('b, t) Rt.fbopt
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> Stat.t Rt.wip
+        val add_id : Rt.String.t Rt.wip -> t -> t
+        val add_val_ : Rt.Long.t -> t -> t
+        val add_count : Rt.UShort.t -> t -> t
+      end
+
+      type obj = {
+        id : string option;
+        val_ : Rt.Long.t;
+        count : Rt.UShort.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end = struct
+      type t
+
+      module Vector = Rt.Ref.Vector
+
+      module Vector64 = Rt.Ref64.Vector
+
+      let[@inline] id b o = Rt.Ref.read_table_opt b o 4
+      let[@inline] val_ b o = Rt.Long.(read_table_default b o 6 ~default:(of_default 0L))
+      let[@inline] count b o = Rt.UShort.(read_table_default b o 8 ~default:(of_default 0L))
+      let[@inline] lookup_by_key buf vec_off key = Rt.lookup_by_key_ref buf vec_off (fun elt -> compare (count buf elt) key)
+
+      module Builder = struct
+        type t = Rt.Builder.t
+
+        let start b = Rt.Builder.start_table b ~n_fields:3
+        let finish b = Rt.Builder.end_table b
+        let add_id = Rt.Ref.push_slot 0
+        let add_val_ = Rt.Long.(push_slot_default 1 ~default:(of_default 0L))
+        let add_count = Rt.UShort.(push_slot_default 2 ~default:(of_default 0L))
+      end
+
+      type obj = {
+        id : string option;
+        val_ : Rt.Long.t;
+        count : Rt.UShort.t;
+      }
+
+      let unpack b__ o__ : obj = {
+        id = Rt.Option.fold ~none:None ~some:(fun s -> Some (Rt.String.to_string b__ s)) (id b__ o__);
+        val_ = val_ b__ o__;
+        count = count b__ o__;
+      }
+
+      let pack b__ (obj : obj) =
+        let id' = Option.map (fun s -> Rt.String.create b__ s) obj.id in
+        let t = Builder.start b__ in
+        let t = match id' with None -> t | Some off -> Builder.add_id off t in
+        let t = Builder.add_val_ obj.val_ t in
+        let t = Builder.add_count obj.count t in
+        Builder.finish t
     end
 
-    module Color = struct
-      type t = Rt.UByte.t
+    (* Struct MyGame.Example.Test (//monster_test.fbs) *)
+    and Test : sig
+      type t = (Rt.Short.t * Rt.Byte.t)
 
-      let red = Rt.UByte.of_default 1L
-      let green = Rt.UByte.of_default 2L
-      let blue = Rt.UByte.of_default 8L
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
-      let to_string e =
-        match Rt.UByte.to_default e with
-        | 1L -> "red"
-        | 2L -> "green"
-        | 8L -> "blue"
-        | x -> "<MyGame.Example.Color: " ^ (Int64.to_string x) ^ ">"
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
-      module Vector = Rt.UByte.Vector
-      module Vector64 = Rt.UByte.Vector64
+      val a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+      val b : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Byte.t
+
+      type obj = {
+        a : Rt.Short.t;
+        b : Rt.Byte.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
+    end = struct
+      type t = (Rt.Short.t * Rt.Byte.t)
+
+      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 4 let set = Struct.set_test__5 end)
+
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 4 let set = Struct.set_test__5 end)
+
+      let[@inline] a b s = Rt.Short.read_offset b s 0
+      let[@inline] b b s = Rt.Byte.read_offset b s 2
+
+      type obj = {
+        a : Rt.Short.t;
+        b : Rt.Byte.t;
+      }
+
+      let unpack b__ s__ : obj = {
+        a = a b__ s__;
+        b = b b__ s__;
+      }
+
+      let pack (obj : obj) = (obj.a, obj.b)
     end
 
-    module AnyUniqueAliases = struct
-      type t = Rt.UType.t
+    (* Table MyGame.Example.TypeAliases (//monster_test.fbs) *)
+    and TypeAliases : sig
+      type t
 
-      let none = Rt.UType.of_default 0L
-      let m = Rt.UType.of_default 1L
-      let ts = Rt.UType.of_default 2L
-      let m2 = Rt.UType.of_default 3L
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
-      let to_string e =
-        match Rt.UType.to_default e with
-        | 0L -> "none"
-        | 1L -> "m"
-        | 2L -> "ts"
-        | 3L -> "m2"
-        | x -> "<MyGame.Example.AnyUniqueAliases: " ^ (Int64.to_string x) ^ ">"
-    end
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
-    module AnyAmbiguousAliases = struct
-      type t = Rt.UType.t
+      val i8 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Byte.t
+      val u8 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UByte.t
+      val i16 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+      val u16 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UShort.t
+      val i32 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+      val u32 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
+      val i64 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Long.t
+      val u64 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+      val f32 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val f64 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+      val v8 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Byte.Vector.t) Rt.fbopt
+      val vf64 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Double.Vector.t) Rt.fbopt
 
-      let none = Rt.UType.of_default 0L
-      let m1 = Rt.UType.of_default 1L
-      let m2 = Rt.UType.of_default 2L
-      let m3 = Rt.UType.of_default 3L
+      module Builder : sig
+        type t
 
-      let to_string e =
-        match Rt.UType.to_default e with
-        | 0L -> "none"
-        | 1L -> "m1"
-        | 2L -> "m2"
-        | 3L -> "m3"
-        | x -> "<MyGame.Example.AnyAmbiguousAliases: " ^ (Int64.to_string x) ^ ">"
-    end
+        val start : Rt.Builder.t -> t
+        val finish : t -> TypeAliases.t Rt.wip
+        val add_i8 : Rt.Byte.t -> t -> t
+        val add_u8 : Rt.UByte.t -> t -> t
+        val add_i16 : Rt.Short.t -> t -> t
+        val add_u16 : Rt.UShort.t -> t -> t
+        val add_i32 : Rt.Int.t -> t -> t
+        val add_u32 : Rt.UInt.t -> t -> t
+        val add_i64 : Rt.Long.t -> t -> t
+        val add_u64 : Rt.ULong.t -> t -> t
+        val add_f32 : Rt.Float.t -> t -> t
+        val add_f64 : Rt.Double.t -> t -> t
+        val add_v8 : Rt.Byte.Vector.t Rt.wip -> t -> t
+        val add_vf64 : Rt.Double.Vector.t Rt.wip -> t -> t
+      end
 
-    module Any = struct
-      type t = Rt.UType.t
+      type obj = {
+        i8 : Rt.Byte.t;
+        u8 : Rt.UByte.t;
+        i16 : Rt.Short.t;
+        u16 : Rt.UShort.t;
+        i32 : Rt.Int.t;
+        u32 : Rt.UInt.t;
+        i64 : Rt.Long.t;
+        u64 : Rt.ULong.t;
+        f32 : Rt.Float.t;
+        f64 : Rt.Double.t;
+        v8 : Rt.Byte.t array;
+        vf64 : Rt.Double.t array;
+      }
 
-      let none = Rt.UType.of_default 0L
-      let monster = Rt.UType.of_default 1L
-      let test_simple_table_with_enum = Rt.UType.of_default 2L
-      let my_game_example2_monster = Rt.UType.of_default 3L
-
-      let to_string e =
-        match Rt.UType.to_default e with
-        | 0L -> "none"
-        | 1L -> "monster"
-        | 2L -> "test_simple_table_with_enum"
-        | 3L -> "my_game_example2_monster"
-        | x -> "<MyGame.Example.Any: " ^ (Int64.to_string x) ^ ">"
-    end
-
-    module Vec3 = struct
-      type t = (Rt.Float.t * Rt.Float.t * Rt.Float.t * Rt.Double.t * Rt.UByte.t * (Rt.Short.t * Rt.Byte.t))
-
-      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 32 let set = Struct.set_vec3__8 end)
-
-      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 32 let set = Struct.set_vec3__8 end)
-
-      let[@inline] x b s = Rt.Float.read_offset b s 0
-      let[@inline] y b s = Rt.Float.read_offset b s 4
-      let[@inline] z b s = Rt.Float.read_offset b s 8
-      let[@inline] test1 b s = Rt.Double.read_offset b s 16
-      let[@inline] test2 b s = Rt.UByte.read_offset b s 24
-      let[@inline] test3 b s = Rt.Struct.read_offset b s 26
-    end
-
-    module TypeAliases = struct
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end = struct
       type t
 
       module Vector = Rt.Ref.Vector
@@ -326,9 +1913,343 @@ module MyGame = struct
         let add_v8 = Rt.Ref.push_slot 10
         let add_vf64 = Rt.Ref.push_slot 11
       end
+
+      type obj = {
+        i8 : Rt.Byte.t;
+        u8 : Rt.UByte.t;
+        i16 : Rt.Short.t;
+        u16 : Rt.UShort.t;
+        i32 : Rt.Int.t;
+        u32 : Rt.UInt.t;
+        i64 : Rt.Long.t;
+        u64 : Rt.ULong.t;
+        f32 : Rt.Float.t;
+        f64 : Rt.Double.t;
+        v8 : Rt.Byte.t array;
+        vf64 : Rt.Double.t array;
+      }
+
+      let unpack b__ o__ : obj = {
+        i8 = i8 b__ o__;
+        u8 = u8 b__ o__;
+        i16 = i16 b__ o__;
+        u16 = u16 b__ o__;
+        i32 = i32 b__ o__;
+        u32 = u32 b__ o__;
+        i64 = i64 b__ o__;
+        u64 = u64 b__ o__;
+        f32 = f32 b__ o__;
+        f64 = f64 b__ o__;
+        v8 = Rt.Option.fold ~none:[||] ~some:(fun v -> Rt.Byte.Vector.to_array b__ v) (v8 b__ o__);
+        vf64 = Rt.Option.fold ~none:[||] ~some:(fun v -> Rt.Double.Vector.to_array b__ v) (vf64 b__ o__);
+      }
+
+      let pack b__ (obj : obj) =
+        let v8' = Rt.Byte.Vector.create b__ obj.v8 in
+        let vf64' = Rt.Double.Vector.create b__ obj.vf64 in
+        let t = Builder.start b__ in
+        let t = Builder.add_i8 obj.i8 t in
+        let t = Builder.add_u8 obj.u8 t in
+        let t = Builder.add_i16 obj.i16 t in
+        let t = Builder.add_u16 obj.u16 t in
+        let t = Builder.add_i32 obj.i32 t in
+        let t = Builder.add_u32 obj.u32 t in
+        let t = Builder.add_i64 obj.i64 t in
+        let t = Builder.add_u64 obj.u64 t in
+        let t = Builder.add_f32 obj.f32 t in
+        let t = Builder.add_f64 obj.f64 t in
+        let t = Builder.add_v8 v8' t in
+        let t = Builder.add_vf64 vf64' t in
+        Builder.finish t
     end
 
-    module TestSimpleTableWithEnum = struct
+    (* Union MyGame.Example.Any (//monster_test.fbs) *)
+    and Any : sig
+      type t = Rt.UType.t
+
+      val none : t
+      val monster : t
+      val test_simple_table_with_enum : t
+      val my_game_example2_monster : t
+      val to_string : t -> string
+
+      type obj = [
+        | `None_
+        | `Monster of Monster.obj
+        | `TestSimpleTableWithEnum of TestSimpleTableWithEnum.obj
+        | `MyGameExample2Monster of Example2.Monster.obj
+      ]
+    end = struct
+      type t = Rt.UType.t
+
+      let none = Rt.UType.of_default 0L
+      let monster = Rt.UType.of_default 1L
+      let test_simple_table_with_enum = Rt.UType.of_default 2L
+      let my_game_example2_monster = Rt.UType.of_default 3L
+
+      let to_string e =
+        match Rt.UType.to_default e with
+        | 0L -> "none"
+        | 1L -> "monster"
+        | 2L -> "test_simple_table_with_enum"
+        | 3L -> "my_game_example2_monster"
+        | x -> "<MyGame.Example.Any: " ^ (Int64.to_string x) ^ ">"
+
+      type obj = [
+        | `None_
+        | `Monster of Monster.obj
+        | `TestSimpleTableWithEnum of TestSimpleTableWithEnum.obj
+        | `MyGameExample2Monster of Example2.Monster.obj
+      ]
+    end
+
+    (* Union MyGame.Example.AnyAmbiguousAliases (//monster_test.fbs) *)
+    and AnyAmbiguousAliases : sig
+      type t = Rt.UType.t
+
+      val none : t
+      val m1 : t
+      val m2 : t
+      val m3 : t
+      val to_string : t -> string
+
+      type obj = [
+        | `None_
+        | `M1 of Monster.obj
+        | `M2 of Monster.obj
+        | `M3 of Monster.obj
+      ]
+    end = struct
+      type t = Rt.UType.t
+
+      let none = Rt.UType.of_default 0L
+      let m1 = Rt.UType.of_default 1L
+      let m2 = Rt.UType.of_default 2L
+      let m3 = Rt.UType.of_default 3L
+
+      let to_string e =
+        match Rt.UType.to_default e with
+        | 0L -> "none"
+        | 1L -> "m1"
+        | 2L -> "m2"
+        | 3L -> "m3"
+        | x -> "<MyGame.Example.AnyAmbiguousAliases: " ^ (Int64.to_string x) ^ ">"
+
+      type obj = [
+        | `None_
+        | `M1 of Monster.obj
+        | `M2 of Monster.obj
+        | `M3 of Monster.obj
+      ]
+    end
+
+    (* Union MyGame.Example.AnyUniqueAliases (//monster_test.fbs) *)
+    and AnyUniqueAliases : sig
+      type t = Rt.UType.t
+
+      val none : t
+      val m : t
+      val ts : t
+      val m2 : t
+      val to_string : t -> string
+
+      type obj = [
+        | `None_
+        | `M of Monster.obj
+        | `Ts of TestSimpleTableWithEnum.obj
+        | `M2 of Example2.Monster.obj
+      ]
+    end = struct
+      type t = Rt.UType.t
+
+      let none = Rt.UType.of_default 0L
+      let m = Rt.UType.of_default 1L
+      let ts = Rt.UType.of_default 2L
+      let m2 = Rt.UType.of_default 3L
+
+      let to_string e =
+        match Rt.UType.to_default e with
+        | 0L -> "none"
+        | 1L -> "m"
+        | 2L -> "ts"
+        | 3L -> "m2"
+        | x -> "<MyGame.Example.AnyUniqueAliases: " ^ (Int64.to_string x) ^ ">"
+
+      type obj = [
+        | `None_
+        | `M of Monster.obj
+        | `Ts of TestSimpleTableWithEnum.obj
+        | `M2 of Example2.Monster.obj
+      ]
+    end
+
+    (** Composite components of Monster color.
+
+        Enum MyGame.Example.Color (//monster_test.fbs) *)
+    and Color : sig
+      type t = Rt.UByte.t
+
+      val red : t
+
+      (** \brief color Green Green is bit_flag with value (1u << 1) *)
+      val green : t
+
+      (** \brief color Blue (1u << 3) *)
+      val blue : t
+      val to_string : t -> string
+
+      module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
+    end = struct
+      type t = Rt.UByte.t
+
+      let red = Rt.UByte.of_default 1L
+      let green = Rt.UByte.of_default 2L
+      let blue = Rt.UByte.of_default 8L
+
+      let to_string e =
+        match Rt.UByte.to_default e with
+        | 1L -> "red"
+        | 2L -> "green"
+        | 8L -> "blue"
+        | x -> "<MyGame.Example.Color: " ^ (Int64.to_string x) ^ ">"
+
+      module Vector = Rt.UByte.Vector
+      module Vector64 = Rt.UByte.Vector64
+    end
+
+    (* Enum MyGame.Example.LongEnum (//monster_test.fbs) *)
+    and LongEnum : sig
+      type t = Rt.ULong.t
+
+      val long_one : t
+      val long_two : t
+      val long_big : t
+      val to_string : t -> string
+
+      module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
+    end = struct
+      type t = Rt.ULong.t
+
+      let long_one = Rt.ULong.of_default 2L
+      let long_two = Rt.ULong.of_default 4L
+      let long_big = Rt.ULong.of_default 1099511627776L
+
+      let to_string e =
+        match Rt.ULong.to_default e with
+        | 2L -> "long_one"
+        | 4L -> "long_two"
+        | 1099511627776L -> "long_big"
+        | x -> "<MyGame.Example.LongEnum: " ^ (Int64.to_string x) ^ ">"
+
+      module Vector = Rt.ULong.Vector
+      module Vector64 = Rt.ULong.Vector64
+    end
+
+    (* Enum MyGame.Example.Race (//monster_test.fbs) *)
+    and Race : sig
+      type t = Rt.Byte.t
+
+      val none : t
+      val human : t
+      val dwarf : t
+      val elf : t
+      val to_string : t -> string
+
+      module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
+    end = struct
+      type t = Rt.Byte.t
+
+      let none = Rt.Byte.of_default (-1L)
+      let human = Rt.Byte.of_default 0L
+      let dwarf = Rt.Byte.of_default 1L
+      let elf = Rt.Byte.of_default 2L
+
+      let to_string e =
+        match Rt.Byte.to_default e with
+        | (-1L) -> "none"
+        | 0L -> "human"
+        | 1L -> "dwarf"
+        | 2L -> "elf"
+        | x -> "<MyGame.Example.Race: " ^ (Int64.to_string x) ^ ">"
+
+      module Vector = Rt.Byte.Vector
+      module Vector64 = Rt.Byte.Vector64
+    end
+
+    (* Struct MyGame.Example.StructOfStructs (//monster_test.fbs) *)
+    and StructOfStructs : sig
+      type t = (Ability.t * Test.t * Ability.t)
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      val a : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Ability.t) Rt.fb
+      val b : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Test.t) Rt.fb
+      val c : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Ability.t) Rt.fb
+
+      type obj = {
+        a : Ability.obj;
+        b : Test.obj;
+        c : Ability.obj;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
+    end = struct
+      type t = ((Rt.UInt.t * Rt.UInt.t) * (Rt.Short.t * Rt.Byte.t) * (Rt.UInt.t * Rt.UInt.t))
+
+      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 20 let set = Struct.set_struct_of_structs__6 end)
+
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 20 let set = Struct.set_struct_of_structs__6 end)
+
+      let[@inline] a b s = Rt.Struct.read_offset b s 0
+      let[@inline] b b s = Rt.Struct.read_offset b s 8
+      let[@inline] c b s = Rt.Struct.read_offset b s 12
+
+      type obj = {
+        a : Ability.obj;
+        b : Test.obj;
+        c : Ability.obj;
+      }
+
+      let unpack b__ s__ : obj = {
+        a = Ability.unpack b__ (a b__ s__);
+        b = Test.unpack b__ (b b__ s__);
+        c = Ability.unpack b__ (c b__ s__);
+      }
+
+      let pack (obj : obj) = (Ability.pack obj.a, Test.pack obj.b, Ability.pack obj.c)
+    end
+
+    (* Table MyGame.Example.TestSimpleTableWithEnum (//monster_test.fbs) *)
+    and TestSimpleTableWithEnum : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      val color : 'b Rt.buf -> ('b, t) Rt.fb -> Color.t
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> TestSimpleTableWithEnum.t Rt.wip
+        val add_color : Color.t -> t -> t
+      end
+
+      type obj = {
+        color : Color.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end = struct
       type t
 
       module Vector = Rt.Ref.Vector
@@ -344,20 +2265,99 @@ module MyGame = struct
         let finish b = Rt.Builder.end_table b
         let add_color = Rt.UByte.(push_slot_default 0 ~default:(of_default 2L))
       end
+
+      type obj = {
+        color : Color.t;
+      }
+
+      let unpack b__ o__ : obj = {
+        color = color b__ o__;
+      }
+
+      let pack b__ (obj : obj) =
+        let t = Builder.start b__ in
+        let t = Builder.add_color obj.color t in
+        Builder.finish t
     end
 
-    module Test = struct
-      type t = (Rt.Short.t * Rt.Byte.t)
+    (* Struct MyGame.Example.Vec3 (//monster_test.fbs) *)
+    and Vec3 : sig
+      type t = (Rt.Float.t * Rt.Float.t * Rt.Float.t * Rt.Double.t * Color.t * Test.t)
 
-      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 4 let set = Struct.set_test__5 end)
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
-      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 4 let set = Struct.set_test__5 end)
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
-      let[@inline] a b s = Rt.Short.read_offset b s 0
-      let[@inline] b b s = Rt.Byte.read_offset b s 2
+      val x : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val y : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val z : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val test1 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+      val test2 : 'b Rt.buf -> ('b, t) Rt.fb -> Color.t
+      val test3 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Test.t) Rt.fb
+
+      type obj = {
+        x : Rt.Float.t;
+        y : Rt.Float.t;
+        z : Rt.Float.t;
+        test1 : Rt.Double.t;
+        test2 : Color.t;
+        test3 : Test.obj;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
+    end = struct
+      type t = (Rt.Float.t * Rt.Float.t * Rt.Float.t * Rt.Double.t * Rt.UByte.t * (Rt.Short.t * Rt.Byte.t))
+
+      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 32 let set = Struct.set_vec3__8 end)
+
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 32 let set = Struct.set_vec3__8 end)
+
+      let[@inline] x b s = Rt.Float.read_offset b s 0
+      let[@inline] y b s = Rt.Float.read_offset b s 4
+      let[@inline] z b s = Rt.Float.read_offset b s 8
+      let[@inline] test1 b s = Rt.Double.read_offset b s 16
+      let[@inline] test2 b s = Rt.UByte.read_offset b s 24
+      let[@inline] test3 b s = Rt.Struct.read_offset b s 26
+
+      type obj = {
+        x : Rt.Float.t;
+        y : Rt.Float.t;
+        z : Rt.Float.t;
+        test1 : Rt.Double.t;
+        test2 : Color.t;
+        test3 : Test.obj;
+      }
+
+      let unpack b__ s__ : obj = {
+        x = x b__ s__;
+        y = y b__ s__;
+        z = z b__ s__;
+        test1 = test1 b__ s__;
+        test2 = test2 b__ s__;
+        test3 = Test.unpack b__ (test3 b__ s__);
+      }
+
+      let pack (obj : obj) = (obj.x, obj.y, obj.z, obj.test1, obj.test2, Test.pack obj.test3)
     end
 
-    module StructOfStructsOfStructs = struct
+    (* Struct MyGame.Example.StructOfStructsOfStructs (//monster_test.fbs) *)
+    and StructOfStructsOfStructs : sig
+      type t = (StructOfStructs.t)
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      val a : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, StructOfStructs.t) Rt.fb
+
+      type obj = {
+        a : StructOfStructs.obj;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
+    end = struct
       type t = (((Rt.UInt.t * Rt.UInt.t) * (Rt.Short.t * Rt.Byte.t) * (Rt.UInt.t * Rt.UInt.t)))
 
       module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 20 let set = Struct.set_struct_of_structs_of_structs__7 end)
@@ -365,63 +2365,236 @@ module MyGame = struct
       module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 20 let set = Struct.set_struct_of_structs_of_structs__7 end)
 
       let[@inline] a b s = Rt.Struct.read_offset b s 0
+
+      type obj = {
+        a : StructOfStructs.obj;
+      }
+
+      let unpack b__ s__ : obj = {
+        a = StructOfStructs.unpack b__ (a b__ s__);
+      }
+
+      let pack (obj : obj) = StructOfStructs.pack obj.a
     end
 
-    module StructOfStructs = struct
-      type t = ((Rt.UInt.t * Rt.UInt.t) * (Rt.Short.t * Rt.Byte.t) * (Rt.UInt.t * Rt.UInt.t))
+    (** an example documentation comment: "monster object"
 
-      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 20 let set = Struct.set_struct_of_structs__6 end)
-
-      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 20 let set = Struct.set_struct_of_structs__6 end)
-
-      let[@inline] a b s = Rt.Struct.read_offset b s 0
-      let[@inline] b b s = Rt.Struct.read_offset b s 8
-      let[@inline] c b s = Rt.Struct.read_offset b s 12
-    end
-
-    module Stat = struct
+        Table MyGame.Example.Monster (//monster_test.fbs) *)
+    and Monster : sig
       type t
 
-      module Vector = Rt.Ref.Vector
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
-      module Vector64 = Rt.Ref64.Vector
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
 
-      let[@inline] id b o = Rt.Ref.read_table_opt b o 4
-      let[@inline] val_ b o = Rt.Long.(read_table_default b o 6 ~default:(of_default 0L))
-      let[@inline] count b o = Rt.UShort.(read_table_default b o 8 ~default:(of_default 0L))
-      let[@inline] lookup_by_key buf vec_off key = Rt.lookup_by_key_ref buf vec_off (fun elt -> compare (count buf elt) key)
+      val extension : string option
+      val identifier : string option
+      val has_identifier : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> bool
+      val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+      val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
-      module Builder = struct
-        type t = Rt.Builder.t
+      val pos : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Vec3.t) Rt.fbopt
+      val mana : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+      val hp : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+      val name : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fb
+      val inventory : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
+      val color : 'b Rt.buf -> ('b, t) Rt.fb -> Color.t
+      val test_type : 'b Rt.buf -> ('b, t) Rt.fb -> Any.t
+      val test : ?none:'a -> ?monster:(('b, t) Rt.fb -> 'a) -> ?test_simple_table_with_enum:(('b, TestSimpleTableWithEnum.t) Rt.fb -> 'a) -> ?my_game_example2_monster:(('b, Example2.Monster.t) Rt.fb -> 'a) -> default:(Any.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a
+      val test4 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Test.Vector.t) Rt.fbopt
+      val testarrayofstring : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.Vector.t) Rt.fbopt
 
-        let start b = Rt.Builder.start_table b ~n_fields:3
-        let finish b = Rt.Builder.end_table b
-        let add_id = Rt.Ref.push_slot 0
-        let add_val_ = Rt.Long.(push_slot_default 1 ~default:(of_default 0L))
-        let add_count = Rt.UShort.(push_slot_default 2 ~default:(of_default 0L))
+      (** an example documentation comment: this will end up in the generated code multiline too *)
+      val testarrayoftables : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Vector.t) Rt.fbopt
+      val enemy : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, t) Rt.fbopt
+      val testnestedflatbuffer : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
+      val testnestedflatbuffer_as_monster : 'b Rt.buf -> ('b, t) Rt.fb -> t Rt.root option
+      val testempty : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Stat.t) Rt.fbopt
+      val testbool : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Bool.t
+      val testhashs32_fnv1 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+      val testhashu32_fnv1 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
+      val testhashs64_fnv1 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Long.t
+      val testhashu64_fnv1 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+      val testhashs32_fnv1_a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+      val testhashu32_fnv1_a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
+      val testhashs64_fnv1_a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Long.t
+      val testhashu64_fnv1_a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+      val testarrayofbools : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Bool.Vector.t) Rt.fbopt
+      val testf : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val testf2 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val testf3 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val testarrayofstring2 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.Vector.t) Rt.fbopt
+      val testarrayofsortedstruct : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Ability.Vector.t) Rt.fbopt
+      val flex : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
+      val test5 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Test.Vector.t) Rt.fbopt
+      val vector_of_longs : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Long.Vector.t) Rt.fbopt
+      val vector_of_doubles : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Double.Vector.t) Rt.fbopt
+      val parent_namespace_test : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, InParentNamespace.t) Rt.fbopt
+      val vector_of_referrables : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Referrable.Vector.t) Rt.fbopt
+      val single_weak_reference : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+      val vector_of_weak_references : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.ULong.Vector.t) Rt.fbopt
+      val vector_of_strong_referrables : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Referrable.Vector.t) Rt.fbopt
+      val co_owning_reference : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+      val vector_of_co_owning_references : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.ULong.Vector.t) Rt.fbopt
+      val non_owning_reference : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+      val vector_of_non_owning_references : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.ULong.Vector.t) Rt.fbopt
+      val any_unique_type : 'b Rt.buf -> ('b, t) Rt.fb -> AnyUniqueAliases.t
+      val any_unique : ?none:'a -> ?m:(('b, t) Rt.fb -> 'a) -> ?ts:(('b, TestSimpleTableWithEnum.t) Rt.fb -> 'a) -> ?m2:(('b, Example2.Monster.t) Rt.fb -> 'a) -> default:(AnyUniqueAliases.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a
+      val any_ambiguous_type : 'b Rt.buf -> ('b, t) Rt.fb -> AnyAmbiguousAliases.t
+      val any_ambiguous : ?none:'a -> ?m1:(('b, t) Rt.fb -> 'a) -> ?m2:(('b, t) Rt.fb -> 'a) -> ?m3:(('b, t) Rt.fb -> 'a) -> default:(AnyAmbiguousAliases.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a
+      val vector_of_enums : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Color.Vector.t) Rt.fbopt
+      val signed_enum : 'b Rt.buf -> ('b, t) Rt.fb -> Race.t
+      val testrequirednestedflatbuffer : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
+      val testrequirednestedflatbuffer_as_monster : 'b Rt.buf -> ('b, t) Rt.fb -> t Rt.root option
+      val scalar_key_sorted_tables : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Stat.Vector.t) Rt.fbopt
+      val native_inline : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Test.t) Rt.fbopt
+      val long_enum_non_enum_default : 'b Rt.buf -> ('b, t) Rt.fb -> LongEnum.t
+      val long_enum_normal_default : 'b Rt.buf -> ('b, t) Rt.fb -> LongEnum.t
+      val nan_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val inf_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val positive_inf_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val infinity_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val positive_infinity_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val negative_inf_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val negative_infinity_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val double_inf_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+      val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> string -> ('b, t) Rt.fbopt
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> Monster.t Rt.wip
+        val add_pos : Vec3.t -> t -> t
+        val add_mana : Rt.Short.t -> t -> t
+        val add_hp : Rt.Short.t -> t -> t
+        val add_name : Rt.String.t Rt.wip -> t -> t
+        val add_inventory : Rt.UByte.Vector.t Rt.wip -> t -> t
+        val add_color : Color.t -> t -> t
+        val add_test_monster : Monster.t Rt.wip -> t -> t
+        val add_test_test_simple_table_with_enum : TestSimpleTableWithEnum.t Rt.wip -> t -> t
+        val add_test_my_game_example2_monster : Example2.Monster.t Rt.wip -> t -> t
+        val add_test4 : Test.Vector.t Rt.wip -> t -> t
+        val add_testarrayofstring : Rt.String.Vector.t Rt.wip -> t -> t
+        val add_testarrayoftables : Monster.Vector.t Rt.wip -> t -> t
+        val add_enemy : Monster.t Rt.wip -> t -> t
+        val add_testnestedflatbuffer : Rt.UByte.Vector.t Rt.wip -> t -> t
+        val add_testempty : Stat.t Rt.wip -> t -> t
+        val add_testbool : Rt.Bool.t -> t -> t
+        val add_testhashs32_fnv1 : Rt.Int.t -> t -> t
+        val add_testhashu32_fnv1 : Rt.UInt.t -> t -> t
+        val add_testhashs64_fnv1 : Rt.Long.t -> t -> t
+        val add_testhashu64_fnv1 : Rt.ULong.t -> t -> t
+        val add_testhashs32_fnv1_a : Rt.Int.t -> t -> t
+        val add_testhashu32_fnv1_a : Rt.UInt.t -> t -> t
+        val add_testhashs64_fnv1_a : Rt.Long.t -> t -> t
+        val add_testhashu64_fnv1_a : Rt.ULong.t -> t -> t
+        val add_testarrayofbools : Rt.Bool.Vector.t Rt.wip -> t -> t
+        val add_testf : Rt.Float.t -> t -> t
+        val add_testf2 : Rt.Float.t -> t -> t
+        val add_testf3 : Rt.Float.t -> t -> t
+        val add_testarrayofstring2 : Rt.String.Vector.t Rt.wip -> t -> t
+        val add_testarrayofsortedstruct : Ability.Vector.t Rt.wip -> t -> t
+        val add_flex : Rt.UByte.Vector.t Rt.wip -> t -> t
+        val add_test5 : Test.Vector.t Rt.wip -> t -> t
+        val add_vector_of_longs : Rt.Long.Vector.t Rt.wip -> t -> t
+        val add_vector_of_doubles : Rt.Double.Vector.t Rt.wip -> t -> t
+        val add_parent_namespace_test : InParentNamespace.t Rt.wip -> t -> t
+        val add_vector_of_referrables : Referrable.Vector.t Rt.wip -> t -> t
+        val add_single_weak_reference : Rt.ULong.t -> t -> t
+        val add_vector_of_weak_references : Rt.ULong.Vector.t Rt.wip -> t -> t
+        val add_vector_of_strong_referrables : Referrable.Vector.t Rt.wip -> t -> t
+        val add_co_owning_reference : Rt.ULong.t -> t -> t
+        val add_vector_of_co_owning_references : Rt.ULong.Vector.t Rt.wip -> t -> t
+        val add_non_owning_reference : Rt.ULong.t -> t -> t
+        val add_vector_of_non_owning_references : Rt.ULong.Vector.t Rt.wip -> t -> t
+        val add_any_unique_m : Monster.t Rt.wip -> t -> t
+        val add_any_unique_ts : TestSimpleTableWithEnum.t Rt.wip -> t -> t
+        val add_any_unique_m2 : Example2.Monster.t Rt.wip -> t -> t
+        val add_any_ambiguous_m1 : Monster.t Rt.wip -> t -> t
+        val add_any_ambiguous_m2 : Monster.t Rt.wip -> t -> t
+        val add_any_ambiguous_m3 : Monster.t Rt.wip -> t -> t
+        val add_vector_of_enums : Color.Vector.t Rt.wip -> t -> t
+        val add_signed_enum : Race.t -> t -> t
+        val add_testrequirednestedflatbuffer : Rt.UByte.Vector.t Rt.wip -> t -> t
+        val add_scalar_key_sorted_tables : Stat.Vector.t Rt.wip -> t -> t
+        val add_native_inline : Test.t -> t -> t
+        val add_long_enum_non_enum_default : LongEnum.t -> t -> t
+        val add_long_enum_normal_default : LongEnum.t -> t -> t
+        val add_nan_default : Rt.Float.t -> t -> t
+        val add_inf_default : Rt.Float.t -> t -> t
+        val add_positive_inf_default : Rt.Float.t -> t -> t
+        val add_infinity_default : Rt.Float.t -> t -> t
+        val add_positive_infinity_default : Rt.Float.t -> t -> t
+        val add_negative_inf_default : Rt.Float.t -> t -> t
+        val add_negative_infinity_default : Rt.Float.t -> t -> t
+        val add_double_inf_default : Rt.Double.t -> t -> t
       end
-    end
 
-    module Referrable = struct
-      type t
+      type obj = {
+        pos : Vec3.obj option;
+        mana : Rt.Short.t;
+        hp : Rt.Short.t;
+        name : string;
+        inventory : Rt.UByte.t array;
+        color : Color.t;
+        test : Any.obj;
+        test4 : Test.obj array;
+        testarrayofstring : string array;
+        testarrayoftables : obj array;
+        enemy : obj option;
+        testnestedflatbuffer : Rt.UByte.t array;
+        testempty : Stat.obj option;
+        testbool : Rt.Bool.t;
+        testhashs32_fnv1 : Rt.Int.t;
+        testhashu32_fnv1 : Rt.UInt.t;
+        testhashs64_fnv1 : Rt.Long.t;
+        testhashu64_fnv1 : Rt.ULong.t;
+        testhashs32_fnv1_a : Rt.Int.t;
+        testhashu32_fnv1_a : Rt.UInt.t;
+        testhashs64_fnv1_a : Rt.Long.t;
+        testhashu64_fnv1_a : Rt.ULong.t;
+        testarrayofbools : Rt.Bool.t array;
+        testf : Rt.Float.t;
+        testf2 : Rt.Float.t;
+        testf3 : Rt.Float.t;
+        testarrayofstring2 : string array;
+        testarrayofsortedstruct : Ability.obj array;
+        flex : Rt.UByte.t array;
+        test5 : Test.obj array;
+        vector_of_longs : Rt.Long.t array;
+        vector_of_doubles : Rt.Double.t array;
+        parent_namespace_test : InParentNamespace.obj option;
+        vector_of_referrables : Referrable.obj array;
+        single_weak_reference : Rt.ULong.t;
+        vector_of_weak_references : Rt.ULong.t array;
+        vector_of_strong_referrables : Referrable.obj array;
+        co_owning_reference : Rt.ULong.t;
+        vector_of_co_owning_references : Rt.ULong.t array;
+        non_owning_reference : Rt.ULong.t;
+        vector_of_non_owning_references : Rt.ULong.t array;
+        any_unique : AnyUniqueAliases.obj;
+        any_ambiguous : AnyAmbiguousAliases.obj;
+        vector_of_enums : Color.t array;
+        signed_enum : Race.t;
+        testrequirednestedflatbuffer : Rt.UByte.t array;
+        scalar_key_sorted_tables : Stat.obj array;
+        native_inline : Test.obj option;
+        long_enum_non_enum_default : LongEnum.t;
+        long_enum_normal_default : LongEnum.t;
+        nan_default : Rt.Float.t;
+        inf_default : Rt.Float.t;
+        positive_inf_default : Rt.Float.t;
+        infinity_default : Rt.Float.t;
+        positive_infinity_default : Rt.Float.t;
+        negative_inf_default : Rt.Float.t;
+        negative_infinity_default : Rt.Float.t;
+        double_inf_default : Rt.Double.t;
+      }
 
-      module Vector = Rt.Ref.Vector
-
-      module Vector64 = Rt.Ref64.Vector
-
-      let[@inline] id b o = Rt.ULong.(read_table_default b o 4 ~default:(of_default 0L))
-      let[@inline] lookup_by_key buf vec_off key = Rt.lookup_by_key_ref buf vec_off (fun elt -> compare (id buf elt) key)
-
-      module Builder = struct
-        type t = Rt.Builder.t
-
-        let start b = Rt.Builder.start_table b ~n_fields:1
-        let finish b = Rt.Builder.end_table b
-        let add_id = Rt.ULong.(push_slot_default 0 ~default:(of_default 0L))
-      end
-    end
-
-    module Monster = struct
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end = struct
       type t
 
       module Vector = Rt.Ref.Vector
@@ -569,18 +2742,303 @@ module MyGame = struct
         let add_negative_infinity_default = Rt.Float.(push_slot_default 60 ~default:(of_default neg_infinity))
         let add_double_inf_default = Rt.Double.(push_slot_default 61 ~default:(of_default infinity))
       end
-    end
 
-    module Ability = struct
-      type t = (Rt.UInt.t * Rt.UInt.t)
+      type obj = {
+        pos : Vec3.obj option;
+        mana : Rt.Short.t;
+        hp : Rt.Short.t;
+        name : string;
+        inventory : Rt.UByte.t array;
+        color : Color.t;
+        test : Any.obj;
+        test4 : Test.obj array;
+        testarrayofstring : string array;
+        testarrayoftables : obj array;
+        enemy : obj option;
+        testnestedflatbuffer : Rt.UByte.t array;
+        testempty : Stat.obj option;
+        testbool : Rt.Bool.t;
+        testhashs32_fnv1 : Rt.Int.t;
+        testhashu32_fnv1 : Rt.UInt.t;
+        testhashs64_fnv1 : Rt.Long.t;
+        testhashu64_fnv1 : Rt.ULong.t;
+        testhashs32_fnv1_a : Rt.Int.t;
+        testhashu32_fnv1_a : Rt.UInt.t;
+        testhashs64_fnv1_a : Rt.Long.t;
+        testhashu64_fnv1_a : Rt.ULong.t;
+        testarrayofbools : Rt.Bool.t array;
+        testf : Rt.Float.t;
+        testf2 : Rt.Float.t;
+        testf3 : Rt.Float.t;
+        testarrayofstring2 : string array;
+        testarrayofsortedstruct : Ability.obj array;
+        flex : Rt.UByte.t array;
+        test5 : Test.obj array;
+        vector_of_longs : Rt.Long.t array;
+        vector_of_doubles : Rt.Double.t array;
+        parent_namespace_test : InParentNamespace.obj option;
+        vector_of_referrables : Referrable.obj array;
+        single_weak_reference : Rt.ULong.t;
+        vector_of_weak_references : Rt.ULong.t array;
+        vector_of_strong_referrables : Referrable.obj array;
+        co_owning_reference : Rt.ULong.t;
+        vector_of_co_owning_references : Rt.ULong.t array;
+        non_owning_reference : Rt.ULong.t;
+        vector_of_non_owning_references : Rt.ULong.t array;
+        any_unique : AnyUniqueAliases.obj;
+        any_ambiguous : AnyAmbiguousAliases.obj;
+        vector_of_enums : Color.t array;
+        signed_enum : Race.t;
+        testrequirednestedflatbuffer : Rt.UByte.t array;
+        scalar_key_sorted_tables : Stat.obj array;
+        native_inline : Test.obj option;
+        long_enum_non_enum_default : LongEnum.t;
+        long_enum_normal_default : LongEnum.t;
+        nan_default : Rt.Float.t;
+        inf_default : Rt.Float.t;
+        positive_inf_default : Rt.Float.t;
+        infinity_default : Rt.Float.t;
+        positive_infinity_default : Rt.Float.t;
+        negative_inf_default : Rt.Float.t;
+        negative_infinity_default : Rt.Float.t;
+        double_inf_default : Rt.Double.t;
+      }
 
-      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 8 let set = Struct.set_ability__4 end)
+      let rec unpack b__ o__ : obj = {
+        pos = Rt.Option.fold ~none:None ~some:(fun x -> Some (Vec3.unpack b__ x)) (pos b__ o__);
+        mana = mana b__ o__;
+        hp = hp b__ o__;
+        name = Rt.String.to_string b__ (name b__ o__);
+        inventory = Rt.Option.fold ~none:[||] ~some:(fun v -> Rt.UByte.Vector.to_array b__ v) (inventory b__ o__);
+        color = color b__ o__;
+        test = test ~none:`None_ ~monster:(fun x -> `Monster (unpack b__ x)) ~test_simple_table_with_enum:(fun x -> `TestSimpleTableWithEnum (TestSimpleTableWithEnum.unpack b__ x)) ~my_game_example2_monster:(fun x -> `MyGameExample2Monster (Example2.Monster.unpack b__ x)) ~default:(fun _ -> `None_) b__ o__;
+        test4 = Rt.Option.fold ~none:[||] ~some:(fun v -> Array.map (fun x -> Test.unpack b__ x) (Test.Vector.to_array b__ v)) (test4 b__ o__);
+        testarrayofstring = Rt.Option.fold ~none:[||] ~some:(fun v -> Array.map (fun s -> Rt.String.to_string b__ s) (Rt.String.Vector.to_array b__ v)) (testarrayofstring b__ o__);
+        testarrayoftables = Rt.Option.fold ~none:[||] ~some:(fun v -> Array.map (fun x -> unpack b__ x) (Vector.to_array b__ v)) (testarrayoftables b__ o__);
+        enemy = Rt.Option.fold ~none:None ~some:(fun x -> Some (unpack b__ x)) (enemy b__ o__);
+        testnestedflatbuffer = Rt.Option.fold ~none:[||] ~some:(fun v -> Rt.UByte.Vector.to_array b__ v) (testnestedflatbuffer b__ o__);
+        testempty = Rt.Option.fold ~none:None ~some:(fun x -> Some (Stat.unpack b__ x)) (testempty b__ o__);
+        testbool = testbool b__ o__;
+        testhashs32_fnv1 = testhashs32_fnv1 b__ o__;
+        testhashu32_fnv1 = testhashu32_fnv1 b__ o__;
+        testhashs64_fnv1 = testhashs64_fnv1 b__ o__;
+        testhashu64_fnv1 = testhashu64_fnv1 b__ o__;
+        testhashs32_fnv1_a = testhashs32_fnv1_a b__ o__;
+        testhashu32_fnv1_a = testhashu32_fnv1_a b__ o__;
+        testhashs64_fnv1_a = testhashs64_fnv1_a b__ o__;
+        testhashu64_fnv1_a = testhashu64_fnv1_a b__ o__;
+        testarrayofbools = Rt.Option.fold ~none:[||] ~some:(fun v -> Rt.Bool.Vector.to_array b__ v) (testarrayofbools b__ o__);
+        testf = testf b__ o__;
+        testf2 = testf2 b__ o__;
+        testf3 = testf3 b__ o__;
+        testarrayofstring2 = Rt.Option.fold ~none:[||] ~some:(fun v -> Array.map (fun s -> Rt.String.to_string b__ s) (Rt.String.Vector.to_array b__ v)) (testarrayofstring2 b__ o__);
+        testarrayofsortedstruct = Rt.Option.fold ~none:[||] ~some:(fun v -> Array.map (fun x -> Ability.unpack b__ x) (Ability.Vector.to_array b__ v)) (testarrayofsortedstruct b__ o__);
+        flex = Rt.Option.fold ~none:[||] ~some:(fun v -> Rt.UByte.Vector.to_array b__ v) (flex b__ o__);
+        test5 = Rt.Option.fold ~none:[||] ~some:(fun v -> Array.map (fun x -> Test.unpack b__ x) (Test.Vector.to_array b__ v)) (test5 b__ o__);
+        vector_of_longs = Rt.Option.fold ~none:[||] ~some:(fun v -> Rt.Long.Vector.to_array b__ v) (vector_of_longs b__ o__);
+        vector_of_doubles = Rt.Option.fold ~none:[||] ~some:(fun v -> Rt.Double.Vector.to_array b__ v) (vector_of_doubles b__ o__);
+        parent_namespace_test = Rt.Option.fold ~none:None ~some:(fun x -> Some (InParentNamespace.unpack b__ x)) (parent_namespace_test b__ o__);
+        vector_of_referrables = Rt.Option.fold ~none:[||] ~some:(fun v -> Array.map (fun x -> Referrable.unpack b__ x) (Referrable.Vector.to_array b__ v)) (vector_of_referrables b__ o__);
+        single_weak_reference = single_weak_reference b__ o__;
+        vector_of_weak_references = Rt.Option.fold ~none:[||] ~some:(fun v -> Rt.ULong.Vector.to_array b__ v) (vector_of_weak_references b__ o__);
+        vector_of_strong_referrables = Rt.Option.fold ~none:[||] ~some:(fun v -> Array.map (fun x -> Referrable.unpack b__ x) (Referrable.Vector.to_array b__ v)) (vector_of_strong_referrables b__ o__);
+        co_owning_reference = co_owning_reference b__ o__;
+        vector_of_co_owning_references = Rt.Option.fold ~none:[||] ~some:(fun v -> Rt.ULong.Vector.to_array b__ v) (vector_of_co_owning_references b__ o__);
+        non_owning_reference = non_owning_reference b__ o__;
+        vector_of_non_owning_references = Rt.Option.fold ~none:[||] ~some:(fun v -> Rt.ULong.Vector.to_array b__ v) (vector_of_non_owning_references b__ o__);
+        any_unique = any_unique ~none:`None_ ~m:(fun x -> `M (unpack b__ x)) ~ts:(fun x -> `Ts (TestSimpleTableWithEnum.unpack b__ x)) ~m2:(fun x -> `M2 (Example2.Monster.unpack b__ x)) ~default:(fun _ -> `None_) b__ o__;
+        any_ambiguous = any_ambiguous ~none:`None_ ~m1:(fun x -> `M1 (unpack b__ x)) ~m2:(fun x -> `M2 (unpack b__ x)) ~m3:(fun x -> `M3 (unpack b__ x)) ~default:(fun _ -> `None_) b__ o__;
+        vector_of_enums = Rt.Option.fold ~none:[||] ~some:(fun v -> Color.Vector.to_array b__ v) (vector_of_enums b__ o__);
+        signed_enum = signed_enum b__ o__;
+        testrequirednestedflatbuffer = Rt.Option.fold ~none:[||] ~some:(fun v -> Rt.UByte.Vector.to_array b__ v) (testrequirednestedflatbuffer b__ o__);
+        scalar_key_sorted_tables = Rt.Option.fold ~none:[||] ~some:(fun v -> Array.map (fun x -> Stat.unpack b__ x) (Stat.Vector.to_array b__ v)) (scalar_key_sorted_tables b__ o__);
+        native_inline = Rt.Option.fold ~none:None ~some:(fun x -> Some (Test.unpack b__ x)) (native_inline b__ o__);
+        long_enum_non_enum_default = long_enum_non_enum_default b__ o__;
+        long_enum_normal_default = long_enum_normal_default b__ o__;
+        nan_default = nan_default b__ o__;
+        inf_default = inf_default b__ o__;
+        positive_inf_default = positive_inf_default b__ o__;
+        infinity_default = infinity_default b__ o__;
+        positive_infinity_default = positive_infinity_default b__ o__;
+        negative_inf_default = negative_inf_default b__ o__;
+        negative_infinity_default = negative_infinity_default b__ o__;
+        double_inf_default = double_inf_default b__ o__;
+      }
 
-      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 8 let set = Struct.set_ability__4 end)
-
-      let[@inline] id b s = Rt.UInt.read_offset b s 0
-      let[@inline] distance b s = Rt.UInt.read_offset b s 4
-      let[@inline] lookup_by_key buf vec_off key = Rt.lookup_by_key_struct ~size:8 buf vec_off (fun elt -> compare (id buf elt) key)
+      and pack b__ (obj : obj) =
+        let name' = Rt.String.create b__ obj.name in
+        let inventory' = Rt.UByte.Vector.create b__ obj.inventory in
+        let test' = match obj.test with
+          | `None_ -> None
+          | `Monster x -> Some (`Monster, pack b__ x)
+          | `TestSimpleTableWithEnum x -> Some (`TestSimpleTableWithEnum, TestSimpleTableWithEnum.pack b__ x)
+          | `MyGameExample2Monster x -> Some (`MyGameExample2Monster, Example2.Monster.pack b__ x)
+        in
+        let test4' = Test.Vector.create b__ (Array.map Test.pack obj.test4) in
+        let testarrayofstring' = Rt.String.Vector.create b__ (Array.map (fun s -> Rt.String.create b__ s) obj.testarrayofstring) in
+        let testarrayoftables' = Vector.create b__ (Array.map (fun x -> pack b__ x) obj.testarrayoftables) in
+        let enemy' = Option.map (fun x -> pack b__ x) obj.enemy in
+        let testnestedflatbuffer' = Rt.UByte.Vector.create b__ obj.testnestedflatbuffer in
+        let testempty' = Option.map (fun x -> Stat.pack b__ x) obj.testempty in
+        let testarrayofbools' = Rt.Bool.Vector.create b__ obj.testarrayofbools in
+        let testarrayofstring2' = Rt.String.Vector.create b__ (Array.map (fun s -> Rt.String.create b__ s) obj.testarrayofstring2) in
+        let testarrayofsortedstruct' = Ability.Vector.create b__ (Array.map Ability.pack obj.testarrayofsortedstruct) in
+        let flex' = Rt.UByte.Vector.create b__ obj.flex in
+        let test5' = Test.Vector.create b__ (Array.map Test.pack obj.test5) in
+        let vector_of_longs' = Rt.Long.Vector.create b__ obj.vector_of_longs in
+        let vector_of_doubles' = Rt.Double.Vector.create b__ obj.vector_of_doubles in
+        let parent_namespace_test' = Option.map (fun x -> InParentNamespace.pack b__ x) obj.parent_namespace_test in
+        let vector_of_referrables' = Referrable.Vector.create b__ (Array.map (fun x -> Referrable.pack b__ x) obj.vector_of_referrables) in
+        let vector_of_weak_references' = Rt.ULong.Vector.create b__ obj.vector_of_weak_references in
+        let vector_of_strong_referrables' = Referrable.Vector.create b__ (Array.map (fun x -> Referrable.pack b__ x) obj.vector_of_strong_referrables) in
+        let vector_of_co_owning_references' = Rt.ULong.Vector.create b__ obj.vector_of_co_owning_references in
+        let vector_of_non_owning_references' = Rt.ULong.Vector.create b__ obj.vector_of_non_owning_references in
+        let any_unique' = match obj.any_unique with
+          | `None_ -> None
+          | `M x -> Some (`M, pack b__ x)
+          | `Ts x -> Some (`Ts, TestSimpleTableWithEnum.pack b__ x)
+          | `M2 x -> Some (`M2, Example2.Monster.pack b__ x)
+        in
+        let any_ambiguous' = match obj.any_ambiguous with
+          | `None_ -> None
+          | `M1 x -> Some (`M1, pack b__ x)
+          | `M2 x -> Some (`M2, pack b__ x)
+          | `M3 x -> Some (`M3, pack b__ x)
+        in
+        let vector_of_enums' = Color.Vector.create b__ obj.vector_of_enums in
+        let testrequirednestedflatbuffer' = Rt.UByte.Vector.create b__ obj.testrequirednestedflatbuffer in
+        let scalar_key_sorted_tables' = Stat.Vector.create b__ (Array.map (fun x -> Stat.pack b__ x) obj.scalar_key_sorted_tables) in
+        let t = Builder.start b__ in
+        let t = match obj.pos with None -> t | Some s -> Builder.add_pos (Vec3.pack s) t in
+        let t = Builder.add_mana obj.mana t in
+        let t = Builder.add_hp obj.hp t in
+        let t = Builder.add_name name' t in
+        let t = Builder.add_inventory inventory' t in
+        let t = Builder.add_color obj.color t in
+        let t = match test' with
+          | None -> t
+          | Some (`Monster, off) -> Builder.add_test_monster off t
+          | Some (`TestSimpleTableWithEnum, off) -> Builder.add_test_test_simple_table_with_enum off t
+          | Some (`MyGameExample2Monster, off) -> Builder.add_test_my_game_example2_monster off t
+        in
+        let t = Builder.add_test4 test4' t in
+        let t = Builder.add_testarrayofstring testarrayofstring' t in
+        let t = Builder.add_testarrayoftables testarrayoftables' t in
+        let t = match enemy' with None -> t | Some off -> Builder.add_enemy off t in
+        let t = Builder.add_testnestedflatbuffer testnestedflatbuffer' t in
+        let t = match testempty' with None -> t | Some off -> Builder.add_testempty off t in
+        let t = Builder.add_testbool obj.testbool t in
+        let t = Builder.add_testhashs32_fnv1 obj.testhashs32_fnv1 t in
+        let t = Builder.add_testhashu32_fnv1 obj.testhashu32_fnv1 t in
+        let t = Builder.add_testhashs64_fnv1 obj.testhashs64_fnv1 t in
+        let t = Builder.add_testhashu64_fnv1 obj.testhashu64_fnv1 t in
+        let t = Builder.add_testhashs32_fnv1_a obj.testhashs32_fnv1_a t in
+        let t = Builder.add_testhashu32_fnv1_a obj.testhashu32_fnv1_a t in
+        let t = Builder.add_testhashs64_fnv1_a obj.testhashs64_fnv1_a t in
+        let t = Builder.add_testhashu64_fnv1_a obj.testhashu64_fnv1_a t in
+        let t = Builder.add_testarrayofbools testarrayofbools' t in
+        let t = Builder.add_testf obj.testf t in
+        let t = Builder.add_testf2 obj.testf2 t in
+        let t = Builder.add_testf3 obj.testf3 t in
+        let t = Builder.add_testarrayofstring2 testarrayofstring2' t in
+        let t = Builder.add_testarrayofsortedstruct testarrayofsortedstruct' t in
+        let t = Builder.add_flex flex' t in
+        let t = Builder.add_test5 test5' t in
+        let t = Builder.add_vector_of_longs vector_of_longs' t in
+        let t = Builder.add_vector_of_doubles vector_of_doubles' t in
+        let t = match parent_namespace_test' with None -> t | Some off -> Builder.add_parent_namespace_test off t in
+        let t = Builder.add_vector_of_referrables vector_of_referrables' t in
+        let t = Builder.add_single_weak_reference obj.single_weak_reference t in
+        let t = Builder.add_vector_of_weak_references vector_of_weak_references' t in
+        let t = Builder.add_vector_of_strong_referrables vector_of_strong_referrables' t in
+        let t = Builder.add_co_owning_reference obj.co_owning_reference t in
+        let t = Builder.add_vector_of_co_owning_references vector_of_co_owning_references' t in
+        let t = Builder.add_non_owning_reference obj.non_owning_reference t in
+        let t = Builder.add_vector_of_non_owning_references vector_of_non_owning_references' t in
+        let t = match any_unique' with
+          | None -> t
+          | Some (`M, off) -> Builder.add_any_unique_m off t
+          | Some (`Ts, off) -> Builder.add_any_unique_ts off t
+          | Some (`M2, off) -> Builder.add_any_unique_m2 off t
+        in
+        let t = match any_ambiguous' with
+          | None -> t
+          | Some (`M1, off) -> Builder.add_any_ambiguous_m1 off t
+          | Some (`M2, off) -> Builder.add_any_ambiguous_m2 off t
+          | Some (`M3, off) -> Builder.add_any_ambiguous_m3 off t
+        in
+        let t = Builder.add_vector_of_enums vector_of_enums' t in
+        let t = Builder.add_signed_enum obj.signed_enum t in
+        let t = Builder.add_testrequirednestedflatbuffer testrequirednestedflatbuffer' t in
+        let t = Builder.add_scalar_key_sorted_tables scalar_key_sorted_tables' t in
+        let t = match obj.native_inline with None -> t | Some s -> Builder.add_native_inline (Test.pack s) t in
+        let t = Builder.add_long_enum_non_enum_default obj.long_enum_non_enum_default t in
+        let t = Builder.add_long_enum_normal_default obj.long_enum_normal_default t in
+        let t = Builder.add_nan_default obj.nan_default t in
+        let t = Builder.add_inf_default obj.inf_default t in
+        let t = Builder.add_positive_inf_default obj.positive_inf_default t in
+        let t = Builder.add_infinity_default obj.infinity_default t in
+        let t = Builder.add_positive_infinity_default obj.positive_infinity_default t in
+        let t = Builder.add_negative_inf_default obj.negative_inf_default t in
+        let t = Builder.add_negative_infinity_default obj.negative_infinity_default t in
+        let t = Builder.add_double_inf_default obj.double_inf_default t in
+        Builder.finish t
     end
   end (* Example *)
 end (* MyGame *)
+
+(* Table TableA (//include_test/include_test1.fbs) *)
+and TableA : sig
+  type t
+
+  module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+  module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+  val b : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, MyGame.OtherNameSpace.TableB.t) Rt.fbopt
+
+  module Builder : sig
+    type t
+
+    val start : Rt.Builder.t -> t
+    val finish : t -> TableA.t Rt.wip
+    val add_b : MyGame.OtherNameSpace.TableB.t Rt.wip -> t -> t
+  end
+
+  type obj = {
+    b : MyGame.OtherNameSpace.TableB.obj option;
+  }
+
+  val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+  val pack : Rt.Builder.t -> obj -> t Rt.wip
+end = struct
+  type t
+
+  module Vector = Rt.Ref.Vector
+
+  module Vector64 = Rt.Ref64.Vector
+
+  let[@inline] b b o = Rt.Ref.read_table_opt b o 4
+
+  module Builder = struct
+    type t = Rt.Builder.t
+
+    let start b = Rt.Builder.start_table b ~n_fields:1
+    let finish b = Rt.Builder.end_table b
+    let add_b = Rt.Ref.push_slot 0
+  end
+
+  type obj = {
+    b : MyGame.OtherNameSpace.TableB.obj option;
+  }
+
+  let unpack b__ o__ : obj = {
+    b = Rt.Option.fold ~none:None ~some:(fun x -> Some (MyGame.OtherNameSpace.TableB.unpack b__ x)) (b b__ o__);
+  }
+
+  let pack b__ (obj : obj) =
+    let b' = Option.map (fun x -> MyGame.OtherNameSpace.TableB.pack b__ x) obj.b in
+    let t = Builder.start b__ in
+    let t = match b' with None -> t | Some off -> Builder.add_b off t in
+    Builder.finish t
+end

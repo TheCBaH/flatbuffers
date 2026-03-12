@@ -48,5 +48,21 @@ module rec MyGame : sig
       val add_dvec : Rt.Double.Vector.t Rt.wip -> t -> t
       val add_fvec : Rt.Float.Vector.t Rt.wip -> t -> t
     end
+
+    type obj = {
+      d0 : Rt.Double.t;
+      d1 : Rt.Double.t;
+      d2 : Rt.Double.t;
+      d3 : Rt.Double.t;
+      f0 : Rt.Float.t;
+      f1 : Rt.Float.t;
+      f2 : Rt.Float.t;
+      f3 : Rt.Float.t;
+      dvec : Rt.Double.t array;
+      fvec : Rt.Float.t array;
+    }
+
+    val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+    val pack : Rt.Builder.t -> obj -> t Rt.wip
   end
 end (* MyGame *)

@@ -25,8 +25,206 @@ module Struct = struct
     Rt.Builder.set_scalar TUInt b (i + 12) length_;
 end
 
-module BenchmarksFlatbuffers = struct
-  module Enum = struct
+module rec BenchmarksFlatbuffers : sig
+  (* Struct benchmarks_flatbuffers.Foo (//bench.fbs) *)
+  module rec Foo : sig
+    type t = (Rt.ULong.t * Rt.Short.t * Rt.Byte.t * Rt.UInt.t)
+
+    module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+    val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+    val count : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+    val prefix : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Byte.t
+    val length : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
+
+    type obj = {
+      id : Rt.ULong.t;
+      count : Rt.Short.t;
+      prefix : Rt.Byte.t;
+      length : Rt.UInt.t;
+    }
+
+    val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+    val pack : obj -> t
+  end
+
+  (* Enum benchmarks_flatbuffers.Enum (//bench.fbs) *)
+  and Enum : sig
+    type t = Rt.Short.t
+
+    val apples : t
+    val pears : t
+    val bananas : t
+    val to_string : t -> string
+
+    module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+    module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
+  end
+
+  (* Struct benchmarks_flatbuffers.Bar (//bench.fbs) *)
+  and Bar : sig
+    type t = (Foo.t * Rt.Int.t * Rt.Float.t * Rt.UShort.t)
+
+    module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+    val parent : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Foo.t) Rt.fb
+    val time : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+    val ratio : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+    val size : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UShort.t
+
+    type obj = {
+      parent : Foo.obj;
+      time : Rt.Int.t;
+      ratio : Rt.Float.t;
+      size : Rt.UShort.t;
+    }
+
+    val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+    val pack : obj -> t
+  end
+
+  (* Table benchmarks_flatbuffers.FooBar (//bench.fbs) *)
+  and FooBar : sig
+    type t
+
+    module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+    val sibling : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Bar.t) Rt.fbopt
+    val name : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fbopt
+    val rating : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+    val postfix : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UByte.t
+
+    module Builder : sig
+      type t
+
+      val start : Rt.Builder.t -> t
+      val finish : t -> FooBar.t Rt.wip
+      val add_sibling : Bar.t -> t -> t
+      val add_name : Rt.String.t Rt.wip -> t -> t
+      val add_rating : Rt.Double.t -> t -> t
+      val add_postfix : Rt.UByte.t -> t -> t
+    end
+
+    type obj = {
+      sibling : Bar.obj option;
+      name : string option;
+      rating : Rt.Double.t;
+      postfix : Rt.UByte.t;
+    }
+
+    val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+    val pack : Rt.Builder.t -> obj -> t Rt.wip
+  end
+
+  (* Table benchmarks_flatbuffers.FooBarContainer (//bench.fbs) *)
+  and FooBarContainer : sig
+    type t
+
+    module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+    val extension : string option
+    val identifier : string option
+    val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+    val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
+
+    val list : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, FooBar.Vector.t) Rt.fbopt
+    val initialized : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Bool.t
+    val fruit : 'b Rt.buf -> ('b, t) Rt.fb -> Enum.t
+    val location : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fbopt
+
+    module Builder : sig
+      type t
+
+      val start : Rt.Builder.t -> t
+      val finish : t -> FooBarContainer.t Rt.wip
+      val add_list : FooBar.Vector.t Rt.wip -> t -> t
+      val add_initialized : Rt.Bool.t -> t -> t
+      val add_fruit : Enum.t -> t -> t
+      val add_location : Rt.String.t Rt.wip -> t -> t
+    end
+
+    type obj = {
+      list : FooBar.obj array;
+      initialized : Rt.Bool.t;
+      fruit : Enum.t;
+      location : string option;
+    }
+
+    val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+    val pack : Rt.Builder.t -> obj -> t Rt.wip
+  end
+end = struct
+  (* Struct benchmarks_flatbuffers.Foo (//bench.fbs) *)
+  module rec Foo : sig
+    type t = (Rt.ULong.t * Rt.Short.t * Rt.Byte.t * Rt.UInt.t)
+
+    module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+    val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+    val count : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+    val prefix : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Byte.t
+    val length : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
+
+    type obj = {
+      id : Rt.ULong.t;
+      count : Rt.Short.t;
+      prefix : Rt.Byte.t;
+      length : Rt.UInt.t;
+    }
+
+    val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+    val pack : obj -> t
+  end = struct
+    type t = (Rt.ULong.t * Rt.Short.t * Rt.Byte.t * Rt.UInt.t)
+
+    module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 16 let set = Struct.set_foo__2 end)
+
+    module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 16 let set = Struct.set_foo__2 end)
+
+    let[@inline] id b s = Rt.ULong.read_offset b s 0
+    let[@inline] count b s = Rt.Short.read_offset b s 8
+    let[@inline] prefix b s = Rt.Byte.read_offset b s 10
+    let[@inline] length b s = Rt.UInt.read_offset b s 12
+
+    type obj = {
+      id : Rt.ULong.t;
+      count : Rt.Short.t;
+      prefix : Rt.Byte.t;
+      length : Rt.UInt.t;
+    }
+
+    let unpack b__ s__ : obj = {
+      id = id b__ s__;
+      count = count b__ s__;
+      prefix = prefix b__ s__;
+      length = length b__ s__;
+    }
+
+    let pack (obj : obj) = (obj.id, obj.count, obj.prefix, obj.length)
+  end
+
+  (* Enum benchmarks_flatbuffers.Enum (//bench.fbs) *)
+  and Enum : sig
+    type t = Rt.Short.t
+
+    val apples : t
+    val pears : t
+    val bananas : t
+    val to_string : t -> string
+
+    module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+    module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
+  end = struct
     type t = Rt.Short.t
 
     let apples = Rt.Short.of_default 0L
@@ -44,7 +242,176 @@ module BenchmarksFlatbuffers = struct
     module Vector64 = Rt.Short.Vector64
   end
 
-  module FooBarContainer = struct
+  (* Struct benchmarks_flatbuffers.Bar (//bench.fbs) *)
+  and Bar : sig
+    type t = (Foo.t * Rt.Int.t * Rt.Float.t * Rt.UShort.t)
+
+    module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+    val parent : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Foo.t) Rt.fb
+    val time : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+    val ratio : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+    val size : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UShort.t
+
+    type obj = {
+      parent : Foo.obj;
+      time : Rt.Int.t;
+      ratio : Rt.Float.t;
+      size : Rt.UShort.t;
+    }
+
+    val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+    val pack : obj -> t
+  end = struct
+    type t = ((Rt.ULong.t * Rt.Short.t * Rt.Byte.t * Rt.UInt.t) * Rt.Int.t * Rt.Float.t * Rt.UShort.t)
+
+    module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 32 let set = Struct.set_bar__3 end)
+
+    module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 32 let set = Struct.set_bar__3 end)
+
+    let[@inline] parent b s = Rt.Struct.read_offset b s 0
+    let[@inline] time b s = Rt.Int.read_offset b s 16
+    let[@inline] ratio b s = Rt.Float.read_offset b s 20
+    let[@inline] size b s = Rt.UShort.read_offset b s 24
+
+    type obj = {
+      parent : Foo.obj;
+      time : Rt.Int.t;
+      ratio : Rt.Float.t;
+      size : Rt.UShort.t;
+    }
+
+    let unpack b__ s__ : obj = {
+      parent = Foo.unpack b__ (parent b__ s__);
+      time = time b__ s__;
+      ratio = ratio b__ s__;
+      size = size b__ s__;
+    }
+
+    let pack (obj : obj) = (Foo.pack obj.parent, obj.time, obj.ratio, obj.size)
+  end
+
+  (* Table benchmarks_flatbuffers.FooBar (//bench.fbs) *)
+  and FooBar : sig
+    type t
+
+    module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+    val sibling : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Bar.t) Rt.fbopt
+    val name : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fbopt
+    val rating : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+    val postfix : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UByte.t
+
+    module Builder : sig
+      type t
+
+      val start : Rt.Builder.t -> t
+      val finish : t -> FooBar.t Rt.wip
+      val add_sibling : Bar.t -> t -> t
+      val add_name : Rt.String.t Rt.wip -> t -> t
+      val add_rating : Rt.Double.t -> t -> t
+      val add_postfix : Rt.UByte.t -> t -> t
+    end
+
+    type obj = {
+      sibling : Bar.obj option;
+      name : string option;
+      rating : Rt.Double.t;
+      postfix : Rt.UByte.t;
+    }
+
+    val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+    val pack : Rt.Builder.t -> obj -> t Rt.wip
+  end = struct
+    type t
+
+    module Vector = Rt.Ref.Vector
+
+    module Vector64 = Rt.Ref64.Vector
+
+    let[@inline] sibling b o = Rt.Struct.read_table_opt b o 4
+    let[@inline] name b o = Rt.Ref.read_table_opt b o 6
+    let[@inline] rating b o = Rt.Double.(read_table_default b o 8 ~default:(of_default 0.0))
+    let[@inline] postfix b o = Rt.UByte.(read_table_default b o 10 ~default:(of_default 0L))
+
+    module Builder = struct
+      type t = Rt.Builder.t
+
+      let start b = Rt.Builder.start_table b ~n_fields:4
+      let finish b = Rt.Builder.end_table b
+      let add_sibling = Rt.Struct.push_slot Struct.set_bar__3 32 8 0
+      let add_name = Rt.Ref.push_slot 1
+      let add_rating = Rt.Double.(push_slot_default 2 ~default:(of_default 0.0))
+      let add_postfix = Rt.UByte.(push_slot_default 3 ~default:(of_default 0L))
+    end
+
+    type obj = {
+      sibling : Bar.obj option;
+      name : string option;
+      rating : Rt.Double.t;
+      postfix : Rt.UByte.t;
+    }
+
+    let unpack b__ o__ : obj = {
+      sibling = Rt.Option.fold ~none:None ~some:(fun x -> Some (Bar.unpack b__ x)) (sibling b__ o__);
+      name = Rt.Option.fold ~none:None ~some:(fun s -> Some (Rt.String.to_string b__ s)) (name b__ o__);
+      rating = rating b__ o__;
+      postfix = postfix b__ o__;
+    }
+
+    let pack b__ (obj : obj) =
+      let name' = Option.map (fun s -> Rt.String.create b__ s) obj.name in
+      let t = Builder.start b__ in
+      let t = match obj.sibling with None -> t | Some s -> Builder.add_sibling (Bar.pack s) t in
+      let t = match name' with None -> t | Some off -> Builder.add_name off t in
+      let t = Builder.add_rating obj.rating t in
+      let t = Builder.add_postfix obj.postfix t in
+      Builder.finish t
+  end
+
+  (* Table benchmarks_flatbuffers.FooBarContainer (//bench.fbs) *)
+  and FooBarContainer : sig
+    type t
+
+    module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+    val extension : string option
+    val identifier : string option
+    val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+    val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
+
+    val list : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, FooBar.Vector.t) Rt.fbopt
+    val initialized : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Bool.t
+    val fruit : 'b Rt.buf -> ('b, t) Rt.fb -> Enum.t
+    val location : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fbopt
+
+    module Builder : sig
+      type t
+
+      val start : Rt.Builder.t -> t
+      val finish : t -> FooBarContainer.t Rt.wip
+      val add_list : FooBar.Vector.t Rt.wip -> t -> t
+      val add_initialized : Rt.Bool.t -> t -> t
+      val add_fruit : Enum.t -> t -> t
+      val add_location : Rt.String.t Rt.wip -> t -> t
+    end
+
+    type obj = {
+      list : FooBar.obj array;
+      initialized : Rt.Bool.t;
+      fruit : Enum.t;
+      location : string option;
+    }
+
+    val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+    val pack : Rt.Builder.t -> obj -> t Rt.wip
+  end = struct
     type t
 
     module Vector = Rt.Ref.Vector
@@ -71,55 +438,29 @@ module BenchmarksFlatbuffers = struct
       let add_fruit = Rt.Short.(push_slot_default 2 ~default:(of_default 0L))
       let add_location = Rt.Ref.push_slot 3
     end
-  end
 
-  module FooBar = struct
-    type t
+    type obj = {
+      list : FooBar.obj array;
+      initialized : Rt.Bool.t;
+      fruit : Enum.t;
+      location : string option;
+    }
 
-    module Vector = Rt.Ref.Vector
+    let unpack b__ o__ : obj = {
+      list = Rt.Option.fold ~none:[||] ~some:(fun v -> Array.map (fun x -> FooBar.unpack b__ x) (FooBar.Vector.to_array b__ v)) (list b__ o__);
+      initialized = initialized b__ o__;
+      fruit = fruit b__ o__;
+      location = Rt.Option.fold ~none:None ~some:(fun s -> Some (Rt.String.to_string b__ s)) (location b__ o__);
+    }
 
-    module Vector64 = Rt.Ref64.Vector
-
-    let[@inline] sibling b o = Rt.Struct.read_table_opt b o 4
-    let[@inline] name b o = Rt.Ref.read_table_opt b o 6
-    let[@inline] rating b o = Rt.Double.(read_table_default b o 8 ~default:(of_default 0.0))
-    let[@inline] postfix b o = Rt.UByte.(read_table_default b o 10 ~default:(of_default 0L))
-
-    module Builder = struct
-      type t = Rt.Builder.t
-
-      let start b = Rt.Builder.start_table b ~n_fields:4
-      let finish b = Rt.Builder.end_table b
-      let add_sibling = Rt.Struct.push_slot Struct.set_bar__3 32 8 0
-      let add_name = Rt.Ref.push_slot 1
-      let add_rating = Rt.Double.(push_slot_default 2 ~default:(of_default 0.0))
-      let add_postfix = Rt.UByte.(push_slot_default 3 ~default:(of_default 0L))
-    end
-  end
-
-  module Foo = struct
-    type t = (Rt.ULong.t * Rt.Short.t * Rt.Byte.t * Rt.UInt.t)
-
-    module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 16 let set = Struct.set_foo__2 end)
-
-    module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 16 let set = Struct.set_foo__2 end)
-
-    let[@inline] id b s = Rt.ULong.read_offset b s 0
-    let[@inline] count b s = Rt.Short.read_offset b s 8
-    let[@inline] prefix b s = Rt.Byte.read_offset b s 10
-    let[@inline] length b s = Rt.UInt.read_offset b s 12
-  end
-
-  module Bar = struct
-    type t = ((Rt.ULong.t * Rt.Short.t * Rt.Byte.t * Rt.UInt.t) * Rt.Int.t * Rt.Float.t * Rt.UShort.t)
-
-    module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 32 let set = Struct.set_bar__3 end)
-
-    module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 32 let set = Struct.set_bar__3 end)
-
-    let[@inline] parent b s = Rt.Struct.read_offset b s 0
-    let[@inline] time b s = Rt.Int.read_offset b s 16
-    let[@inline] ratio b s = Rt.Float.read_offset b s 20
-    let[@inline] size b s = Rt.UShort.read_offset b s 24
+    let pack b__ (obj : obj) =
+      let list' = FooBar.Vector.create b__ (Array.map (fun x -> FooBar.pack b__ x) obj.list) in
+      let location' = Option.map (fun s -> Rt.String.create b__ s) obj.location in
+      let t = Builder.start b__ in
+      let t = Builder.add_list list' t in
+      let t = Builder.add_initialized obj.initialized t in
+      let t = Builder.add_fruit obj.fruit t in
+      let t = match location' with None -> t | Some off -> Builder.add_location off t in
+      Builder.finish t
   end
 end (* BenchmarksFlatbuffers *)

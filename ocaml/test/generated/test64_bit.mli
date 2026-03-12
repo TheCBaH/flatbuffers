@@ -6,8 +6,28 @@
 
 module Rt : Flatbuffers.Runtime.Intf
 
+(* Struct LeafStruct (//test_64bit.fbs) *)
+module rec LeafStruct : sig
+  type t = (Rt.Int.t * Rt.Double.t)
+
+  module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+  module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+  val a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+  val b : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+
+  type obj = {
+    a : Rt.Int.t;
+    b : Rt.Double.t;
+  }
+
+  val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+  val pack : obj -> t
+end
+
 (* Table WrapperTable (//test_64bit.fbs) *)
-module rec WrapperTable : sig
+and WrapperTable : sig
   type t
 
   module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
@@ -23,6 +43,13 @@ module rec WrapperTable : sig
     val finish : t -> WrapperTable.t Rt.wip
     val add_vector : Rt.Byte.Vector.t Rt.wip -> t -> t
   end
+
+  type obj = {
+    vector : Rt.Byte.t array;
+  }
+
+  val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+  val pack : Rt.Builder.t -> obj -> t Rt.wip
 end
 
 (* Table RootTable (//test_64bit.fbs) *)
@@ -68,16 +95,21 @@ and RootTable : sig
     val add_many_vectors : WrapperTable.Vector.t Rt.wip -> t -> t
     val add_forced_aligned_vector : Rt.UByte.Vector64.t Rt.wip -> t -> t
   end
-end
 
-(* Struct LeafStruct (//test_64bit.fbs) *)
-and LeafStruct : sig
-  type t = (Rt.Int.t * Rt.Double.t)
+  type obj = {
+    far_vector : Rt.UByte.t array;
+    a : Rt.Int.t;
+    far_string : string option;
+    big_bool_vector : Rt.UByte.t array;
+    big_vector : Rt.UByte.t array;
+    near_string : string option;
+    nested_root : Rt.UByte.t array;
+    far_struct_vector : LeafStruct.obj array;
+    big_struct_vector : LeafStruct.obj array;
+    many_vectors : WrapperTable.obj array;
+    forced_aligned_vector : Rt.UByte.t array;
+  }
 
-  module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
-
-  module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
-
-  val a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
-  val b : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+  val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+  val pack : Rt.Builder.t -> obj -> t Rt.wip
 end

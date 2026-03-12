@@ -16,10 +16,12 @@
 
 #include "bfbs_gen_ocaml.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <iostream>
 #include <map>
 #include <memory>
+#include <queue>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -193,6 +195,52 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
     return repr;
   }
 
+  // Get FQ names of objects/enums that an object's type definition depends on
+  std::set<std::string> GetDependencies(const r::Object *object) {
+    std::set<std::string> deps;
+    const std::string obj_name = object->name()->str();
+    ForAllFields(object, false, [&](const r::Field *field) {
+      if (field->deprecated()) return;
+      const r::BaseType bt = field->type()->base_type();
+      if (IsScalar(bt) && field->type()->index() >= 0) {
+        deps.insert(GetEnum(field->type())->name()->str());
+      }
+      if (bt == r::Obj) {
+        auto name = GetObject(field->type())->name()->str();
+        if (name != obj_name) deps.insert(name);
+      }
+      if ((bt == r::Vector || bt == r::Vector64)) {
+        if (field->type()->element() == r::Obj) {
+          auto name = GetObject(field->type(), true)->name()->str();
+          if (name != obj_name) deps.insert(name);
+        }
+        if (IsScalar(field->type()->element()) && field->type()->index() >= 0) {
+          deps.insert(GetEnum(field->type())->name()->str());
+        }
+      }
+      if (bt == r::Union) {
+        auto enum_def = GetEnum(field->type());
+        deps.insert(enum_def->name()->str());
+        ForAllEnumValues(enum_def, [&](const r::EnumVal *e) {
+          if (e->union_type()->base_type() == r::Obj) {
+            auto name = GetObject(e->union_type())->name()->str();
+            if (name != obj_name) deps.insert(name);
+          }
+        });
+      }
+      if (bt == r::Array) {
+        if (field->type()->element() == r::Obj) {
+          auto name = GetObject(field->type(), true)->name()->str();
+          if (name != obj_name) deps.insert(name);
+        }
+        if (IsScalar(field->type()->element()) && field->type()->index() >= 0) {
+          deps.insert(GetEnum(field->type())->name()->str());
+        }
+      }
+    });
+    return deps;
+  }
+
   void GenerateUnionReadFns(std::string &impl) {
     const auto indent = Indent(1);
 
@@ -337,6 +385,26 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
               "module Vector64 : Rt.VectorS with type 'b elt := t and type "
               "builder_elt := t\n";
       impl += indent + "module Vector64 = " + ns + ".Vector64\n";
+    } else {
+      // Object API: inline polymorphic variant type
+      const std::string enum_name = enum_def->name()->str();
+      std::string union_def = indent + "type obj = [\n";
+      ForAllEnumValues(enum_def, [&](const r::EnumVal *e) {
+        const auto variant = ObjVariantName(e->name()->str());
+        if (e->union_type()->base_type() == r::None) {
+          union_def += indent + "  | `" + variant + "\n";
+        } else if (e->union_type()->base_type() == r::Obj) {
+          auto obj = GetObject(e->union_type());
+          auto rel = NamespaceRelComponents(obj->name()->str(), enum_name);
+          union_def += indent + "  | `" + variant + " of " +
+                       NsRef(rel, "obj") + "\n";
+        } else if (e->union_type()->base_type() == r::String) {
+          union_def += indent + "  | `" + variant + " of string\n";
+        }
+      });
+      union_def += indent + "]\n";
+      intf += "\n" + union_def;
+      impl += "\n" + union_def;
     }
   }
 
@@ -680,7 +748,590 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
       impl += indent + "end\n";
       intf += indent + "end\n";
     }
+
+    // ===== Object API =====
+    {
+      // Count non-deprecated, non-UType fields
+      int n_obj_fields = 0;
+      ForAllFields(object, false, [&](const r::Field *field) {
+        if (!field->deprecated() && field->type()->base_type() != r::UType)
+          n_obj_fields++;
+      });
+
+      // Define type obj inline
+      if (n_obj_fields == 0) {
+        impl += "\n" + indent + "type obj = unit\n\n";
+        intf += "\n" + indent + "type obj = unit\n\n";
+      } else {
+        std::string obj_def = indent + "type obj = {\n";
+        ForAllFields(object, false, [&](const r::Field *field) {
+          if (field->deprecated()) return;
+          if (field->type()->base_type() == r::UType) return;
+          std::string fname = namer_.Field(*field);
+          std::string ftype = ObjFieldType(field, obj_name, object->is_struct());
+          obj_def += indent + "  " + fname + " : " + ftype + ";\n";
+        });
+        obj_def += indent + "}\n\n";
+        impl += "\n" + obj_def;
+        intf += "\n" + obj_def;
+      }
+
+      if (n_obj_fields == 0) {
+        if (object->is_struct()) {
+          intf += indent + "val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj\n";
+          impl += indent + "let unpack _b _s = ()\n";
+          intf += indent + "val pack : obj -> t\n";
+          impl += indent + "let pack () = ()\n";
+        } else {
+          intf += indent +
+                  "val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj\n";
+          impl += indent + "let unpack _b _o = ()\n";
+          intf += indent +
+                  "val pack : Rt.Builder.t -> obj -> t Rt.wip\n";
+          impl += indent +
+                  "let pack b () =\n";
+          impl += indent + "  let t = Builder.start b in\n";
+          impl += indent + "  Builder.finish t\n";
+        }
+
+      } else {
+        bool can_gen_fns = CanGenerateObjFns(object);
+        bool self_ref = HasSelfReference(object);
+
+        if (can_gen_fns && object->is_struct()) {
+          // Struct unpack
+          intf +=
+              indent + "val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj\n";
+          impl += indent + "let unpack b__ s__ : obj = {\n";
+          ForAllFields(object, false, [&](const r::Field *field) {
+            if (field->deprecated()) return;
+            const std::string fname = namer_.Field(*field);
+            const r::BaseType bt = field->type()->base_type();
+            std::string expr;
+
+            if (bt == r::Array) {
+              auto elem = field->type()->element();
+              if (IsScalar(elem)) {
+                expr = "Array.init " + fname + "_length (fun i -> " + fname +
+                       " b__ s__ i)";
+              } else if (elem == r::Obj) {
+                auto obj = GetObject(field->type(), true);
+                auto rel =
+                    NamespaceRelComponents(obj->name()->str(), obj_name);
+                expr = "Array.init " + fname + "_length (fun i -> " +
+                       NsRef(rel, "unpack") + " b__ (" + fname +
+                       " b__ s__ i))";
+              }
+            } else if (IsScalar(bt)) {
+              expr = fname + " b__ s__";
+            } else if (bt == r::Obj) {
+              auto rel = NamespaceRelComponents(
+                  GetObject(field->type())->name()->str(), obj_name);
+              expr = NsRef(rel, "unpack") + " b__ (" + fname + " b__ s__)";
+            }
+
+            impl +=
+                indent + "  " + fname + " = " + expr + ";\n";
+          });
+          impl += indent + "}\n\n";
+
+          // Struct pack
+          intf += indent + "val pack : obj -> t\n";
+          int field_count = 0;
+          ForAllFields(object, false, [&](const r::Field *field) {
+            if (!field->deprecated()) field_count++;
+          });
+
+          impl += indent + "let pack (obj : obj) = ";
+          if (field_count > 1) impl += "(";
+          bool first = true;
+          ForAllFields(object, false, [&](const r::Field *field) {
+            if (field->deprecated()) return;
+            const std::string fname = namer_.Field(*field);
+            const r::BaseType bt = field->type()->base_type();
+            std::string expr;
+
+            if (bt == r::Array) {
+              auto elem = field->type()->element();
+              if (IsScalar(elem)) {
+                expr = "obj." + fname;
+              } else if (elem == r::Obj) {
+                auto obj = GetObject(field->type(), true);
+                auto rel =
+                    NamespaceRelComponents(obj->name()->str(), obj_name);
+                expr = "Array.map " + NsRef(rel, "pack") + " obj." +
+                       fname;
+              }
+            } else if (IsScalar(bt)) {
+              expr = "obj." + fname;
+            } else if (bt == r::Obj) {
+              auto rel = NamespaceRelComponents(
+                  GetObject(field->type())->name()->str(), obj_name);
+              expr = NsRef(rel, "pack") + " obj." + fname;
+            }
+
+            if (!first) impl += ", ";
+            impl += expr;
+            first = false;
+          });
+          if (field_count > 1) impl += ")";
+          impl += "\n";
+  
+        } else if (can_gen_fns && !object->is_struct()) {
+          // Table unpack
+          intf +=
+              indent + "val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj\n";
+          std::string rec_kw = self_ref ? "rec " : "";
+          impl += indent + "let " + rec_kw + "unpack b__ o__ : obj = {\n";
+          ForAllFields(object, false, [&](const r::Field *field) {
+            if (field->deprecated()) return;
+            if (field->type()->base_type() == r::UType) return;
+            const std::string fname = namer_.Field(*field);
+            std::string expr = TableUnpackExpr(field, obj_name);
+            impl +=
+                indent + "  " + fname + " = " + expr + ";\n";
+          });
+          impl += indent + "}\n\n";
+
+          // Table pack
+          intf += indent +
+                  "val pack : Rt.Builder.t -> obj -> t Rt.wip\n";
+          std::string pack_rec = self_ref ? "rec " : "";
+          // If unpack used 'rec', pack needs 'and' instead of 'let rec'
+          if (self_ref) {
+            impl += indent + "and pack b__ (obj : obj) =\n";
+          } else {
+            impl += indent + "let pack b__ (obj : obj) =\n";
+          }
+
+          // Prepare phase: create offsets
+          ForAllFields(object, false, [&](const r::Field *field) {
+            if (field->deprecated()) return;
+            if (field->type()->base_type() == r::UType) return;
+            TablePackPrepare(field, obj_name, level, impl);
+          });
+
+          // Build phase
+          impl += indent + "  let t = Builder.start b__ in\n";
+          ForAllFields(object, false, [&](const r::Field *field) {
+            if (field->deprecated()) return;
+            if (field->type()->base_type() == r::UType) return;
+            TablePackAdd(field, obj_name, level, impl);
+          });
+          impl += indent + "  Builder.finish t\n";
+  
+        }
+        // else: skip unpack/pack (forward reference issue)
+      }
+    }
   }
+
+  // ===== Object API helpers =====
+
+  // Format a namespace-relative reference with a member suffix.
+  // When rel is empty (self-reference), returns just the member name.
+  std::string NsRef(const std::vector<std::string> &rel,
+                     const std::string &member) {
+    if (rel.empty()) return member;
+    return namer_.Namespace(rel) + "." + member;
+  }
+
+  std::string ObjVariantName(const std::string &name) {
+    std::string result = namer_.Namespace(name);
+    if (result == "None") result = "None_";
+    return result;
+  }
+
+  bool HasSelfReference(const r::Object *object) {
+    bool self_ref = false;
+    const std::string obj_name = object->name()->str();
+    ForAllFields(object, false, [&](const r::Field *field) {
+      if (field->deprecated()) return;
+      const r::BaseType bt = field->type()->base_type();
+      if (bt == r::Obj) {
+        if (GetObject(field->type())->name()->str() == obj_name) self_ref = true;
+      }
+      if ((bt == r::Vector || bt == r::Vector64) &&
+          field->type()->element() == r::Obj) {
+        if (GetObject(field->type(), true)->name()->str() == obj_name)
+          self_ref = true;
+      }
+      if (bt == r::Union) {
+        ForAllEnumValues(GetEnum(field->type()), [&](const r::EnumVal *e) {
+          if (e->union_type()->base_type() == r::Obj &&
+              GetObject(e->union_type())->name()->str() == obj_name)
+            self_ref = true;
+        });
+      }
+    });
+    return self_ref;
+  }
+
+  bool CanGenerateObjFns(const r::Object *) {
+    return true;  // All dependencies visible via module rec
+  }
+
+  // OCaml type for a field in an obj record
+  std::string ObjFieldType(const r::Field *field, const std::string &in_ns,
+                            bool is_struct) {
+    const r::BaseType bt = field->type()->base_type();
+
+    // Fixed-length array
+    if (bt == r::Array) {
+      auto elem = field->type()->element();
+      std::string et;
+      if (IsScalar(elem)) {
+        if (field->type()->index() >= 0)
+          et = GenerateIntfNs(field->type(), in_ns, true) + ".t";
+        else
+          et = RuntimeNS + "." + r::EnumNameBaseType(elem) + ".t";
+      } else if (elem == r::Obj) {
+        auto obj = GetObject(field->type(), true);
+        auto rel = NamespaceRelComponents(obj->name()->str(), in_ns);
+        et = NsRef(rel, "obj");
+      }
+      return et + " array";
+    }
+
+    // Scalar (plain or enum)
+    if (IsScalar(bt)) {
+      std::string t;
+      if (field->type()->index() >= 0)
+        t = GenerateIntfNs(field->type(), in_ns) + ".t";
+      else
+        t = RuntimeNS + "." + r::EnumNameBaseType(bt) + ".t";
+      if (!is_struct && field->optional()) t += " option";
+      return t;
+    }
+
+    // String
+    if (bt == r::String) {
+      std::string t = "string";
+      if (!is_struct && field->optional()) t += " option";
+      return t;
+    }
+
+    // Object ref
+    if (bt == r::Obj) {
+      auto object = GetObject(field->type());
+      auto rel = NamespaceRelComponents(object->name()->str(), in_ns);
+      std::string t = NsRef(rel, "obj");
+      if (!is_struct && !field->required()) t += " option";
+      return t;
+    }
+
+    // Vector
+    if (bt == r::Vector || bt == r::Vector64) {
+      auto elem = field->type()->element();
+      std::string et;
+      if (elem == r::String) {
+        et = "string";
+      } else if (IsScalar(elem)) {
+        if (field->type()->index() >= 0)
+          et = GenerateIntfNs(field->type(), in_ns, true) + ".t";
+        else
+          et = RuntimeNS + "." + r::EnumNameBaseType(elem) + ".t";
+      } else if (elem == r::Obj) {
+        auto obj = GetObject(field->type(), true);
+        auto rel = NamespaceRelComponents(obj->name()->str(), in_ns);
+        et = NsRef(rel, "obj");
+      }
+      return et + " array";
+    }
+
+    // Union
+    if (bt == r::Union) {
+      auto enum_def = GetEnum(field->type());
+      auto rel = NamespaceRelComponents(enum_def->name()->str(), in_ns);
+      return NsRef(rel, "obj");
+    }
+
+    return "{{ ERROR ObjFieldType }}";
+  }
+
+  // Generate table field unpack expression
+  std::string TableUnpackExpr(const r::Field *field,
+                               const std::string &in_ns) {
+    const r::BaseType bt = field->type()->base_type();
+    const std::string fname = namer_.Field(*field);
+
+    // Scalar
+    if (IsScalar(bt)) {
+      return fname + " b__ o__";
+    }
+
+    // String
+    if (bt == r::String) {
+      if (field->optional()) {
+        return RuntimeNS + ".Option.fold ~none:None ~some:(fun s -> Some (" +
+               RuntimeNS + ".String.to_string b__ s)) (" + fname + " b__ o__)";
+      } else {
+        return RuntimeNS + ".String.to_string b__ (" + fname + " b__ o__)";
+      }
+    }
+
+    // Object ref (table or struct)
+    if (bt == r::Obj) {
+      auto object = GetObject(field->type());
+      auto rel = NamespaceRelComponents(object->name()->str(), in_ns);
+      std::string unpack_fn = NsRef(rel, "unpack");
+      if (field->required()) {
+        return unpack_fn + " b__ (" + fname + " b__ o__)";
+      } else {
+        return RuntimeNS + ".Option.fold ~none:None ~some:(fun x -> Some (" +
+               unpack_fn + " b__ x)) (" + fname + " b__ o__)";
+      }
+    }
+
+    // Vector
+    if (bt == r::Vector || bt == r::Vector64) {
+      auto elem = field->type()->element();
+      std::string vec_ns = GenerateIntfNs(field->type(), in_ns);
+
+      std::string body;
+      if (elem == r::String) {
+        body = "Array.map (fun s -> " + RuntimeNS +
+               ".String.to_string b__ s) (" + vec_ns + ".to_array b__ v)";
+      } else if (IsScalar(elem)) {
+        body = vec_ns + ".to_array b__ v";
+      } else if (elem == r::Obj) {
+        auto obj = GetObject(field->type(), true);
+        auto rel = NamespaceRelComponents(obj->name()->str(), in_ns);
+        std::string uf = NsRef(rel, "unpack");
+        body = "Array.map (fun x -> " + uf + " b__ x) (" + vec_ns +
+               ".to_array b__ v)";
+      }
+
+      if (field->required()) {
+        return "(let v = " + fname + " b__ o__ in " + body + ")";
+      } else {
+        return RuntimeNS + ".Option.fold ~none:[||] ~some:(fun v -> " +
+               body + ") (" + fname + " b__ o__)";
+      }
+    }
+
+    // Union
+    if (bt == r::Union) {
+      auto enum_def = GetEnum(field->type());
+
+      std::string expr = fname;
+      ForAllEnumValues(enum_def, [&](const r::EnumVal *e) {
+        const auto variant = ObjVariantName(e->name()->str());
+        if (e->union_type()->base_type() == r::None) {
+          expr += " ~none:`" + variant;
+        } else if (e->union_type()->base_type() == r::Obj) {
+          auto obj = GetObject(e->union_type());
+          auto rel = NamespaceRelComponents(obj->name()->str(), in_ns);
+          std::string uf = NsRef(rel, "unpack");
+          expr += " ~" + namer_.Variable(e->name()->str()) +
+                  ":(fun x -> `" + variant + " (" + uf +
+                  " b__ x))";
+        } else if (e->union_type()->base_type() == r::String) {
+          expr += " ~" + namer_.Variable(e->name()->str()) +
+                  ":(fun x -> `" + variant + " (" +
+                  RuntimeNS + ".String.to_string b__ x))";
+        }
+      });
+      expr += " ~default:(fun _ -> `" +
+              ObjVariantName("NONE") + ") b__ o__";
+      return expr;
+    }
+
+    return "{{ ERROR TableUnpackExpr }}";
+  }
+
+  // Generate table pack prepare (offset creation before Builder.start)
+  void TablePackPrepare(const r::Field *field, const std::string &in_ns,
+                         int level, std::string &impl) {
+    const r::BaseType bt = field->type()->base_type();
+    const std::string fname = namer_.Field(*field);
+    const std::string ind = Indent(level + 1);
+
+    // Scalars/enums: no offset needed
+    if (IsScalar(bt)) return;
+
+    // Struct in table: inline, no offset needed
+    if (bt == r::Obj && GetObject(field->type())->is_struct()) return;
+
+    // String
+    if (bt == r::String) {
+      if (field->optional()) {
+        impl += ind + "let " + fname + "' = Option.map (fun s -> " +
+                RuntimeNS + ".String.create b__ s) obj." + fname + " in\n";
+      } else {
+        impl += ind + "let " + fname + "' = " + RuntimeNS +
+                ".String.create b__ obj." + fname + " in\n";
+      }
+      return;
+    }
+
+    // Table ref
+    if (bt == r::Obj) {
+      auto object = GetObject(field->type());
+      auto rel = NamespaceRelComponents(object->name()->str(), in_ns);
+      std::string pf = NsRef(rel, "pack");
+      if (field->required()) {
+        impl += ind + "let " + fname + "' = " + pf + " b__ obj." + fname +
+                " in\n";
+      } else {
+        impl += ind + "let " + fname + "' = Option.map (fun x -> " + pf +
+                " b__ x) obj." + fname + " in\n";
+      }
+      return;
+    }
+
+    // Vector
+    if (bt == r::Vector || bt == r::Vector64) {
+      auto elem = field->type()->element();
+      bool is_v64 = (bt == r::Vector64);
+      std::string vs = is_v64 ? "64" : "";
+
+      if (elem == r::String) {
+        impl += ind + "let " + fname + "' = " + RuntimeNS +
+                ".String.Vector.create b__ (Array.map (fun s -> " + RuntimeNS +
+                ".String.create b__ s) obj." + fname + ") in\n";
+      } else if (IsScalar(elem)) {
+        std::string sns;
+        if (field->type()->index() >= 0)
+          sns = GenerateIntfNs(field->type(), in_ns, true);
+        else
+          sns = RuntimeNS + "." + r::EnumNameBaseType(elem);
+        impl += ind + "let " + fname + "' = " + sns + ".Vector" + vs +
+                ".create b__ obj." + fname + " in\n";
+      } else if (elem == r::Obj) {
+        auto obj = GetObject(field->type(), true);
+        auto rel = NamespaceRelComponents(obj->name()->str(), in_ns);
+        std::string pack_fn = NsRef(rel, "pack");
+        std::string vec_mod = NsRef(rel, "Vector" + vs);
+        if (obj->is_struct()) {
+          impl += ind + "let " + fname + "' = " + vec_mod +
+                  ".create b__ (Array.map " + pack_fn + " obj." + fname +
+                  ") in\n";
+        } else {
+          impl += ind + "let " + fname + "' = " + vec_mod +
+                  ".create b__ (Array.map (fun x -> " + pack_fn +
+                  " b__ x) obj." + fname + ") in\n";
+        }
+      }
+      return;
+    }
+
+    // Union
+    if (bt == r::Union) {
+      auto enum_def = GetEnum(field->type());
+
+      impl += ind + "let " + fname + "' = match obj." + fname + " with\n";
+      ForAllEnumValues(enum_def, [&](const r::EnumVal *e) {
+        const auto variant = ObjVariantName(e->name()->str());
+        if (e->union_type()->base_type() == r::None) {
+          impl += ind + "  | `" + variant + " -> None\n";
+        } else if (e->union_type()->base_type() == r::Obj) {
+          auto obj = GetObject(e->union_type());
+          auto rel = NamespaceRelComponents(obj->name()->str(), in_ns);
+          std::string pf = NsRef(rel, "pack");
+          impl += ind + "  | `" + variant +
+                  " x -> Some (`" + variant + ", " + pf + " b__ x)\n";
+        } else if (e->union_type()->base_type() == r::String) {
+          impl += ind + "  | `" + variant +
+                  " x -> Some (`" + variant + ", " + RuntimeNS +
+                  ".String.create b__ x)\n";
+        }
+      });
+      impl += ind + "in\n";
+      return;
+    }
+  }
+
+  // Generate table pack add (after Builder.start)
+  void TablePackAdd(const r::Field *field, const std::string &in_ns,
+                     int level, std::string &impl) {
+    const r::BaseType bt = field->type()->base_type();
+    const std::string fname = namer_.Field(*field);
+    const std::string ind = Indent(level + 1);
+
+    // Scalar (non-optional)
+    if (IsScalar(bt) && !field->optional()) {
+      impl += ind + "let t = Builder.add_" + fname + " obj." + fname +
+              " t in\n";
+      return;
+    }
+
+    // Optional scalar
+    if (IsScalar(bt) && field->optional()) {
+      impl += ind + "let t = match obj." + fname +
+              " with None -> t | Some v -> Builder.add_" + fname +
+              " v t in\n";
+      return;
+    }
+
+    // Struct in table (inline)
+    if (bt == r::Obj && GetObject(field->type())->is_struct()) {
+      auto object = GetObject(field->type());
+      auto rel = NamespaceRelComponents(object->name()->str(), in_ns);
+      std::string pf = NsRef(rel, "pack");
+      if (field->required()) {
+        impl += ind + "let t = Builder.add_" + fname + " (" + pf +
+                " obj." + fname + ") t in\n";
+      } else {
+        impl += ind + "let t = match obj." + fname +
+                " with None -> t | Some s -> Builder.add_" + fname +
+                " (" + pf + " s) t in\n";
+      }
+      return;
+    }
+
+    // String (prepared offset)
+    if (bt == r::String) {
+      if (field->optional()) {
+        impl += ind + "let t = match " + fname +
+                "' with None -> t | Some off -> Builder.add_" + fname +
+                " off t in\n";
+      } else {
+        impl += ind + "let t = Builder.add_" + fname + " " + fname +
+                "' t in\n";
+      }
+      return;
+    }
+
+    // Table ref (prepared offset)
+    if (bt == r::Obj) {
+      if (field->required()) {
+        impl += ind + "let t = Builder.add_" + fname + " " + fname +
+                "' t in\n";
+      } else {
+        impl += ind + "let t = match " + fname +
+                "' with None -> t | Some off -> Builder.add_" + fname +
+                " off t in\n";
+      }
+      return;
+    }
+
+    // Vector (prepared offset)
+    if (bt == r::Vector || bt == r::Vector64) {
+      impl += ind + "let t = Builder.add_" + fname + " " + fname +
+              "' t in\n";
+      return;
+    }
+
+    // Union (prepared match)
+    if (bt == r::Union) {
+      auto enum_def = GetEnum(field->type());
+      impl += ind + "let t = match " + fname + "' with\n";
+      impl += ind + "  | None -> t\n";
+      ForAllEnumValues(enum_def, [&](const r::EnumVal *e) {
+        if (e->union_type()->base_type() == r::None) return;
+        const auto variant = ObjVariantName(e->name()->str());
+        const auto variant_fn = namer_.Variable(e->name()->str());
+        impl += ind + "  | Some (`" + variant +
+                ", off) -> Builder.add_" + fname + "_" + variant_fn +
+                " off t\n";
+      });
+      impl += ind + "in\n";
+      return;
+    }
+  }
+
+  // ===== End Object API helpers =====
 
   std::string Int64ToString(int64_t x) const {
     if (x < 0)
@@ -1019,33 +1670,93 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
     intf += "module Rt : Flatbuffers.Runtime.Intf\n\n";
   }
 
-  void EmitCode(std::string &intf, std::string &impl) {
-    std::set<const Node *> emitted;
-    std::vector<const Node *> to_emit;
-    for (auto &n : root_node_.nodes) { to_emit.push_back(&n); }
-
-    bool start_level = true;
-
-    while (!to_emit.empty()) {
-      const auto &node = *to_emit.back();
-
-      if (!emitted.count(&node)) {
-        EmitNodePre(node, intf, impl, start_level);
-
-        for (auto &n : node.nodes) { to_emit.push_back(&n); }
-        start_level = !node.children.empty();
-
-        emitted.insert(&node);
-      } else {
-        EmitNodePost(node, intf, impl);
-        to_emit.pop_back();
-      }
+  // Collect all FQ object/enum names contained within a node (recursively)
+  void CollectNodeNames(const Node &node,
+                        std::map<std::string, size_t> &map,
+                        size_t child_idx) {
+    if (node.object) map[node.object->name()->str()] = child_idx;
+    if (node.enum_def) map[node.enum_def->name()->str()] = child_idx;
+    for (const auto &child : node.nodes) {
+      CollectNodeNames(child, map, child_idx);
     }
   }
 
-  void EmitNodePre(const Node &node, std::string &intf, std::string &impl,
-                   bool start_level = false) {
-    const std::string indent = Indent(node.level);
+  // Collect all objects contained within a node (recursively)
+  void CollectNodeObjects(const Node &node,
+                          std::vector<const r::Object *> &objects) {
+    if (node.object) objects.push_back(node.object);
+    for (const auto &child : node.nodes) {
+      CollectNodeObjects(child, objects);
+    }
+  }
+
+  // Return children indices in topological order (dependencies first)
+  std::vector<size_t> SortedChildIndices(const Node &parent) {
+    size_t n = parent.nodes.size();
+    if (n <= 1) {
+      std::vector<size_t> result;
+      for (size_t i = 0; i < n; i++) result.push_back(i);
+      return result;
+    }
+
+    // Map: FQ name -> which child index contains it
+    std::map<std::string, size_t> name_to_child;
+    for (size_t i = 0; i < n; i++) {
+      CollectNodeNames(parent.nodes[i], name_to_child, i);
+    }
+
+    // Build dependency graph among children.
+    // Recursively collect all objects inside each child and aggregate deps.
+    std::vector<std::set<size_t>> deps(n);
+    for (size_t i = 0; i < n; i++) {
+      std::vector<const r::Object *> objects;
+      CollectNodeObjects(parent.nodes[i], objects);
+      for (auto obj : objects) {
+        for (const auto &dep : GetDependencies(obj)) {
+          auto it = name_to_child.find(dep);
+          if (it != name_to_child.end() && it->second != i) {
+            deps[i].insert(it->second);
+          }
+        }
+      }
+    }
+
+    // Kahn's topological sort
+    std::vector<std::vector<size_t>> rdeps(n);
+    std::vector<size_t> in_degree(n, 0);
+    for (size_t i = 0; i < n; i++) {
+      in_degree[i] = deps[i].size();
+      for (auto j : deps[i]) {
+        rdeps[j].push_back(i);
+      }
+    }
+
+    std::queue<size_t> queue;
+    for (size_t i = 0; i < n; i++) {
+      if (in_degree[i] == 0) queue.push(i);
+    }
+
+    std::vector<size_t> result;
+    while (!queue.empty()) {
+      size_t v = queue.front(); queue.pop();
+      result.push_back(v);
+      for (auto u : rdeps[v]) {
+        if (--in_degree[u] == 0) queue.push(u);
+      }
+    }
+
+    // Handle cycles: append remaining nodes
+    if (result.size() < n) {
+      std::set<size_t> in_result(result.begin(), result.end());
+      for (size_t i = 0; i < n; i++) {
+        if (!in_result.count(i)) result.push_back(i);
+      }
+    }
+
+    return result;
+  }
+
+  std::string GenerateModuleDoc(const Node &node) {
     std::string full_name;
     std::string declaring_file;
 
@@ -1074,32 +1785,80 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
                                   /*extra=*/header);
     }
 
-    // TODO(dmitrig): not worth it?
-    if (doc.empty() && !header.empty()) doc = indent + "(* " + header + " *)\n";
+    if (doc.empty() && !header.empty())
+      doc = Indent(node.level) + "(* " + header + " *)\n";
 
-    if (start_level) {
-      intf += doc + indent + "module rec " + node.name + " : sig\n";
-      impl += indent + "module " + node.name + " = struct\n";
-    } else {
-      intf += "\n" + doc + indent + "and " + node.name + " : sig\n";
-      impl += "\n" + indent + "module " + node.name + " = struct\n";
-    }
-
-    if (node.enum_def) {
-      GenerateEnum(node.enum_def, node.level + 1, intf, impl);
-    } else if (node.object) {
-      GenerateObject(node.object, node.level + 1, intf, impl);
-    }
+    return doc;
   }
 
-  void EmitNodePost(const Node &node, std::string &intf, std::string &impl) {
-    const std::string indent = Indent(node.level);
+  // Strip 'private' from type declarations for .ml inline sig.
+  // In module rec, the inline sig seals the module, so enum types with
+  // 'type t = private Foo' would prevent using Foo values as t.
+  // The .mli still has 'private' for external type safety.
+  static std::string StripPrivate(const std::string &sig) {
+    std::string result = sig;
+    const std::string from = "type t = private ";
+    const std::string to = "type t = ";
+    size_t pos = 0;
+    while ((pos = result.find(from, pos)) != std::string::npos) {
+      result.replace(pos, from.length(), to);
+      pos += to.length();
+    }
+    return result;
+  }
 
-    std::string comment;
-    if (!(node.enum_def || node.object)) comment = " (* " + node.name + " *)";
+  // Returns {sig_content, impl_content} for a module's body
+  std::pair<std::string, std::string> EmitModuleContent(const Node &node) {
+    std::string sig, impl;
 
-    intf += indent + "end" + comment + "\n";
-    impl += indent + "end" + comment + "\n";
+    // Generate this node's own content (leaf: object or enum)
+    if (node.enum_def) {
+      GenerateEnum(node.enum_def, node.level + 1, sig, impl);
+    } else if (node.object) {
+      GenerateObject(node.object, node.level + 1, sig, impl);
+    }
+
+    // Generate children as module rec group
+    if (!node.nodes.empty()) {
+      auto order = SortedChildIndices(node);
+      bool first = true;
+      for (auto idx : order) {
+        const auto &child = node.nodes[idx];
+        auto child_content = EmitModuleContent(child);
+        std::string doc = GenerateModuleDoc(child);
+        std::string indent = Indent(child.level);
+
+        std::string comment;
+        if (!(child.enum_def || child.object))
+          comment = " (* " + child.name + " *)";
+
+        std::string kw = first ? "module rec " : "and ";
+
+        // .mli: module rec X : sig ... end (with private)
+        sig += (first ? "" : "\n") + doc + indent + kw + child.name +
+               " : sig\n" + child_content.first + indent + "end" +
+               comment + "\n";
+
+        // .ml: module rec X : sig ... end = struct ... end
+        // Strip 'private' from inline sig so types are transparent
+        // within the module rec group
+        std::string ml_sig = StripPrivate(child_content.first);
+        impl += (first ? "" : "\n") + doc + indent + kw + child.name +
+                " : sig\n" + ml_sig + indent +
+                "end = struct\n" + child_content.second + indent + "end" +
+                comment + "\n";
+
+        first = false;
+      }
+    }
+
+    return {sig, impl};
+  }
+
+  void EmitCode(std::string &intf, std::string &impl) {
+    auto content = EmitModuleContent(root_node_);
+    intf += content.first;
+    impl += content.second;
   }
 
   void WriteFiles(const std::string &intf, const std::string &impl) {

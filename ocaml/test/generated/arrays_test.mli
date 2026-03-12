@@ -36,6 +36,47 @@ module rec MyGame : sig
       val c : 'b Rt.buf -> ('b, t) Rt.fb -> int -> TestEnum.t
       val d_length : int
       val d : 'b Rt.buf -> ('b, t) Rt.fb -> int -> Rt.Long.t
+
+      type obj = {
+        a : Rt.Int.t array;
+        b : TestEnum.t;
+        c : TestEnum.t array;
+        d : Rt.Long.t array;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
+    end
+
+    (* Struct MyGame.Example.ArrayStruct (//arrays_test.fbs) *)
+    and ArrayStruct : sig
+      type t = (Rt.Float.t * Rt.Int.t array * Rt.Byte.t * NestedStruct.t array * Rt.Int.t * Rt.Long.t array)
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      val a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val b_length : int
+      val b : 'b Rt.buf -> ('b, t) Rt.fb -> int -> Rt.Int.t
+      val c : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Byte.t
+      val d_length : int
+      val d : 'b Rt.buf -> ('b, t) Rt.fb -> int -> ('b, NestedStruct.t) Rt.fb
+      val e : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+      val f_length : int
+      val f : 'b Rt.buf -> ('b, t) Rt.fb -> int -> Rt.Long.t
+
+      type obj = {
+        a : Rt.Float.t;
+        b : Rt.Int.t array;
+        c : Rt.Byte.t;
+        d : NestedStruct.obj array;
+        e : Rt.Int.t;
+        f : Rt.Long.t array;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
     end
 
     (* Struct MyGame.Example.LargeArrayStruct (//arrays_test.fbs) *)
@@ -56,6 +97,17 @@ module rec MyGame : sig
       val g : 'b Rt.buf -> ('b, t) Rt.fb -> int -> ('b, NestedStruct.t) Rt.fb
       val h_length : int
       val h : 'b Rt.buf -> ('b, t) Rt.fb -> int -> TestEnum.t
+
+      type obj = {
+        d : Rt.UByte.t array;
+        e : Rt.Float.t array;
+        f : Rt.Bool.t array;
+        g : NestedStruct.obj array;
+        h : TestEnum.t array;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
     end
 
     (* Table MyGame.Example.ArrayTable (//arrays_test.fbs) *)
@@ -81,25 +133,13 @@ module rec MyGame : sig
         val finish : t -> ArrayTable.t Rt.wip
         val add_a : ArrayStruct.t -> t -> t
       end
-    end
 
-    (* Struct MyGame.Example.ArrayStruct (//arrays_test.fbs) *)
-    and ArrayStruct : sig
-      type t = (Rt.Float.t * Rt.Int.t array * Rt.Byte.t * NestedStruct.t array * Rt.Int.t * Rt.Long.t array)
+      type obj = {
+        a : ArrayStruct.obj option;
+      }
 
-      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
-
-      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
-
-      val a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
-      val b_length : int
-      val b : 'b Rt.buf -> ('b, t) Rt.fb -> int -> Rt.Int.t
-      val c : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Byte.t
-      val d_length : int
-      val d : 'b Rt.buf -> ('b, t) Rt.fb -> int -> ('b, NestedStruct.t) Rt.fb
-      val e : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
-      val f_length : int
-      val f : 'b Rt.buf -> ('b, t) Rt.fb -> int -> Rt.Long.t
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
     end
   end (* Example *)
 end (* MyGame *)

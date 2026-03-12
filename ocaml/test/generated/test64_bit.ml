@@ -16,7 +16,72 @@ module Struct = struct
     Rt.Builder.set_scalar TDouble b (i + 8) b_;
 end
 
-module WrapperTable = struct
+(* Struct LeafStruct (//test_64bit.fbs) *)
+module rec LeafStruct : sig
+  type t = (Rt.Int.t * Rt.Double.t)
+
+  module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+  module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+  val a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+  val b : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+
+  type obj = {
+    a : Rt.Int.t;
+    b : Rt.Double.t;
+  }
+
+  val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+  val pack : obj -> t
+end = struct
+  type t = (Rt.Int.t * Rt.Double.t)
+
+  module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 16 let set = Struct.set_leaf_struct__16 end)
+
+  module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 16 let set = Struct.set_leaf_struct__16 end)
+
+  let[@inline] a b s = Rt.Int.read_offset b s 0
+  let[@inline] b b s = Rt.Double.read_offset b s 8
+
+  type obj = {
+    a : Rt.Int.t;
+    b : Rt.Double.t;
+  }
+
+  let unpack b__ s__ : obj = {
+    a = a b__ s__;
+    b = b b__ s__;
+  }
+
+  let pack (obj : obj) = (obj.a, obj.b)
+end
+
+(* Table WrapperTable (//test_64bit.fbs) *)
+and WrapperTable : sig
+  type t
+
+  module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+  module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+  val vector : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Byte.Vector.t) Rt.fbopt
+
+  module Builder : sig
+    type t
+
+    val start : Rt.Builder.t -> t
+    val finish : t -> WrapperTable.t Rt.wip
+    val add_vector : Rt.Byte.Vector.t Rt.wip -> t -> t
+  end
+
+  type obj = {
+    vector : Rt.Byte.t array;
+  }
+
+  val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+  val pack : Rt.Builder.t -> obj -> t Rt.wip
+end = struct
   type t
 
   module Vector = Rt.Ref.Vector
@@ -32,9 +97,83 @@ module WrapperTable = struct
     let finish b = Rt.Builder.end_table b
     let add_vector = Rt.Ref64.push_slot 0
   end
+
+  type obj = {
+    vector : Rt.Byte.t array;
+  }
+
+  let unpack b__ o__ : obj = {
+    vector = Rt.Option.fold ~none:[||] ~some:(fun v -> Rt.Byte.Vector.to_array b__ v) (vector b__ o__);
+  }
+
+  let pack b__ (obj : obj) =
+    let vector' = Rt.Byte.Vector.create b__ obj.vector in
+    let t = Builder.start b__ in
+    let t = Builder.add_vector vector' t in
+    Builder.finish t
 end
 
-module RootTable = struct
+(* Table RootTable (//test_64bit.fbs) *)
+and RootTable : sig
+  type t
+
+  module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+  module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+  val extension : string option
+  val identifier : string option
+  val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+  val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
+
+  val far_vector : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
+  val a : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+  val far_string : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fbopt
+  val big_bool_vector : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector64.t) Rt.fbopt
+  val big_vector : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector64.t) Rt.fbopt
+  val near_string : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fbopt
+  val nested_root : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector64.t) Rt.fbopt
+  val nested_root_as_root_table : 'b Rt.buf -> ('b, t) Rt.fb -> t Rt.root option
+  val far_struct_vector : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, LeafStruct.Vector.t) Rt.fbopt
+  val big_struct_vector : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, LeafStruct.Vector64.t) Rt.fbopt
+  val many_vectors : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, WrapperTable.Vector.t) Rt.fbopt
+  val forced_aligned_vector : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector64.t) Rt.fbopt
+
+  module Builder : sig
+    type t
+
+    val start : Rt.Builder.t -> t
+    val finish : t -> RootTable.t Rt.wip
+    val add_far_vector : Rt.UByte.Vector.t Rt.wip -> t -> t
+    val add_a : Rt.Int.t -> t -> t
+    val add_far_string : Rt.String.t Rt.wip -> t -> t
+    val add_big_bool_vector : Rt.UByte.Vector64.t Rt.wip -> t -> t
+    val add_big_vector : Rt.UByte.Vector64.t Rt.wip -> t -> t
+    val add_near_string : Rt.String.t Rt.wip -> t -> t
+    val add_nested_root : Rt.UByte.Vector64.t Rt.wip -> t -> t
+    val add_far_struct_vector : LeafStruct.Vector.t Rt.wip -> t -> t
+    val add_big_struct_vector : LeafStruct.Vector64.t Rt.wip -> t -> t
+    val add_many_vectors : WrapperTable.Vector.t Rt.wip -> t -> t
+    val add_forced_aligned_vector : Rt.UByte.Vector64.t Rt.wip -> t -> t
+  end
+
+  type obj = {
+    far_vector : Rt.UByte.t array;
+    a : Rt.Int.t;
+    far_string : string option;
+    big_bool_vector : Rt.UByte.t array;
+    big_vector : Rt.UByte.t array;
+    near_string : string option;
+    nested_root : Rt.UByte.t array;
+    far_struct_vector : LeafStruct.obj array;
+    big_struct_vector : LeafStruct.obj array;
+    many_vectors : WrapperTable.obj array;
+    forced_aligned_vector : Rt.UByte.t array;
+  }
+
+  val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+  val pack : Rt.Builder.t -> obj -> t Rt.wip
+end = struct
   type t
 
   module Vector = Rt.Ref.Vector
@@ -76,15 +215,57 @@ module RootTable = struct
     let add_many_vectors = Rt.Ref.push_slot 9
     let add_forced_aligned_vector = Rt.Ref64.push_slot 10
   end
-end
 
-module LeafStruct = struct
-  type t = (Rt.Int.t * Rt.Double.t)
+  type obj = {
+    far_vector : Rt.UByte.t array;
+    a : Rt.Int.t;
+    far_string : string option;
+    big_bool_vector : Rt.UByte.t array;
+    big_vector : Rt.UByte.t array;
+    near_string : string option;
+    nested_root : Rt.UByte.t array;
+    far_struct_vector : LeafStruct.obj array;
+    big_struct_vector : LeafStruct.obj array;
+    many_vectors : WrapperTable.obj array;
+    forced_aligned_vector : Rt.UByte.t array;
+  }
 
-  module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 16 let set = Struct.set_leaf_struct__16 end)
+  let unpack b__ o__ : obj = {
+    far_vector = Rt.Option.fold ~none:[||] ~some:(fun v -> Rt.UByte.Vector.to_array b__ v) (far_vector b__ o__);
+    a = a b__ o__;
+    far_string = Rt.Option.fold ~none:None ~some:(fun s -> Some (Rt.String.to_string b__ s)) (far_string b__ o__);
+    big_bool_vector = Rt.Option.fold ~none:[||] ~some:(fun v -> Rt.UByte.Vector64.to_array b__ v) (big_bool_vector b__ o__);
+    big_vector = Rt.Option.fold ~none:[||] ~some:(fun v -> Rt.UByte.Vector64.to_array b__ v) (big_vector b__ o__);
+    near_string = Rt.Option.fold ~none:None ~some:(fun s -> Some (Rt.String.to_string b__ s)) (near_string b__ o__);
+    nested_root = Rt.Option.fold ~none:[||] ~some:(fun v -> Rt.UByte.Vector64.to_array b__ v) (nested_root b__ o__);
+    far_struct_vector = Rt.Option.fold ~none:[||] ~some:(fun v -> Array.map (fun x -> LeafStruct.unpack b__ x) (LeafStruct.Vector.to_array b__ v)) (far_struct_vector b__ o__);
+    big_struct_vector = Rt.Option.fold ~none:[||] ~some:(fun v -> Array.map (fun x -> LeafStruct.unpack b__ x) (LeafStruct.Vector64.to_array b__ v)) (big_struct_vector b__ o__);
+    many_vectors = Rt.Option.fold ~none:[||] ~some:(fun v -> Array.map (fun x -> WrapperTable.unpack b__ x) (WrapperTable.Vector.to_array b__ v)) (many_vectors b__ o__);
+    forced_aligned_vector = Rt.Option.fold ~none:[||] ~some:(fun v -> Rt.UByte.Vector64.to_array b__ v) (forced_aligned_vector b__ o__);
+  }
 
-  module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 16 let set = Struct.set_leaf_struct__16 end)
-
-  let[@inline] a b s = Rt.Int.read_offset b s 0
-  let[@inline] b b s = Rt.Double.read_offset b s 8
+  let pack b__ (obj : obj) =
+    let far_vector' = Rt.UByte.Vector.create b__ obj.far_vector in
+    let far_string' = Option.map (fun s -> Rt.String.create b__ s) obj.far_string in
+    let big_bool_vector' = Rt.UByte.Vector64.create b__ obj.big_bool_vector in
+    let big_vector' = Rt.UByte.Vector64.create b__ obj.big_vector in
+    let near_string' = Option.map (fun s -> Rt.String.create b__ s) obj.near_string in
+    let nested_root' = Rt.UByte.Vector64.create b__ obj.nested_root in
+    let far_struct_vector' = LeafStruct.Vector.create b__ (Array.map LeafStruct.pack obj.far_struct_vector) in
+    let big_struct_vector' = LeafStruct.Vector64.create b__ (Array.map LeafStruct.pack obj.big_struct_vector) in
+    let many_vectors' = WrapperTable.Vector.create b__ (Array.map (fun x -> WrapperTable.pack b__ x) obj.many_vectors) in
+    let forced_aligned_vector' = Rt.UByte.Vector64.create b__ obj.forced_aligned_vector in
+    let t = Builder.start b__ in
+    let t = Builder.add_far_vector far_vector' t in
+    let t = Builder.add_a obj.a t in
+    let t = match far_string' with None -> t | Some off -> Builder.add_far_string off t in
+    let t = Builder.add_big_bool_vector big_bool_vector' t in
+    let t = Builder.add_big_vector big_vector' t in
+    let t = match near_string' with None -> t | Some off -> Builder.add_near_string off t in
+    let t = Builder.add_nested_root nested_root' t in
+    let t = Builder.add_far_struct_vector far_struct_vector' t in
+    let t = Builder.add_big_struct_vector big_struct_vector' t in
+    let t = Builder.add_many_vectors many_vectors' t in
+    let t = Builder.add_forced_aligned_vector forced_aligned_vector' t in
+    Builder.finish t
 end

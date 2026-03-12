@@ -24,40 +24,352 @@ module Union = struct
     | _ -> default t
 end
 
-module MyGame = struct
-  module Sample = struct
-    module Equipment = struct
-      type t = Rt.UType.t
+module rec MyGame : sig
+  module rec Sample : sig
+    (* Struct MyGame.Sample.Vec3 (//monster.fbs) *)
+    module rec Vec3 : sig
+      type t = (Rt.Float.t * Rt.Float.t * Rt.Float.t)
 
-      let none = Rt.UType.of_default 0L
-      let weapon = Rt.UType.of_default 1L
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
-      let to_string e =
-        match Rt.UType.to_default e with
-        | 0L -> "none"
-        | 1L -> "weapon"
-        | x -> "<MyGame.Sample.Equipment: " ^ (Int64.to_string x) ^ ">"
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      val x : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val y : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val z : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+
+      type obj = {
+        x : Rt.Float.t;
+        y : Rt.Float.t;
+        z : Rt.Float.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
     end
 
-    module Color = struct
+    (* Table MyGame.Sample.Weapon (//monster.fbs) *)
+    and Weapon : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      val name : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fbopt
+      val damage : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> Weapon.t Rt.wip
+        val add_name : Rt.String.t Rt.wip -> t -> t
+        val add_damage : Rt.Short.t -> t -> t
+      end
+
+      type obj = {
+        name : string option;
+        damage : Rt.Short.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end
+
+    (* Enum MyGame.Sample.Color (//monster.fbs) *)
+    and Color : sig
       type t = Rt.Byte.t
 
-      let red = Rt.Byte.of_default 0L
-      let green = Rt.Byte.of_default 1L
-      let blue = Rt.Byte.of_default 2L
+      val red : t
+      val green : t
+      val blue : t
+      val to_string : t -> string
 
-      let to_string e =
-        match Rt.Byte.to_default e with
-        | 0L -> "red"
-        | 1L -> "green"
-        | 2L -> "blue"
-        | x -> "<MyGame.Sample.Color: " ^ (Int64.to_string x) ^ ">"
-
-      module Vector = Rt.Byte.Vector
-      module Vector64 = Rt.Byte.Vector64
+      module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
     end
 
-    module Weapon = struct
+    (* Union MyGame.Sample.Equipment (//monster.fbs) *)
+    and Equipment : sig
+      type t = Rt.UType.t
+
+      val none : t
+      val weapon : t
+      val to_string : t -> string
+
+      type obj = [
+        | `None_
+        | `Weapon of Weapon.obj
+      ]
+    end
+
+    (* Table MyGame.Sample.Monster (//monster.fbs) *)
+    and Monster : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      val extension : string option
+      val identifier : string option
+      val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+      val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
+
+      val pos : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Vec3.t) Rt.fbopt
+      val mana : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+      val hp : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+      val name : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fbopt
+      val inventory : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
+      val color : 'b Rt.buf -> ('b, t) Rt.fb -> Color.t
+      val weapons : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Weapon.Vector.t) Rt.fbopt
+      val equipped_type : 'b Rt.buf -> ('b, t) Rt.fb -> Equipment.t
+      val equipped : ?none:'a -> ?weapon:(('b, Weapon.t) Rt.fb -> 'a) -> default:(Equipment.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a
+      val path : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Vec3.Vector.t) Rt.fbopt
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> Monster.t Rt.wip
+        val add_pos : Vec3.t -> t -> t
+        val add_mana : Rt.Short.t -> t -> t
+        val add_hp : Rt.Short.t -> t -> t
+        val add_name : Rt.String.t Rt.wip -> t -> t
+        val add_inventory : Rt.UByte.Vector.t Rt.wip -> t -> t
+        val add_color : Color.t -> t -> t
+        val add_weapons : Weapon.Vector.t Rt.wip -> t -> t
+        val add_equipped_weapon : Weapon.t Rt.wip -> t -> t
+        val add_path : Vec3.Vector.t Rt.wip -> t -> t
+      end
+
+      type obj = {
+        pos : Vec3.obj option;
+        mana : Rt.Short.t;
+        hp : Rt.Short.t;
+        name : string option;
+        inventory : Rt.UByte.t array;
+        color : Color.t;
+        weapons : Weapon.obj array;
+        equipped : Equipment.obj;
+        path : Vec3.obj array;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end
+  end (* Sample *)
+end = struct
+  module rec Sample : sig
+    (* Struct MyGame.Sample.Vec3 (//monster.fbs) *)
+    module rec Vec3 : sig
+      type t = (Rt.Float.t * Rt.Float.t * Rt.Float.t)
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      val x : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val y : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val z : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+
+      type obj = {
+        x : Rt.Float.t;
+        y : Rt.Float.t;
+        z : Rt.Float.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
+    end
+
+    (* Table MyGame.Sample.Weapon (//monster.fbs) *)
+    and Weapon : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      val name : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fbopt
+      val damage : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> Weapon.t Rt.wip
+        val add_name : Rt.String.t Rt.wip -> t -> t
+        val add_damage : Rt.Short.t -> t -> t
+      end
+
+      type obj = {
+        name : string option;
+        damage : Rt.Short.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end
+
+    (* Enum MyGame.Sample.Color (//monster.fbs) *)
+    and Color : sig
+      type t = Rt.Byte.t
+
+      val red : t
+      val green : t
+      val blue : t
+      val to_string : t -> string
+
+      module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
+    end
+
+    (* Union MyGame.Sample.Equipment (//monster.fbs) *)
+    and Equipment : sig
+      type t = Rt.UType.t
+
+      val none : t
+      val weapon : t
+      val to_string : t -> string
+
+      type obj = [
+        | `None_
+        | `Weapon of Weapon.obj
+      ]
+    end
+
+    (* Table MyGame.Sample.Monster (//monster.fbs) *)
+    and Monster : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      val extension : string option
+      val identifier : string option
+      val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+      val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
+
+      val pos : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Vec3.t) Rt.fbopt
+      val mana : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+      val hp : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+      val name : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fbopt
+      val inventory : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
+      val color : 'b Rt.buf -> ('b, t) Rt.fb -> Color.t
+      val weapons : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Weapon.Vector.t) Rt.fbopt
+      val equipped_type : 'b Rt.buf -> ('b, t) Rt.fb -> Equipment.t
+      val equipped : ?none:'a -> ?weapon:(('b, Weapon.t) Rt.fb -> 'a) -> default:(Equipment.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a
+      val path : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Vec3.Vector.t) Rt.fbopt
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> Monster.t Rt.wip
+        val add_pos : Vec3.t -> t -> t
+        val add_mana : Rt.Short.t -> t -> t
+        val add_hp : Rt.Short.t -> t -> t
+        val add_name : Rt.String.t Rt.wip -> t -> t
+        val add_inventory : Rt.UByte.Vector.t Rt.wip -> t -> t
+        val add_color : Color.t -> t -> t
+        val add_weapons : Weapon.Vector.t Rt.wip -> t -> t
+        val add_equipped_weapon : Weapon.t Rt.wip -> t -> t
+        val add_path : Vec3.Vector.t Rt.wip -> t -> t
+      end
+
+      type obj = {
+        pos : Vec3.obj option;
+        mana : Rt.Short.t;
+        hp : Rt.Short.t;
+        name : string option;
+        inventory : Rt.UByte.t array;
+        color : Color.t;
+        weapons : Weapon.obj array;
+        equipped : Equipment.obj;
+        path : Vec3.obj array;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end
+  end = struct
+    (* Struct MyGame.Sample.Vec3 (//monster.fbs) *)
+    module rec Vec3 : sig
+      type t = (Rt.Float.t * Rt.Float.t * Rt.Float.t)
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+      val x : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val y : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val z : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+
+      type obj = {
+        x : Rt.Float.t;
+        y : Rt.Float.t;
+        z : Rt.Float.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
+    end = struct
+      type t = (Rt.Float.t * Rt.Float.t * Rt.Float.t)
+
+      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 12 let set = Struct.set_vec3__0 end)
+
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 12 let set = Struct.set_vec3__0 end)
+
+      let[@inline] x b s = Rt.Float.read_offset b s 0
+      let[@inline] y b s = Rt.Float.read_offset b s 4
+      let[@inline] z b s = Rt.Float.read_offset b s 8
+
+      type obj = {
+        x : Rt.Float.t;
+        y : Rt.Float.t;
+        z : Rt.Float.t;
+      }
+
+      let unpack b__ s__ : obj = {
+        x = x b__ s__;
+        y = y b__ s__;
+        z = z b__ s__;
+      }
+
+      let pack (obj : obj) = (obj.x, obj.y, obj.z)
+    end
+
+    (* Table MyGame.Sample.Weapon (//monster.fbs) *)
+    and Weapon : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      val name : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fbopt
+      val damage : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> Weapon.t Rt.wip
+        val add_name : Rt.String.t Rt.wip -> t -> t
+        val add_damage : Rt.Short.t -> t -> t
+      end
+
+      type obj = {
+        name : string option;
+        damage : Rt.Short.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end = struct
       type t
 
       module Vector = Rt.Ref.Vector
@@ -75,21 +387,139 @@ module MyGame = struct
         let add_name = Rt.Ref.push_slot 0
         let add_damage = Rt.Short.(push_slot_default 1 ~default:(of_default 0L))
       end
+
+      type obj = {
+        name : string option;
+        damage : Rt.Short.t;
+      }
+
+      let unpack b__ o__ : obj = {
+        name = Rt.Option.fold ~none:None ~some:(fun s -> Some (Rt.String.to_string b__ s)) (name b__ o__);
+        damage = damage b__ o__;
+      }
+
+      let pack b__ (obj : obj) =
+        let name' = Option.map (fun s -> Rt.String.create b__ s) obj.name in
+        let t = Builder.start b__ in
+        let t = match name' with None -> t | Some off -> Builder.add_name off t in
+        let t = Builder.add_damage obj.damage t in
+        Builder.finish t
     end
 
-    module Vec3 = struct
-      type t = (Rt.Float.t * Rt.Float.t * Rt.Float.t)
+    (* Enum MyGame.Sample.Color (//monster.fbs) *)
+    and Color : sig
+      type t = Rt.Byte.t
 
-      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 12 let set = Struct.set_vec3__0 end)
+      val red : t
+      val green : t
+      val blue : t
+      val to_string : t -> string
 
-      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 12 let set = Struct.set_vec3__0 end)
+      module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
+    end = struct
+      type t = Rt.Byte.t
 
-      let[@inline] x b s = Rt.Float.read_offset b s 0
-      let[@inline] y b s = Rt.Float.read_offset b s 4
-      let[@inline] z b s = Rt.Float.read_offset b s 8
+      let red = Rt.Byte.of_default 0L
+      let green = Rt.Byte.of_default 1L
+      let blue = Rt.Byte.of_default 2L
+
+      let to_string e =
+        match Rt.Byte.to_default e with
+        | 0L -> "red"
+        | 1L -> "green"
+        | 2L -> "blue"
+        | x -> "<MyGame.Sample.Color: " ^ (Int64.to_string x) ^ ">"
+
+      module Vector = Rt.Byte.Vector
+      module Vector64 = Rt.Byte.Vector64
     end
 
-    module Monster = struct
+    (* Union MyGame.Sample.Equipment (//monster.fbs) *)
+    and Equipment : sig
+      type t = Rt.UType.t
+
+      val none : t
+      val weapon : t
+      val to_string : t -> string
+
+      type obj = [
+        | `None_
+        | `Weapon of Weapon.obj
+      ]
+    end = struct
+      type t = Rt.UType.t
+
+      let none = Rt.UType.of_default 0L
+      let weapon = Rt.UType.of_default 1L
+
+      let to_string e =
+        match Rt.UType.to_default e with
+        | 0L -> "none"
+        | 1L -> "weapon"
+        | x -> "<MyGame.Sample.Equipment: " ^ (Int64.to_string x) ^ ">"
+
+      type obj = [
+        | `None_
+        | `Weapon of Weapon.obj
+      ]
+    end
+
+    (* Table MyGame.Sample.Monster (//monster.fbs) *)
+    and Monster : sig
+      type t
+
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+      val extension : string option
+      val identifier : string option
+      val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+      val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
+
+      val pos : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Vec3.t) Rt.fbopt
+      val mana : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+      val hp : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+      val name : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fbopt
+      val inventory : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
+      val color : 'b Rt.buf -> ('b, t) Rt.fb -> Color.t
+      val weapons : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Weapon.Vector.t) Rt.fbopt
+      val equipped_type : 'b Rt.buf -> ('b, t) Rt.fb -> Equipment.t
+      val equipped : ?none:'a -> ?weapon:(('b, Weapon.t) Rt.fb -> 'a) -> default:(Equipment.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a
+      val path : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Vec3.Vector.t) Rt.fbopt
+
+      module Builder : sig
+        type t
+
+        val start : Rt.Builder.t -> t
+        val finish : t -> Monster.t Rt.wip
+        val add_pos : Vec3.t -> t -> t
+        val add_mana : Rt.Short.t -> t -> t
+        val add_hp : Rt.Short.t -> t -> t
+        val add_name : Rt.String.t Rt.wip -> t -> t
+        val add_inventory : Rt.UByte.Vector.t Rt.wip -> t -> t
+        val add_color : Color.t -> t -> t
+        val add_weapons : Weapon.Vector.t Rt.wip -> t -> t
+        val add_equipped_weapon : Weapon.t Rt.wip -> t -> t
+        val add_path : Vec3.Vector.t Rt.wip -> t -> t
+      end
+
+      type obj = {
+        pos : Vec3.obj option;
+        mana : Rt.Short.t;
+        hp : Rt.Short.t;
+        name : string option;
+        inventory : Rt.UByte.t array;
+        color : Color.t;
+        weapons : Weapon.obj array;
+        equipped : Equipment.obj;
+        path : Vec3.obj array;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
+    end = struct
       type t
 
       module Vector = Rt.Ref.Vector
@@ -127,6 +557,54 @@ module MyGame = struct
         let add_equipped_weapon = Rt.Ref.push_union 8 9 Equipment.weapon
         let add_path = Rt.Ref.push_slot 10
       end
+
+      type obj = {
+        pos : Vec3.obj option;
+        mana : Rt.Short.t;
+        hp : Rt.Short.t;
+        name : string option;
+        inventory : Rt.UByte.t array;
+        color : Color.t;
+        weapons : Weapon.obj array;
+        equipped : Equipment.obj;
+        path : Vec3.obj array;
+      }
+
+      let unpack b__ o__ : obj = {
+        pos = Rt.Option.fold ~none:None ~some:(fun x -> Some (Vec3.unpack b__ x)) (pos b__ o__);
+        mana = mana b__ o__;
+        hp = hp b__ o__;
+        name = Rt.Option.fold ~none:None ~some:(fun s -> Some (Rt.String.to_string b__ s)) (name b__ o__);
+        inventory = Rt.Option.fold ~none:[||] ~some:(fun v -> Rt.UByte.Vector.to_array b__ v) (inventory b__ o__);
+        color = color b__ o__;
+        weapons = Rt.Option.fold ~none:[||] ~some:(fun v -> Array.map (fun x -> Weapon.unpack b__ x) (Weapon.Vector.to_array b__ v)) (weapons b__ o__);
+        equipped = equipped ~none:`None_ ~weapon:(fun x -> `Weapon (Weapon.unpack b__ x)) ~default:(fun _ -> `None_) b__ o__;
+        path = Rt.Option.fold ~none:[||] ~some:(fun v -> Array.map (fun x -> Vec3.unpack b__ x) (Vec3.Vector.to_array b__ v)) (path b__ o__);
+      }
+
+      let pack b__ (obj : obj) =
+        let name' = Option.map (fun s -> Rt.String.create b__ s) obj.name in
+        let inventory' = Rt.UByte.Vector.create b__ obj.inventory in
+        let weapons' = Weapon.Vector.create b__ (Array.map (fun x -> Weapon.pack b__ x) obj.weapons) in
+        let equipped' = match obj.equipped with
+          | `None_ -> None
+          | `Weapon x -> Some (`Weapon, Weapon.pack b__ x)
+        in
+        let path' = Vec3.Vector.create b__ (Array.map Vec3.pack obj.path) in
+        let t = Builder.start b__ in
+        let t = match obj.pos with None -> t | Some s -> Builder.add_pos (Vec3.pack s) t in
+        let t = Builder.add_mana obj.mana t in
+        let t = Builder.add_hp obj.hp t in
+        let t = match name' with None -> t | Some off -> Builder.add_name off t in
+        let t = Builder.add_inventory inventory' t in
+        let t = Builder.add_color obj.color t in
+        let t = Builder.add_weapons weapons' t in
+        let t = match equipped' with
+          | None -> t
+          | Some (`Weapon, off) -> Builder.add_equipped_weapon off t
+        in
+        let t = Builder.add_path path' t in
+        Builder.finish t
     end
   end (* Sample *)
 end (* MyGame *)

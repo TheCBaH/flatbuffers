@@ -8,26 +8,26 @@ module Rt : Flatbuffers.Runtime.Intf
 
 module rec MyGame : sig
   module rec Sample : sig
-    (* Union MyGame.Sample.Equipment (//monster.fbs) *)
-    module rec Equipment : sig
-      type t = private Rt.UType.t
+    (* Struct MyGame.Sample.Vec3 (//monster.fbs) *)
+    module rec Vec3 : sig
+      type t = (Rt.Float.t * Rt.Float.t * Rt.Float.t)
 
-      val none : t
-      val weapon : t
-      val to_string : t -> string
-    end
+      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
-    (* Enum MyGame.Sample.Color (//monster.fbs) *)
-    and Color : sig
-      type t = private Rt.Byte.t
+      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
 
-      val red : t
-      val green : t
-      val blue : t
-      val to_string : t -> string
+      val x : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val y : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+      val z : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
 
-      module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
-      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      type obj = {
+        x : Rt.Float.t;
+        y : Rt.Float.t;
+        z : Rt.Float.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : obj -> t
     end
 
     (* Table MyGame.Sample.Weapon (//monster.fbs) *)
@@ -49,19 +49,41 @@ module rec MyGame : sig
         val add_name : Rt.String.t Rt.wip -> t -> t
         val add_damage : Rt.Short.t -> t -> t
       end
+
+      type obj = {
+        name : string option;
+        damage : Rt.Short.t;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
     end
 
-    (* Struct MyGame.Sample.Vec3 (//monster.fbs) *)
-    and Vec3 : sig
-      type t = (Rt.Float.t * Rt.Float.t * Rt.Float.t)
+    (* Enum MyGame.Sample.Color (//monster.fbs) *)
+    and Color : sig
+      type t = private Rt.Byte.t
 
-      module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+      val red : t
+      val green : t
+      val blue : t
+      val to_string : t -> string
 
-      module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+      module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
+      module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
+    end
 
-      val x : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
-      val y : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
-      val z : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+    (* Union MyGame.Sample.Equipment (//monster.fbs) *)
+    and Equipment : sig
+      type t = private Rt.UType.t
+
+      val none : t
+      val weapon : t
+      val to_string : t -> string
+
+      type obj = [
+        | `None_
+        | `Weapon of Weapon.obj
+      ]
     end
 
     (* Table MyGame.Sample.Monster (//monster.fbs) *)
@@ -103,6 +125,21 @@ module rec MyGame : sig
         val add_equipped_weapon : Weapon.t Rt.wip -> t -> t
         val add_path : Vec3.Vector.t Rt.wip -> t -> t
       end
+
+      type obj = {
+        pos : Vec3.obj option;
+        mana : Rt.Short.t;
+        hp : Rt.Short.t;
+        name : string option;
+        inventory : Rt.UByte.t array;
+        color : Color.t;
+        weapons : Weapon.obj array;
+        equipped : Equipment.obj;
+        path : Vec3.obj array;
+      }
+
+      val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+      val pack : Rt.Builder.t -> obj -> t Rt.wip
     end
   end (* Sample *)
 end (* MyGame *)

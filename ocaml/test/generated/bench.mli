@@ -7,8 +7,32 @@
 module Rt : Flatbuffers.Runtime.Intf
 
 module rec BenchmarksFlatbuffers : sig
+  (* Struct benchmarks_flatbuffers.Foo (//bench.fbs) *)
+  module rec Foo : sig
+    type t = (Rt.ULong.t * Rt.Short.t * Rt.Byte.t * Rt.UInt.t)
+
+    module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+    val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
+    val count : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
+    val prefix : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Byte.t
+    val length : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
+
+    type obj = {
+      id : Rt.ULong.t;
+      count : Rt.Short.t;
+      prefix : Rt.Byte.t;
+      length : Rt.UInt.t;
+    }
+
+    val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+    val pack : obj -> t
+  end
+
   (* Enum benchmarks_flatbuffers.Enum (//bench.fbs) *)
-  module rec Enum : sig
+  and Enum : sig
     type t = private Rt.Short.t
 
     val apples : t
@@ -18,6 +42,65 @@ module rec BenchmarksFlatbuffers : sig
 
     module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
     module Vector64 : Rt.VectorS with type 'b elt := t and type builder_elt := t
+  end
+
+  (* Struct benchmarks_flatbuffers.Bar (//bench.fbs) *)
+  and Bar : sig
+    type t = (Foo.t * Rt.Int.t * Rt.Float.t * Rt.UShort.t)
+
+    module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+    val parent : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Foo.t) Rt.fb
+    val time : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+    val ratio : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
+    val size : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UShort.t
+
+    type obj = {
+      parent : Foo.obj;
+      time : Rt.Int.t;
+      ratio : Rt.Float.t;
+      size : Rt.UShort.t;
+    }
+
+    val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+    val pack : obj -> t
+  end
+
+  (* Table benchmarks_flatbuffers.FooBar (//bench.fbs) *)
+  and FooBar : sig
+    type t
+
+    module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
+
+    val sibling : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Bar.t) Rt.fbopt
+    val name : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fbopt
+    val rating : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
+    val postfix : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UByte.t
+
+    module Builder : sig
+      type t
+
+      val start : Rt.Builder.t -> t
+      val finish : t -> FooBar.t Rt.wip
+      val add_sibling : Bar.t -> t -> t
+      val add_name : Rt.String.t Rt.wip -> t -> t
+      val add_rating : Rt.Double.t -> t -> t
+      val add_postfix : Rt.UByte.t -> t -> t
+    end
+
+    type obj = {
+      sibling : Bar.obj option;
+      name : string option;
+      rating : Rt.Double.t;
+      postfix : Rt.UByte.t;
+    }
+
+    val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+    val pack : Rt.Builder.t -> obj -> t Rt.wip
   end
 
   (* Table benchmarks_flatbuffers.FooBarContainer (//bench.fbs) *)
@@ -48,58 +131,15 @@ module rec BenchmarksFlatbuffers : sig
       val add_fruit : Enum.t -> t -> t
       val add_location : Rt.String.t Rt.wip -> t -> t
     end
-  end
 
-  (* Table benchmarks_flatbuffers.FooBar (//bench.fbs) *)
-  and FooBar : sig
-    type t
+    type obj = {
+      list : FooBar.obj array;
+      initialized : Rt.Bool.t;
+      fruit : Enum.t;
+      location : string option;
+    }
 
-    module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
-
-    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
-
-    val sibling : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Bar.t) Rt.fbopt
-    val name : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.t) Rt.fbopt
-    val rating : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
-    val postfix : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UByte.t
-
-    module Builder : sig
-      type t
-
-      val start : Rt.Builder.t -> t
-      val finish : t -> FooBar.t Rt.wip
-      val add_sibling : Bar.t -> t -> t
-      val add_name : Rt.String.t Rt.wip -> t -> t
-      val add_rating : Rt.Double.t -> t -> t
-      val add_postfix : Rt.UByte.t -> t -> t
-    end
-  end
-
-  (* Struct benchmarks_flatbuffers.Foo (//bench.fbs) *)
-  and Foo : sig
-    type t = (Rt.ULong.t * Rt.Short.t * Rt.Byte.t * Rt.UInt.t)
-
-    module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
-
-    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
-
-    val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
-    val count : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Short.t
-    val prefix : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Byte.t
-    val length : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
-  end
-
-  (* Struct benchmarks_flatbuffers.Bar (//bench.fbs) *)
-  and Bar : sig
-    type t = (Foo.t * Rt.Int.t * Rt.Float.t * Rt.UShort.t)
-
-    module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
-
-    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
-
-    val parent : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Foo.t) Rt.fb
-    val time : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
-    val ratio : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
-    val size : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UShort.t
+    val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+    val pack : Rt.Builder.t -> obj -> t Rt.wip
   end
 end (* BenchmarksFlatbuffers *)
