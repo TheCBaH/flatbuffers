@@ -43,9 +43,9 @@ namespace {
 // To reduce typing
 namespace r = ::reflection;
 
-// TODO(dmitrig): treat identifiers used in generation as keywords for renaming?
 std::set<std::string> OCamlKeywords() {
-  return { "and",     "as",         "assert",    "asr",         "begin",
+  return { // OCaml reserved words
+           "and",     "as",         "assert",    "asr",         "begin",
            "class",   "constraint", "do",        "done",        "downto",
            "else",    "end",        "exception", "external",    "false",
            "for",     "fun",        "function",  "functor",     "if",
@@ -56,7 +56,12 @@ std::set<std::string> OCamlKeywords() {
            "open",    "or",         "private",   "rec",         "sig",
            "struct",  "then",       "to",        "true",        "try",
            "type",    "val",        "virtual",   "when",        "while",
-           "with" };
+           "with",
+           // Generator-synthesized identifiers (snake_case — fields/functions)
+           "obj", "unpack", "pack", "to_string", "extension", "identifier",
+           "root", "finish_buf", "has_identifier", "lookup_by_key",
+           // Generator-synthesized identifiers (UpperCamel — modules)
+           "Rt", "Builder", "Vector", "Vector64" };
 }
 
 Namer::Config OCamlDefaultConfig() {
