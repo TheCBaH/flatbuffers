@@ -475,6 +475,35 @@ let check_nested_defaults () =
   Alcotest.(check bool) "inventory absent" true (Rt.Option.is_none (Monster.inventory nbuf nm))
 ;;
 
+let check_union_default_tag () =
+  let open Fixtures.Monster_test in
+  let open MyGame.Example in
+  let b = Rt.Builder.create () in
+  let name = Rt.String.create b "NoUnion" in
+  let wip = Monster.Builder.(start b |> add_name name |> finish) in
+  let buf = Monster.finish_buf Flatbuffers.Primitives.Bytes b wip in
+  let (Rt.Root (buf, m)) = Monster.root Flatbuffers.Primitives.Bytes buf in
+  (* tag defaults to None (0) when vtable slot is absent *)
+  Alcotest.(check char) "test_type absent defaults to None"
+    (Any.none :> char) (Monster.test_type buf m :> char);
+  (* union reader with absent tag falls through to ~default *)
+  let result =
+    Monster.test buf m
+      ~none:42
+      ~monster:(fun _ -> failwith "should not read monster")
+      ~default:(fun _ -> failwith "should not hit default")
+  in
+  Alcotest.(check int) "union None branch taken" 42 result;
+  (* when ~none is not provided, ~default receives the None tag *)
+  let result2 =
+    Monster.test buf m
+      ~monster:(fun _ -> failwith "should not read monster")
+      ~default:(fun t -> Alcotest.(check char) "default tag is None"
+        (Any.none :> char) (t :> char); 99)
+  in
+  Alcotest.(check int) "union default fallback" 99 result2
+;;
+
 let check_key_lookup_stat () =
   let open Fixtures.Monster_test in
   let open MyGame.Example in
@@ -622,6 +651,7 @@ let test_cases =
     ; test_case "Nested testrequired field" `Quick check_nested_testrequired
     ; test_case "Nested with builder reset" `Quick check_nested_builder_reset
     ; test_case "Nested default values" `Quick check_nested_defaults
+    ; test_case "Union absent defaults to None" `Quick check_union_default_tag
     ; test_case "Key lookup on sorted table vector" `Quick check_key_lookup_stat
     ; test_case "Key lookup not found" `Quick check_key_lookup_not_found
     ; test_case "Key lookup on sorted struct vector" `Quick check_key_lookup_struct

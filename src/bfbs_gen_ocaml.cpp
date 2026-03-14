@@ -175,7 +175,6 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
   }
 
  private:
-  // TODO(dmitrig): just 'open Rt' don't bother trying to make this a variable
   const std::string RuntimeNS = "Rt";
 
   std::string UnionReadIdent(const r::Enum *enum_def) {
@@ -576,7 +575,9 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
         if (field_type == r::Union) {
           auto ns = GenerateIntfNs(field->type(), obj_name);
           auto args = GenerateUnionArgs(field->type());
-          // TODO(dmitrig): default tag may not be stored, need default arg
+          // When the tag vtable slot is absent, read_table_default returns 0
+          // (None). The union reader's match handles this: if ~none is provided
+          // it fires; otherwise the catch-all ~default receives the None tag.
           impl += indent + "let[@inline] " + namer_.Function(field_name) +
                   args + " b o = Union." +
                   UnionReadIdent(GetEnum(field->type())) + " b " +
@@ -700,7 +701,6 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
       impl += indent2 + "let finish b = Rt.Builder.end_table b\n";
 
       intf += indent2 + "val start : Rt.Builder.t -> t\n";
-      // TODO(dmitrig): gross namespacing here
       intf += indent2 + "val finish : t -> " + obj_shortname + ".t Rt.wip\n";
 
       ForAllFields(object, /*reverse=*/false, [&](const r::Field *field) {
