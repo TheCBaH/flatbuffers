@@ -291,10 +291,39 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
 
     if (structs.empty()) return;
 
+    // Topologically sort structs so dependencies come first, allowing
+    // simple `let` instead of `let rec ... and ...`.
+    std::map<std::string, int> name_to_idx;
+    for (size_t i = 0; i < structs.size(); i++)
+      name_to_idx[structs[i]->name()->str()] = static_cast<int>(i);
+
+    std::vector<int> order;
+    std::vector<int> state(structs.size(), 0);  // 0=unvisited, 1=visiting, 2=done
+    std::function<void(int)> visit = [&](int i) {
+      if (state[i] == 2) return;
+      state[i] = 1;
+      ForAllFields(structs[i], false, [&](const r::Field *field) {
+        const r::Object *dep = nullptr;
+        if (field->type()->base_type() == r::Obj) {
+          dep = GetObject(field->type());
+        } else if (field->type()->base_type() == r::Array &&
+                   field->type()->element() == r::Obj) {
+          dep = GetObject(field->type(), true);
+        }
+        if (dep && dep->is_struct()) {
+          auto it = name_to_idx.find(dep->name()->str());
+          if (it != name_to_idx.end() && state[it->second] != 1)
+            visit(it->second);
+        }
+      });
+      state[i] = 2;
+      order.push_back(i);
+    };
+    for (size_t i = 0; i < structs.size(); i++) visit(static_cast<int>(i));
+
     impl += "module Struct = struct\n";
-    bool first = true;
-    bool rec = (structs.size() > 1);
-    for (auto object : structs) {
+    for (auto idx : order) {
+      auto object = structs[idx];
       std::string set_args;
       std::string set_body;
       bool first_field = true;
@@ -342,11 +371,8 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
         first_field = false;
       });
 
-      // TODO(dmitrig): overly complicated way to avoid "unused rec"
-      impl += "\n" + indent + (first ? "let " : "and ") + (rec ? "rec " : "") +
-              StructSetIdent(object) + " b i (" + set_args + ") =\n" + set_body;
-      first = false;
-      rec = false;
+      impl += "\n" + indent + "let " + StructSetIdent(object) + " b i (" +
+              set_args + ") =\n" + set_body + indent + "  ()\n";
     }
     impl += "end\n\n";
   }

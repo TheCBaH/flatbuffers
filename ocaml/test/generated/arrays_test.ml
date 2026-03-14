@@ -10,7 +10,15 @@ module Rt = Flatbuffers.Runtime
 
 module Struct = struct
 
-  let rec set_array_struct__14 b i (a_, b_, c_, d_, e_, f_) =
+  let set_nested_struct__13 b i (a_, b_, c_, d_) =
+    Array.iteri (fun j_ v_ -> Rt.Builder.set_scalar TInt b (i + 0 + j_ * 4) v_) a_;
+    Rt.Builder.set_scalar TByte b (i + 8) b_;
+    Array.iteri (fun j_ v_ -> Rt.Builder.set_scalar TByte b (i + 9 + j_ * 1) v_) c_;
+    Rt.Builder.set_padding b (i + 11) 5;
+    Array.iteri (fun j_ v_ -> Rt.Builder.set_scalar TLong b (i + 16 + j_ * 8) v_) d_;
+    ()
+
+  let set_array_struct__14 b i (a_, b_, c_, d_, e_, f_) =
     Rt.Builder.set_scalar TFloat b (i + 0) a_;
     Array.iteri (fun j_ v_ -> Rt.Builder.set_scalar TInt b (i + 4 + j_ * 4) v_) b_;
     Rt.Builder.set_scalar TByte b (i + 64) c_;
@@ -19,20 +27,15 @@ module Struct = struct
     Rt.Builder.set_scalar TInt b (i + 136) e_;
     Rt.Builder.set_padding b (i + 140) 4;
     Array.iteri (fun j_ v_ -> Rt.Builder.set_scalar TLong b (i + 144 + j_ * 8) v_) f_;
+    ()
 
-  and set_large_array_struct__15 b i (d_, e_, f_, g_, h_) =
+  let set_large_array_struct__15 b i (d_, e_, f_, g_, h_) =
     Array.iteri (fun j_ v_ -> Rt.Builder.set_scalar TUByte b (i + 0 + j_ * 1) v_) d_;
     Array.iteri (fun j_ v_ -> Rt.Builder.set_scalar TFloat b (i + 64 + j_ * 4) v_) e_;
     Array.iteri (fun j_ v_ -> Rt.Builder.set_scalar TBool b (i + 320 + j_ * 1) v_) f_;
     Array.iteri (fun j_ v_ -> set_nested_struct__13 b (i + 384 + j_ * 32) v_) g_;
     Array.iteri (fun j_ v_ -> Rt.Builder.set_scalar TByte b (i + 2432 + j_ * 1) v_) h_;
-
-  and set_nested_struct__13 b i (a_, b_, c_, d_) =
-    Array.iteri (fun j_ v_ -> Rt.Builder.set_scalar TInt b (i + 0 + j_ * 4) v_) a_;
-    Rt.Builder.set_scalar TByte b (i + 8) b_;
-    Array.iteri (fun j_ v_ -> Rt.Builder.set_scalar TByte b (i + 9 + j_ * 1) v_) c_;
-    Rt.Builder.set_padding b (i + 11) 5;
-    Array.iteri (fun j_ v_ -> Rt.Builder.set_scalar TLong b (i + 16 + j_ * 8) v_) d_;
+    ()
 end
 
 module rec MyGame : sig

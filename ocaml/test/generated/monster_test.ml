@@ -10,24 +10,28 @@ module Rt = Flatbuffers.Runtime
 
 module Struct = struct
 
-  let rec set_ability__4 b i (id_, distance_) =
+  let set_ability__4 b i (id_, distance_) =
     Rt.Builder.set_scalar TUInt b (i + 0) id_;
     Rt.Builder.set_scalar TUInt b (i + 4) distance_;
+    ()
 
-  and set_struct_of_structs__6 b i (a_, b_, c_) =
-    set_ability__4 b (i + 0) a_;
-    set_test__5 b (i + 8) b_;
-    set_ability__4 b (i + 12) c_;
-
-  and set_struct_of_structs_of_structs__7 b i (a_) =
-    set_struct_of_structs__6 b (i + 0) a_;
-
-  and set_test__5 b i (a_, b_) =
+  let set_test__5 b i (a_, b_) =
     Rt.Builder.set_scalar TShort b (i + 0) a_;
     Rt.Builder.set_scalar TByte b (i + 2) b_;
     Rt.Builder.set_padding b (i + 3) 1;
+    ()
 
-  and set_vec3__8 b i (x_, y_, z_, test1_, test2_, test3_) =
+  let set_struct_of_structs__6 b i (a_, b_, c_) =
+    set_ability__4 b (i + 0) a_;
+    set_test__5 b (i + 8) b_;
+    set_ability__4 b (i + 12) c_;
+    ()
+
+  let set_struct_of_structs_of_structs__7 b i (a_) =
+    set_struct_of_structs__6 b (i + 0) a_;
+    ()
+
+  let set_vec3__8 b i (x_, y_, z_, test1_, test2_, test3_) =
     Rt.Builder.set_scalar TFloat b (i + 0) x_;
     Rt.Builder.set_scalar TFloat b (i + 4) y_;
     Rt.Builder.set_scalar TFloat b (i + 8) z_;
@@ -37,9 +41,11 @@ module Struct = struct
     Rt.Builder.set_padding b (i + 25) 1;
     set_test__5 b (i + 26) test3_;
     Rt.Builder.set_padding b (i + 30) 2;
+    ()
 
-  and set_unused__9 b i (a_) =
+  let set_unused__9 b i (a_) =
     Rt.Builder.set_scalar TInt b (i + 0) a_;
+    ()
 end
 
 module Union = struct

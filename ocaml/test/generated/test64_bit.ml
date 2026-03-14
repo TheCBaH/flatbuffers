@@ -14,6 +14,7 @@ module Struct = struct
     Rt.Builder.set_scalar TInt b (i + 0) a_;
     Rt.Builder.set_padding b (i + 4) 4;
     Rt.Builder.set_scalar TDouble b (i + 8) b_;
+    ()
 end
 
 (* Struct LeafStruct (//test_64bit.fbs) *)

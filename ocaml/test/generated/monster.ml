@@ -14,6 +14,7 @@ module Struct = struct
     Rt.Builder.set_scalar TFloat b (i + 0) x_;
     Rt.Builder.set_scalar TFloat b (i + 4) y_;
     Rt.Builder.set_scalar TFloat b (i + 8) z_;
+    ()
 end
 
 module Union = struct
