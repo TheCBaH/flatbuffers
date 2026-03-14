@@ -1607,12 +1607,17 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
     std::string res = "";
     if (!docs) return res;
 
-    // TODO(dmitrig): proper multiline comments
-    res += indent + "(**";
+    std::string body_indent = indent + "    ";
+    bool first = true;
+    res += indent + "(** ";
     flatbuffers::ForAllDocumentation(
-        docs, [&](const flatbuffers::String *str) { res += str->str(); });
-    if (!extra.empty()) res += "\n\n" + indent + "    " + extra;
-    res += " *)\n";
+        docs, [&](const flatbuffers::String *str) {
+          if (!first) res += body_indent;
+          res += str->str() + "\n";
+          first = false;
+        });
+    if (!extra.empty()) res += "\n" + body_indent + extra + "\n";
+    res += indent + "*)\n";
     return res;
   }
 

@@ -325,18 +325,22 @@ module rec MyGame : sig
       ]
     end
 
-    (** Composite components of Monster color.
+    (**  Composite components of Monster color.
 
-        Enum MyGame.Example.Color (//monster_test.fbs) *)
+        Enum MyGame.Example.Color (//monster_test.fbs)
+    *)
     and Color : sig
       type t = private Rt.UByte.t
 
       val red : t
 
-      (** \brief color Green Green is bit_flag with value (1u << 1) *)
+      (**  \brief color Green
+           Green is bit_flag with value (1u << 1)
+      *)
       val green : t
 
-      (** \brief color Blue (1u << 3) *)
+      (**  \brief color Blue (1u << 3)
+      *)
       val blue : t
       val to_string : t -> string
 
@@ -465,9 +469,10 @@ module rec MyGame : sig
       val pack : obj -> t
     end
 
-    (** an example documentation comment: "monster object"
+    (**  an example documentation comment: "monster object"
 
-        Table MyGame.Example.Monster (//monster_test.fbs) *)
+        Table MyGame.Example.Monster (//monster_test.fbs)
+    *)
     and Monster : sig
       type t
 
@@ -492,7 +497,9 @@ module rec MyGame : sig
       val test4 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Test.Vector.t) Rt.fbopt
       val testarrayofstring : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.Vector.t) Rt.fbopt
 
-      (** an example documentation comment: this will end up in the generated code multiline too *)
+      (**  an example documentation comment: this will end up in the generated code
+           multiline too
+      *)
       val testarrayoftables : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Vector.t) Rt.fbopt
       val enemy : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, t) Rt.fbopt
       val testnestedflatbuffer : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
