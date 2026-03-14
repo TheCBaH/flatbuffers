@@ -1,0 +1,11 @@
+table Greeting {
+  message: string;
+}
+
+union Content { Greeting, Name: string }
+
+table Envelope {
+  content: Content;
+}
+
+root_type Envelope;

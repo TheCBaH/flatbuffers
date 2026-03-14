@@ -171,7 +171,8 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
   std::string LanguageName() const override { return "OCaml"; }
 
   uint64_t SupportedAdvancedFeatures() const FLATBUFFERS_OVERRIDE {
-    return r::AdvancedArrayFeatures | r::OptionalScalars;
+    return r::AdvancedArrayFeatures | r::AdvancedUnionFeatures |
+           r::OptionalScalars;
   }
 
  private:

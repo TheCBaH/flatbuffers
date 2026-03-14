@@ -79,6 +79,15 @@ index caeca93d..0909696d 100644
    unsigned long langs = opts.lang_to_generate;
    return (langs > 0 && langs < IDLOptions::kMAX) && !(langs & ~supported_langs);
  }
+@@ -2818,7 +2818,7 @@ bool Parser::SupportsAdvancedUnionFeatures() const {
+           ~(IDLOptions::kCpp | IDLOptions::kTs | IDLOptions::kPhp |
+             IDLOptions::kJava | IDLOptions::kCSharp | IDLOptions::kKotlin |
+             IDLOptions::kBinary | IDLOptions::kSwift | IDLOptions::kNim |
+-            IDLOptions::kJson | IDLOptions::kKotlinKmp)) == 0;
++            IDLOptions::kJson | IDLOptions::kKotlinKmp | IDLOptions::kOCaml)) == 0;
+ }
+
+ bool Parser::SupportsAdvancedArrayFeatures() const {
 @@ -2827,12 +2827,13 @@ bool Parser::SupportsAdvancedArrayFeatures() const {
            ~(IDLOptions::kCpp | IDLOptions::kPython | IDLOptions::kJava |
              IDLOptions::kCSharp | IDLOptions::kJsonSchema | IDLOptions::kJson |

@@ -21,3 +21,10 @@
  (action
    (progn
     (run flatc -I %{workspace_root}/flatbuffers/tests/include_test --ocaml %{schemas}))))
+
+(rule
+ (alias gen-string-union)
+ (deps (:schema string_union.fbs))
+ (targets string_union.ml string_union.mli)
+ (mode promote)
+ (action (run flatc --ocaml --bfbs-filenames . %{schema})))
