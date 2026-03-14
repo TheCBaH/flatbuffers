@@ -67,7 +67,7 @@ index ce9b8c4a..f75a7289 100644
    flatbuffers::FlatCOptions options =
        flatc.ParseFromCommandLineArguments(argc, argv);
 diff --git a/src/idl_parser.cpp b/src/idl_parser.cpp
-index caeca93d..0909696d 100644
+index caeca93d..b5d4152b 100644
 --- a/src/idl_parser.cpp
 +++ b/src/idl_parser.cpp
 @@ -2797,7 +2797,7 @@ bool Parser::SupportsOptionalScalars(const flatbuffers::IDLOptions& opts) {
@@ -79,14 +79,23 @@ index caeca93d..0909696d 100644
    unsigned long langs = opts.lang_to_generate;
    return (langs > 0 && langs < IDLOptions::kMAX) && !(langs & ~supported_langs);
  }
-@@ -2818,7 +2818,7 @@ bool Parser::SupportsAdvancedUnionFeatures() const {
+@@ -2810,7 +2810,7 @@ bool Parser::SupportsDefaultVectorsAndStrings() const {
+   static FLATBUFFERS_CONSTEXPR unsigned long supported_langs =
+       IDLOptions::kRust | IDLOptions::kSwift | IDLOptions::kNim |
+       IDLOptions::kCpp | IDLOptions::kBinary | IDLOptions::kJson |
+-      IDLOptions::kTs;
++      IDLOptions::kTs | IDLOptions::kOCaml;
+   return !(opts.lang_to_generate & ~supported_langs);
+ }
+ 
+@@ -2819,7 +2819,7 @@ bool Parser::SupportsAdvancedUnionFeatures() const {
            ~(IDLOptions::kCpp | IDLOptions::kTs | IDLOptions::kPhp |
              IDLOptions::kJava | IDLOptions::kCSharp | IDLOptions::kKotlin |
              IDLOptions::kBinary | IDLOptions::kSwift | IDLOptions::kNim |
 -            IDLOptions::kJson | IDLOptions::kKotlinKmp)) == 0;
 +            IDLOptions::kJson | IDLOptions::kKotlinKmp | IDLOptions::kOCaml)) == 0;
  }
-
+ 
  bool Parser::SupportsAdvancedArrayFeatures() const {
 @@ -2827,12 +2827,13 @@ bool Parser::SupportsAdvancedArrayFeatures() const {
            ~(IDLOptions::kCpp | IDLOptions::kPython | IDLOptions::kJava |

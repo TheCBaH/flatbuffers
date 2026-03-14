@@ -5,7 +5,7 @@
  (modes byte))
 
 (tests
- (names sample_binary main_test)
+ (names sample_binary main_test more_defaults_test)
  (modules :standard \ fixtures wire_data_test)
  (deps
   (file ../../flatbuffers/tests/monsterdata_test.mon)

@@ -28,3 +28,10 @@
  (targets string_union.ml string_union.mli)
  (mode promote)
  (action (run flatc --ocaml --bfbs-filenames . %{schema})))
+
+(rule
+ (alias gen-more-defaults)
+ (deps (:schema more_defaults.fbs))
+ (targets more_defaults.ml more_defaults.mli)
+ (mode promote)
+ (action (run flatc --ocaml --bfbs-filenames . %{schema})))

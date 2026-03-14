@@ -172,7 +172,7 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
 
   uint64_t SupportedAdvancedFeatures() const FLATBUFFERS_OVERRIDE {
     return r::AdvancedArrayFeatures | r::AdvancedUnionFeatures |
-           r::OptionalScalars;
+           r::OptionalScalars | r::DefaultVectorsAndStrings;
   }
 
  private:
@@ -585,11 +585,17 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
         intf += indent + "val " + namer_.Function(field_name) + " :" + args +
                 " 'b Rt.buf -> ('b, t) " + RuntimeNS + ".fb -> 'a\n";
       } else {
+        // For DefaultVectorsAndStrings: non-optional, non-required reference
+        // fields are read as optional since the default isn't in the buffer.
+        bool reader_opt = field->optional() && !object->is_struct();
+        if (!object->is_struct() && !field->optional() && !field->required() &&
+            !IsImmediateType(field->type())) {
+          reader_opt = true;
+        }
         intf += indent + "val " + namer_.Function(field_name) +
                 " : 'b Rt.buf -> ('b, t) " + RuntimeNS + ".fb -> " +
                 GenerateReaderType(
-                    field->type(), obj_name,
-                    /*optional=*/field->optional() && !object->is_struct()) +
+                    field->type(), obj_name, reader_opt) +
                 "\n";
       }
 
@@ -617,6 +623,11 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
             getter_fn = ".read_table_opt";
           } else if (field->required()) {
             getter_fn = ".read_table";
+          } else if (!IsImmediateType(field->type())) {
+            // DefaultVectorsAndStrings: string/vector/object fields with
+            // defaults are read as optional at the zero-copy level since
+            // the default value is not stored in the buffer.
+            getter_fn = ".read_table_opt";
           } else {
             getter_fn = ".(read_table_default";
             default_arg = " ~default:(" + GenerateDefault(field) + "))";
@@ -765,7 +776,8 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
                        NumToString(object->bytesize()) + " " +
                        NumToString(object->minalign());
           }
-          if (!field->optional() && !field->required()) {
+          if (!field->optional() && !field->required() &&
+              IsImmediateType(field->type())) {
             push_fn = ".(push_slot_default";
             default_arg = " ~default:(" + GenerateDefault(field) + "))";
           } else {
@@ -1098,8 +1110,12 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
       if (field->optional()) {
         return RuntimeNS + ".Option.fold ~none:None ~some:(fun s -> Some (" +
                RuntimeNS + ".String.to_string b__ s)) (" + fname + " b__ o__)";
-      } else {
+      } else if (field->required()) {
         return RuntimeNS + ".String.to_string b__ (" + fname + " b__ o__)";
+      } else {
+        // DefaultVectorsAndStrings: fold with empty string default
+        return RuntimeNS + ".Option.fold ~none:\"\" ~some:(fun s -> " +
+               RuntimeNS + ".String.to_string b__ s) (" + fname + " b__ o__)";
       }
     }
 

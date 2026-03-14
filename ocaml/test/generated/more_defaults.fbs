@@ -1,0 +1,15 @@
+// Test schema for DefaultVectorsAndStrings feature.
+// Based on flatbuffers/tests/more_defaults.fbs with root_type added.
+
+enum ABC: int { A, B, C }
+
+table MoreDefaults {
+  ints: [int] = [];
+  floats: [float] = [];
+  empty_string: string = "";
+  some_string: string = "some";
+  abcs: [ABC] = [];
+  bools: [bool] = [];
+}
+
+root_type MoreDefaults;
