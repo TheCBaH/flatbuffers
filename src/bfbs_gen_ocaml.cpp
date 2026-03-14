@@ -432,10 +432,10 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
 
     // vector module
     if (object->is_struct()) {
-      // TODO(dmitrig): use minalign as well?
       std::string struct_functor_arg =
               " (struct type builder_elt = t let size = " +
-              NumToString(object->bytesize()) + " let set = Struct." +
+              NumToString(object->bytesize()) + " let minalign = " +
+              NumToString(object->minalign()) + " let set = Struct." +
               StructSetIdent(object) + " end)";
       intf += indent +
               "module Vector : Rt.VectorS with type 'b elt := ('b, t) " +
@@ -676,7 +676,8 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
         if (object->is_struct()) {
           impl += indent + "let[@inline] lookup_by_key buf vec_off key = " +
                   RuntimeNS + ".lookup_by_key_struct ~size:" +
-                  NumToString(object->bytesize()) + " " +
+                  NumToString(object->bytesize()) + " ~minalign:" +
+                  NumToString(object->minalign()) + " " +
                   "buf vec_off " +
                   "(fun elt -> " + cmp_expr + ")\n";
         } else {

@@ -37,9 +37,9 @@ module rec LeafStruct : sig
 end = struct
   type t = (Rt.Int.t * Rt.Double.t)
 
-  module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 16 let set = Struct.set_leaf_struct__16 end)
+  module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 16 let minalign = 8 let set = Struct.set_leaf_struct__16 end)
 
-  module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 16 let set = Struct.set_leaf_struct__16 end)
+  module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 16 let minalign = 8 let set = Struct.set_leaf_struct__16 end)
 
   let[@inline] a b s = Rt.Int.read_offset b s 0
   let[@inline] b b s = Rt.Double.read_offset b s 8

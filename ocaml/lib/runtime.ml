@@ -211,6 +211,7 @@ module Struct = struct
     type builder_elt
 
     val size : int
+    val minalign : int
     val set : Builder.t -> int -> builder_elt -> unit
   end) =
   struct
@@ -222,7 +223,7 @@ module Struct = struct
        are indirected through the vtable.
      *)
     type t
-    let tag = Read.TStruct { sz = T.size; align = 0 }
+    let tag = Read.TStruct { sz = T.size; align = T.minalign }
     let[@inline] length (Buf (vt, b)) i = vt.length_vec b i
     let[@inline] get (Buf (vt, b)) i j = vt.get_vec tag b i j
     let[@inline] to_list (Buf (vt, b)) i = vt.to_list_vec tag b i
@@ -236,11 +237,12 @@ module Struct = struct
     type builder_elt
 
     val size : int
+    val minalign : int
     val set : Builder.t -> int -> builder_elt -> unit
   end) =
   struct
     type t
-    let tag = Read.TStruct { sz = T.size; align = 0 }
+    let tag = Read.TStruct { sz = T.size; align = T.minalign }
     let[@inline] length (Buf (vt, b)) i = vt.length_vec64 b i
     let[@inline] get (Buf (vt, b)) i j = vt.get_vec64 tag b i j
     let[@inline] to_list (Buf (vt, b)) i = vt.to_list_vec64 tag b i
@@ -330,8 +332,8 @@ let[@inline] lookup_by_key_ref (Buf (vt, b)) vec_off cmp =
   search 0 len
 ;;
 
-let[@inline] lookup_by_key_struct ~size (Buf (vt, b)) vec_off cmp =
-  let tag = Read.TStruct { sz = size; align = 0 } in
+let[@inline] lookup_by_key_struct ~size ~minalign (Buf (vt, b)) vec_off cmp =
+  let tag = Read.TStruct { sz = size; align = minalign } in
   let len = vt.length_vec b vec_off in
   let rec search lo hi =
     if lo >= hi then -1

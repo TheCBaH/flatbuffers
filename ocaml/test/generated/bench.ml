@@ -187,9 +187,9 @@ end = struct
   end = struct
     type t = (Rt.ULong.t * Rt.Short.t * Rt.Byte.t * Rt.UInt.t)
 
-    module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 16 let set = Struct.set_foo__2 end)
+    module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 16 let minalign = 8 let set = Struct.set_foo__2 end)
 
-    module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 16 let set = Struct.set_foo__2 end)
+    module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 16 let minalign = 8 let set = Struct.set_foo__2 end)
 
     let[@inline] id b s = Rt.ULong.read_offset b s 0
     let[@inline] count b s = Rt.Short.read_offset b s 8
@@ -267,9 +267,9 @@ end = struct
   end = struct
     type t = ((Rt.ULong.t * Rt.Short.t * Rt.Byte.t * Rt.UInt.t) * Rt.Int.t * Rt.Float.t * Rt.UShort.t)
 
-    module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 32 let set = Struct.set_bar__3 end)
+    module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 32 let minalign = 8 let set = Struct.set_bar__3 end)
 
-    module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 32 let set = Struct.set_bar__3 end)
+    module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 32 let minalign = 8 let set = Struct.set_bar__3 end)
 
     let[@inline] parent b s = Rt.Struct.read_offset b s 0
     let[@inline] time b s = Rt.Int.read_offset b s 16

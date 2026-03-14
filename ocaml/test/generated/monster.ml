@@ -319,9 +319,9 @@ end = struct
     end = struct
       type t = (Rt.Float.t * Rt.Float.t * Rt.Float.t)
 
-      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 12 let set = Struct.set_vec3__0 end)
+      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 12 let minalign = 4 let set = Struct.set_vec3__0 end)
 
-      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 12 let set = Struct.set_vec3__0 end)
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 12 let minalign = 4 let set = Struct.set_vec3__0 end)
 
       let[@inline] x b s = Rt.Float.read_offset b s 0
       let[@inline] y b s = Rt.Float.read_offset b s 4

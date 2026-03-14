@@ -988,9 +988,9 @@ end = struct
     end = struct
       type t = (Rt.Int.t)
 
-      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 4 let set = Struct.set_unused__9 end)
+      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 4 let minalign = 4 let set = Struct.set_unused__9 end)
 
-      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 4 let set = Struct.set_unused__9 end)
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 4 let minalign = 4 let set = Struct.set_unused__9 end)
 
       let[@inline] a b s = Rt.Int.read_offset b s 0
 
@@ -1625,13 +1625,13 @@ end = struct
     end = struct
       type t = (Rt.UInt.t * Rt.UInt.t)
 
-      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 8 let set = Struct.set_ability__4 end)
+      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 8 let minalign = 4 let set = Struct.set_ability__4 end)
 
-      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 8 let set = Struct.set_ability__4 end)
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 8 let minalign = 4 let set = Struct.set_ability__4 end)
 
       let[@inline] id b s = Rt.UInt.read_offset b s 0
       let[@inline] distance b s = Rt.UInt.read_offset b s 4
-      let[@inline] lookup_by_key buf vec_off key = Rt.lookup_by_key_struct ~size:8 buf vec_off (fun elt -> compare (id buf elt) key)
+      let[@inline] lookup_by_key buf vec_off key = Rt.lookup_by_key_struct ~size:8 ~minalign:4 buf vec_off (fun elt -> compare (id buf elt) key)
 
       type obj = {
         id : Rt.UInt.t;
@@ -1798,9 +1798,9 @@ end = struct
     end = struct
       type t = (Rt.Short.t * Rt.Byte.t)
 
-      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 4 let set = Struct.set_test__5 end)
+      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 4 let minalign = 2 let set = Struct.set_test__5 end)
 
-      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 4 let set = Struct.set_test__5 end)
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 4 let minalign = 2 let set = Struct.set_test__5 end)
 
       let[@inline] a b s = Rt.Short.read_offset b s 0
       let[@inline] b b s = Rt.Byte.read_offset b s 2
@@ -2202,9 +2202,9 @@ end = struct
     end = struct
       type t = ((Rt.UInt.t * Rt.UInt.t) * (Rt.Short.t * Rt.Byte.t) * (Rt.UInt.t * Rt.UInt.t))
 
-      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 20 let set = Struct.set_struct_of_structs__6 end)
+      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 20 let minalign = 4 let set = Struct.set_struct_of_structs__6 end)
 
-      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 20 let set = Struct.set_struct_of_structs__6 end)
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 20 let minalign = 4 let set = Struct.set_struct_of_structs__6 end)
 
       let[@inline] a b s = Rt.Struct.read_offset b s 0
       let[@inline] b b s = Rt.Struct.read_offset b s 8
@@ -2309,9 +2309,9 @@ end = struct
     end = struct
       type t = (Rt.Float.t * Rt.Float.t * Rt.Float.t * Rt.Double.t * Rt.UByte.t * (Rt.Short.t * Rt.Byte.t))
 
-      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 32 let set = Struct.set_vec3__8 end)
+      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 32 let minalign = 8 let set = Struct.set_vec3__8 end)
 
-      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 32 let set = Struct.set_vec3__8 end)
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 32 let minalign = 8 let set = Struct.set_vec3__8 end)
 
       let[@inline] x b s = Rt.Float.read_offset b s 0
       let[@inline] y b s = Rt.Float.read_offset b s 4
@@ -2360,9 +2360,9 @@ end = struct
     end = struct
       type t = (((Rt.UInt.t * Rt.UInt.t) * (Rt.Short.t * Rt.Byte.t) * (Rt.UInt.t * Rt.UInt.t)))
 
-      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 20 let set = Struct.set_struct_of_structs_of_structs__7 end)
+      module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 20 let minalign = 4 let set = Struct.set_struct_of_structs_of_structs__7 end)
 
-      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 20 let set = Struct.set_struct_of_structs_of_structs__7 end)
+      module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 20 let minalign = 4 let set = Struct.set_struct_of_structs_of_structs__7 end)
 
       let[@inline] a b s = Rt.Struct.read_offset b s 0
 

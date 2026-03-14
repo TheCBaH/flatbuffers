@@ -113,7 +113,7 @@ module type Intf_impl = sig
   val get_nested_root : 'b buf -> Read.offset -> 'a root
   val create_nested_vector : Builder.t -> bytes -> Builder.offset
   val lookup_by_key_ref : 'b buf -> Read.offset -> (Read.offset -> int) -> Read.offset
-  val lookup_by_key_struct : size:int -> 'b buf -> Read.offset -> (Read.offset -> int) -> Read.offset
+  val lookup_by_key_struct : size:int -> minalign:int -> 'b buf -> Read.offset -> (Read.offset -> int) -> Read.offset
 
   module type VectorS = sig
     type t
@@ -177,6 +177,7 @@ module type Intf_impl = sig
       type builder_elt
 
       val size : int
+      val minalign : int
       val set : Builder.t -> int -> builder_elt -> unit
     end) : VectorS with type 'b elt := Read.offset and type builder_elt := T.builder_elt
 
@@ -184,6 +185,7 @@ module type Intf_impl = sig
       type builder_elt
 
       val size : int
+      val minalign : int
       val set : Builder.t -> int -> builder_elt -> unit
     end) : VectorS with type 'b elt := Read.offset and type builder_elt := T.builder_elt
   end
