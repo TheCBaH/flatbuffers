@@ -26,10 +26,10 @@ deps:
 	opam install . --deps-only -t -y
 
 test: flatc
-	opam exec -- dune test
+	opam exec -- dune test --root .
 
 bench: flatc
-	opam exec -- dune exec --profile=release --display=quiet ocaml/test/bench/fb_bench.exe
+	opam exec -- dune exec --root . --profile=release --display=quiet ocaml/test/bench/fb_bench.exe
 
 clean:
 	opam exec -- dune clean
