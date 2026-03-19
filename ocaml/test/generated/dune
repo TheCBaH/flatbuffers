@@ -35,3 +35,10 @@
  (targets more_defaults.ml more_defaults.mli)
  (mode promote)
  (action (run flatc --ocaml --bfbs-filenames . %{schema})))
+
+(rule
+ (alias gen-casing-test)
+ (deps (:schema casing_test.fbs))
+ (targets casing_test.ml casing_test.mli)
+ (mode promote)
+ (action (run flatc --ocaml --bfbs-filenames . %{schema})))

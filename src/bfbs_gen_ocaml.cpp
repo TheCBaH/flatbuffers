@@ -740,7 +740,7 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
       impl += indent2 + "let finish b = Rt.Builder.end_table b\n";
 
       intf += indent2 + "val start : Rt.Builder.t -> t\n";
-      intf += indent2 + "val finish : t -> " + obj_shortname + ".t Rt.wip\n";
+      intf += indent2 + "val finish : t -> " + namer_.Namespace(obj_shortname) + ".t Rt.wip\n";
 
       ForAllFields(object, /*reverse=*/false, [&](const r::Field *field) {
         // Skip writing deprecated fields altogether.

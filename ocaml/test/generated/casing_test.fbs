@@ -1,0 +1,41 @@
+// Test schema for verifying OCaml module name casing in generated .mli files.
+// Table names contain consecutive uppercase letters that exercise the
+// kUpperCamel normalization in the codegen (e.g. LSTM -> Lstm, RNN -> Rnn).
+
+namespace casing;
+
+table LSTMOptions {
+  num_units:int;
+  cell_clip:float;
+}
+
+table RNNConfig {
+  hidden_size:int;
+  time_major:bool;
+}
+
+table TopKV2Params {
+  k:int;
+}
+
+table Conv2DOptions {
+  stride_w:int;
+  stride_h:int;
+  padding:int;
+}
+
+table SVDFParams {
+  rank:int;
+  activation:int;
+}
+
+table SimpleTable {
+  value:int;
+  lstm:LSTMOptions;
+  rnn:RNNConfig;
+  topk:TopKV2Params;
+  conv:Conv2DOptions;
+  svdf:SVDFParams;
+}
+
+root_type SimpleTable;
