@@ -31,3 +31,18 @@ jobs:
     - name: benchmark
       run: |
         ${{ env.EXEC }} make bench
+    - name: generate-check
+      run: |
+        ${{ env.EXEC }} make generate-check
+    - name: check tree is clean
+      run: |
+        if ! git diff --quiet -- . ':!flatbuffers'; then
+          echo "::error::Source tree was modified during build/test"
+          git diff --stat -- . ':!flatbuffers'
+          exit 1
+        fi
+        if [ -n "$(git ls-files --others --exclude-standard -- . ':!flatbuffers')" ]; then
+          echo "::error::Untracked files appeared during build/test"
+          git ls-files --others --exclude-standard -- . ':!flatbuffers'
+          exit 1
+        fi

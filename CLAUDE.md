@@ -17,6 +17,8 @@ make test           # Build flatc + run dune tests
 make bench          # Run benchmarks
 make clean          # Clean everything (dune + flatc + reset submodule)
 make clean-flatc    # Clean only flatc build and reset submodule
+make generate       # Regenerate promoted test schemas from .fbs definitions
+make generate-check # Regenerate test schemas and verify promoted files match
 make rebuild-patch  # Regenerate patch from current submodule state
 
 # Run tests without flatc (uses pre-generated promoted files)
