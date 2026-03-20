@@ -47,6 +47,8 @@ module rec MyGame : sig
       val a : t
       val b : t
       val c : t
+
+      val of_underlying : Rt.Byte.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -183,6 +185,8 @@ end = struct
       val a : t
       val b : t
       val c : t
+
+      val of_underlying : Rt.Byte.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -317,6 +321,8 @@ end = struct
       val a : t
       val b : t
       val c : t
+
+      val of_underlying : Rt.Byte.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -327,6 +333,8 @@ end = struct
       let a = Rt.Byte.of_default 0L
       let b = Rt.Byte.of_default 1L
       let c = Rt.Byte.of_default 2L
+
+      let of_underlying x = x
 
       let to_string e =
         match Rt.Byte.to_default e with

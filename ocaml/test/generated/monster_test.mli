@@ -103,6 +103,8 @@ module rec MyGame : sig
       type t = private Rt.Long.t
 
       val include_val : t
+
+      val of_underlying : Rt.Long.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -279,6 +281,8 @@ module rec MyGame : sig
       val monster : t
       val test_simple_table_with_enum : t
       val my_game_example2_monster : t
+
+      val of_underlying : Rt.UType.t -> t
       val to_string : t -> string
 
       type obj = [
@@ -297,6 +301,8 @@ module rec MyGame : sig
       val m1 : t
       val m2 : t
       val m3 : t
+
+      val of_underlying : Rt.UType.t -> t
       val to_string : t -> string
 
       type obj = [
@@ -315,6 +321,8 @@ module rec MyGame : sig
       val m : t
       val ts : t
       val m2 : t
+
+      val of_underlying : Rt.UType.t -> t
       val to_string : t -> string
 
       type obj = [
@@ -342,6 +350,8 @@ module rec MyGame : sig
       (**  \brief color Blue (1u << 3)
       *)
       val blue : t
+
+      val of_underlying : Rt.UByte.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -355,6 +365,8 @@ module rec MyGame : sig
       val long_one : t
       val long_two : t
       val long_big : t
+
+      val of_underlying : Rt.ULong.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -369,6 +381,8 @@ module rec MyGame : sig
       val human : t
       val dwarf : t
       val elf : t
+
+      val of_underlying : Rt.Byte.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t

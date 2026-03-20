@@ -15,6 +15,8 @@ module rec MyGame : sig
       val a : t
       val b : t
       val c : t
+
+      val of_underlying : Rt.Byte.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t

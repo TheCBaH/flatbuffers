@@ -85,6 +85,8 @@ module rec MyGame : sig
       val red : t
       val green : t
       val blue : t
+
+      val of_underlying : Rt.Byte.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -97,6 +99,8 @@ module rec MyGame : sig
 
       val none : t
       val weapon : t
+
+      val of_underlying : Rt.UType.t -> t
       val to_string : t -> string
 
       type obj = [
@@ -221,6 +225,8 @@ end = struct
       val red : t
       val green : t
       val blue : t
+
+      val of_underlying : Rt.Byte.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -233,6 +239,8 @@ end = struct
 
       val none : t
       val weapon : t
+
+      val of_underlying : Rt.UType.t -> t
       val to_string : t -> string
 
       type obj = [
@@ -414,6 +422,8 @@ end = struct
       val red : t
       val green : t
       val blue : t
+
+      val of_underlying : Rt.Byte.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -424,6 +434,8 @@ end = struct
       let red = Rt.Byte.of_default 0L
       let green = Rt.Byte.of_default 1L
       let blue = Rt.Byte.of_default 2L
+
+      let of_underlying x = x
 
       let to_string e =
         match Rt.Byte.to_default e with
@@ -442,6 +454,8 @@ end = struct
 
       val none : t
       val weapon : t
+
+      val of_underlying : Rt.UType.t -> t
       val to_string : t -> string
 
       type obj = [
@@ -453,6 +467,8 @@ end = struct
 
       let none = Rt.UType.of_default 0L
       let weapon = Rt.UType.of_default 1L
+
+      let of_underlying x = x
 
       let to_string e =
         match Rt.UType.to_default e with

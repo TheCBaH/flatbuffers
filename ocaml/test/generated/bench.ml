@@ -59,6 +59,8 @@ module rec BenchmarksFlatbuffers : sig
     val apples : t
     val pears : t
     val bananas : t
+
+    val of_underlying : Rt.Short.t -> t
     val to_string : t -> string
 
     module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -222,6 +224,8 @@ end = struct
     val apples : t
     val pears : t
     val bananas : t
+
+    val of_underlying : Rt.Short.t -> t
     val to_string : t -> string
 
     module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -232,6 +236,8 @@ end = struct
     let apples = Rt.Short.of_default 0L
     let pears = Rt.Short.of_default 1L
     let bananas = Rt.Short.of_default 2L
+
+    let of_underlying x = x
 
     let to_string e =
       match Rt.Short.to_default e with

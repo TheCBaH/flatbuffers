@@ -395,6 +395,10 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
               ".of_default " + Int64ToString(e->value()) + "\n";
     });
 
+    // of_underlying: convert from the underlying scalar type to the enum type
+    intf += "\n" + indent + "val of_underlying : " + type + " -> t\n";
+    impl += "\n" + indent + "let of_underlying x = x\n";
+
     // to_string for enums and union tags
     intf += indent + "val to_string : t -> string\n";
     impl += "\n" + indent + "let to_string e =\n";

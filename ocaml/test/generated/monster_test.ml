@@ -171,6 +171,8 @@ module rec MyGame : sig
       type t = Rt.Long.t
 
       val include_val : t
+
+      val of_underlying : Rt.Long.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -347,6 +349,8 @@ module rec MyGame : sig
       val monster : t
       val test_simple_table_with_enum : t
       val my_game_example2_monster : t
+
+      val of_underlying : Rt.UType.t -> t
       val to_string : t -> string
 
       type obj = [
@@ -365,6 +369,8 @@ module rec MyGame : sig
       val m1 : t
       val m2 : t
       val m3 : t
+
+      val of_underlying : Rt.UType.t -> t
       val to_string : t -> string
 
       type obj = [
@@ -383,6 +389,8 @@ module rec MyGame : sig
       val m : t
       val ts : t
       val m2 : t
+
+      val of_underlying : Rt.UType.t -> t
       val to_string : t -> string
 
       type obj = [
@@ -410,6 +418,8 @@ module rec MyGame : sig
       (**  \brief color Blue (1u << 3)
       *)
       val blue : t
+
+      val of_underlying : Rt.UByte.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -423,6 +433,8 @@ module rec MyGame : sig
       val long_one : t
       val long_two : t
       val long_big : t
+
+      val of_underlying : Rt.ULong.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -437,6 +449,8 @@ module rec MyGame : sig
       val human : t
       val dwarf : t
       val elf : t
+
+      val of_underlying : Rt.Byte.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -920,6 +934,8 @@ end = struct
       type t = Rt.Long.t
 
       val include_val : t
+
+      val of_underlying : Rt.Long.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -1023,6 +1039,8 @@ end = struct
       type t = Rt.Long.t
 
       val include_val : t
+
+      val of_underlying : Rt.Long.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -1031,6 +1049,8 @@ end = struct
       type t = Rt.Long.t
 
       let include_val = Rt.Long.of_default 0L
+
+      let of_underlying x = x
 
       let to_string e =
         match Rt.Long.to_default e with
@@ -1211,6 +1231,8 @@ end = struct
       val monster : t
       val test_simple_table_with_enum : t
       val my_game_example2_monster : t
+
+      val of_underlying : Rt.UType.t -> t
       val to_string : t -> string
 
       type obj = [
@@ -1229,6 +1251,8 @@ end = struct
       val m1 : t
       val m2 : t
       val m3 : t
+
+      val of_underlying : Rt.UType.t -> t
       val to_string : t -> string
 
       type obj = [
@@ -1247,6 +1271,8 @@ end = struct
       val m : t
       val ts : t
       val m2 : t
+
+      val of_underlying : Rt.UType.t -> t
       val to_string : t -> string
 
       type obj = [
@@ -1274,6 +1300,8 @@ end = struct
       (**  \brief color Blue (1u << 3)
       *)
       val blue : t
+
+      val of_underlying : Rt.UByte.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -1287,6 +1315,8 @@ end = struct
       val long_one : t
       val long_two : t
       val long_big : t
+
+      val of_underlying : Rt.ULong.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -1301,6 +1331,8 @@ end = struct
       val human : t
       val dwarf : t
       val elf : t
+
+      val of_underlying : Rt.Byte.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -1991,6 +2023,8 @@ end = struct
       val monster : t
       val test_simple_table_with_enum : t
       val my_game_example2_monster : t
+
+      val of_underlying : Rt.UType.t -> t
       val to_string : t -> string
 
       type obj = [
@@ -2006,6 +2040,8 @@ end = struct
       let monster = Rt.UType.of_default 1L
       let test_simple_table_with_enum = Rt.UType.of_default 2L
       let my_game_example2_monster = Rt.UType.of_default 3L
+
+      let of_underlying x = x
 
       let to_string e =
         match Rt.UType.to_default e with
@@ -2031,6 +2067,8 @@ end = struct
       val m1 : t
       val m2 : t
       val m3 : t
+
+      val of_underlying : Rt.UType.t -> t
       val to_string : t -> string
 
       type obj = [
@@ -2046,6 +2084,8 @@ end = struct
       let m1 = Rt.UType.of_default 1L
       let m2 = Rt.UType.of_default 2L
       let m3 = Rt.UType.of_default 3L
+
+      let of_underlying x = x
 
       let to_string e =
         match Rt.UType.to_default e with
@@ -2071,6 +2111,8 @@ end = struct
       val m : t
       val ts : t
       val m2 : t
+
+      val of_underlying : Rt.UType.t -> t
       val to_string : t -> string
 
       type obj = [
@@ -2086,6 +2128,8 @@ end = struct
       let m = Rt.UType.of_default 1L
       let ts = Rt.UType.of_default 2L
       let m2 = Rt.UType.of_default 3L
+
+      let of_underlying x = x
 
       let to_string e =
         match Rt.UType.to_default e with
@@ -2120,6 +2164,8 @@ end = struct
       (**  \brief color Blue (1u << 3)
       *)
       val blue : t
+
+      val of_underlying : Rt.UByte.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -2130,6 +2176,8 @@ end = struct
       let red = Rt.UByte.of_default 1L
       let green = Rt.UByte.of_default 2L
       let blue = Rt.UByte.of_default 8L
+
+      let of_underlying x = x
 
       let to_string e =
         match Rt.UByte.to_default e with
@@ -2149,6 +2197,8 @@ end = struct
       val long_one : t
       val long_two : t
       val long_big : t
+
+      val of_underlying : Rt.ULong.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -2159,6 +2209,8 @@ end = struct
       let long_one = Rt.ULong.of_default 2L
       let long_two = Rt.ULong.of_default 4L
       let long_big = Rt.ULong.of_default 1099511627776L
+
+      let of_underlying x = x
 
       let to_string e =
         match Rt.ULong.to_default e with
@@ -2179,6 +2231,8 @@ end = struct
       val human : t
       val dwarf : t
       val elf : t
+
+      val of_underlying : Rt.Byte.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -2190,6 +2244,8 @@ end = struct
       let human = Rt.Byte.of_default 0L
       let dwarf = Rt.Byte.of_default 1L
       let elf = Rt.Byte.of_default 2L
+
+      let of_underlying x = x
 
       let to_string e =
         match Rt.Byte.to_default e with

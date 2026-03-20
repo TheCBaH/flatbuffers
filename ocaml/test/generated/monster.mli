@@ -66,6 +66,8 @@ module rec MyGame : sig
       val red : t
       val green : t
       val blue : t
+
+      val of_underlying : Rt.Byte.t -> t
       val to_string : t -> string
 
       module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -78,6 +80,8 @@ module rec MyGame : sig
 
       val none : t
       val weapon : t
+
+      val of_underlying : Rt.UType.t -> t
       val to_string : t -> string
 
       type obj = [

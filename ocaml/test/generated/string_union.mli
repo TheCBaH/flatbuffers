@@ -39,6 +39,8 @@ and Content : sig
   val none : t
   val greeting : t
   val name : t
+
+  val of_underlying : Rt.UType.t -> t
   val to_string : t -> string
 
   type obj = [

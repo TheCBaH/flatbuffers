@@ -15,6 +15,8 @@ module rec Abc : sig
   val a : t
   val b : t
   val c : t
+
+  val of_underlying : Rt.Int.t -> t
   val to_string : t -> string
 
   module Vector : Rt.VectorS with type 'b elt := t and type builder_elt := t
@@ -25,6 +27,8 @@ end = struct
   let a = Rt.Int.of_default 0L
   let b = Rt.Int.of_default 1L
   let c = Rt.Int.of_default 2L
+
+  let of_underlying x = x
 
   let to_string e =
     match Rt.Int.to_default e with

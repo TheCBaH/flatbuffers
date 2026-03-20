@@ -80,6 +80,8 @@ and Content : sig
   val none : t
   val greeting : t
   val name : t
+
+  val of_underlying : Rt.UType.t -> t
   val to_string : t -> string
 
   type obj = [
@@ -93,6 +95,8 @@ end = struct
   let none = Rt.UType.of_default 0L
   let greeting = Rt.UType.of_default 1L
   let name = Rt.UType.of_default 2L
+
+  let of_underlying x = x
 
   let to_string e =
     match Rt.UType.to_default e with
