@@ -132,6 +132,9 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
     (void)parser;
     (void)path;
     (void)filename;
+    // Suppress unused-function warnings from bfbs_gen.h
+    (void)IsSingleByte;
+    (void)IsVector;
     return NOT_IMPLEMENTED;
   }
 
