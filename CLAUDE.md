@@ -17,6 +17,7 @@ make test           # Build flatc + run dune tests
 make bench          # Run benchmarks
 make clean          # Clean everything (dune + flatc + reset submodule)
 make clean-flatc    # Clean only flatc build and reset submodule
+make rebuild-patch  # Regenerate patch from current submodule state
 
 # Run tests without flatc (uses pre-generated promoted files)
 opam exec -- dune test --ignore-promoted-rules
@@ -31,8 +32,21 @@ opam exec -- dune test --ignore-promoted-rules
 
 - `flatbuffers/` — git submodule pointing to google/flatbuffers
 - `src/bfbs_gen_ocaml.{cpp,h}` — OCaml code generator, maintained here, copied into submodule at build time
-- `patches/ocaml-integration.patch` — 9-line patch that registers the OCaml generator with flatc (adds `kOCaml` language flag, CMake source entries, and generator registration in `flatc_main.cpp`)
+- `patches/ocaml-integration.patch` — patch that registers the OCaml generator with flatc (adds `kOCaml` language flag, CMake source entries, parser feature allowlists, and generator registration in `flatc_main.cpp`)
 - `Makefile` orchestrates: copy generator → apply patch → cmake → build flatc
+
+### Updating the Integration Patch
+
+When modifying files in the upstream `flatbuffers/` submodule (e.g. `src/idl_parser.cpp`, `src/flatc.cpp`, `include/flatbuffers/idl.h`, `src/flatc_main.cpp`, `CMakeLists.txt`), the patch must be regenerated:
+
+1. `make clean-flatc` — reset the submodule to a clean state
+2. `make patch` — apply the current patch and copy generator sources
+3. Edit files inside `flatbuffers/` as needed
+4. `make rebuild-patch` — capture changes into `patches/ocaml-integration.patch`
+5. `make clean-flatc && make flatc` — verify the patch applies cleanly from scratch
+6. `make test` — verify tests pass
+
+Note: `src/bfbs_gen_ocaml.{cpp,h}` are maintained outside the submodule and copied in by `make patch`. Do not edit them inside `flatbuffers/` — edit `src/` directly. Only changes to upstream files belong in the patch.
 
 ### OCaml Runtime (`ocaml/lib/`)
 

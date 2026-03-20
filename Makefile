@@ -2,7 +2,7 @@ SUBMODULE := flatbuffers
 PATCH := patches/ocaml-integration.patch
 FLATC := flatc
 
-.PHONY: all patch flatc deps test bench clean clean-flatc
+.PHONY: all patch flatc deps test bench clean clean-flatc rebuild-patch
 
 all: flatc test
 
@@ -11,9 +11,17 @@ patch:
 		echo "Submodule already has local changes, skipping patch"; \
 	else \
 		cp src/bfbs_gen_ocaml.cpp src/bfbs_gen_ocaml.h $(SUBMODULE)/src/; \
-		git -C $(SUBMODULE) apply ../$(PATCH); \
+		git -C $(SUBMODULE) apply --3way ../$(PATCH); \
 		echo "Patch applied"; \
 	fi
+
+rebuild-patch:
+	@if git -C $(SUBMODULE) diff --quiet; then \
+		echo "Error: submodule has no local changes to capture" >&2; \
+		exit 1; \
+	fi
+	git -C $(SUBMODULE) diff > $(PATCH)
+	@echo "Patch rebuilt: $(PATCH)"
 
 flatc: patch
 	mkdir -p $(SUBMODULE)/build
