@@ -15,23 +15,29 @@ end
 type _ t =
   | Bytes : bytes t
   | String : string t
+#ifdef BIGSTRING
   | Bigstring : Bigstringaf.t t
+#endif
 
 let buf_of_bytes (type b) (prim : b t) b ~off ~len : b =
   match prim with
   | Bytes -> Bytes.sub b off len
   | String -> Bytes.sub_string b off len
+#ifdef BIGSTRING
   | Bigstring ->
     let buf = Bigstringaf.create len in
     Bigstringaf.blit_from_bytes b ~src_off:off buf ~dst_off:0 ~len;
     buf
+#endif
 ;;
 
 let[@inline] get_string (type b) (prim : b t) (b : b) ~off ~len =
   match prim with
   | Bytes -> Bytes.sub_string b off len
   | String -> String.sub b off len
+#ifdef BIGSTRING
   | Bigstring -> Bigstringaf.substring b ~off ~len
+#endif
 ;;
 
 let[@inline] get_uoffset (type b) (prim : b t) (b : b) i =
@@ -39,7 +45,9 @@ let[@inline] get_uoffset (type b) (prim : b t) (b : b) i =
     match prim with
     | Bytes -> Bytes.get_int32_le b i
     | String -> String.get_int32_le b i
+#ifdef BIGSTRING
     | Bigstring -> Bigstringaf.get_int32_le b i
+#endif
   in
   (* note: flambda/closure both sensitive to where this call is. Calling in
      each match branch or match exp as argument both cause extra allocation. *)
@@ -51,7 +59,9 @@ let[@inline] get_uoffset64 (type b) (prim : b t) (b : b) i =
     match prim with
     | Bytes -> Bytes.get_int64_le b i
     | String -> String.get_int64_le b i
+#ifdef BIGSTRING
     | Bigstring -> Bigstringaf.get_int64_le b i
+#endif
   in
   Int64.to_int i
 ;;
@@ -60,7 +70,9 @@ let[@inline] get_voffset (type b) (prim : b t) (b : b) i =
   match prim with
   | Bytes -> Bytes.get_uint16_le b i
   | String -> String.get_uint16_le b i
+#ifdef BIGSTRING
   | Bigstring -> Bigstringaf.get_int16_le b i
+#endif
 ;;
 
 let[@inline] get_soffset (type b) (prim : b t) (b : b) i =
@@ -68,7 +80,9 @@ let[@inline] get_soffset (type b) (prim : b t) (b : b) i =
     match prim with
     | Bytes -> Bytes.get_int32_le b i
     | String -> String.get_int32_le b i
+#ifdef BIGSTRING
     | Bigstring -> Bigstringaf.get_int32_le b i
+#endif
   in
   Int32.to_int i
 ;;
@@ -97,37 +111,59 @@ let[@inline] get_scalar (type a b) (t : a ty) (prim : b t) (b : b) (i : int) : a
   match t, prim with
   | TBool, Bytes -> Bytes.get b i == '\001'
   | TBool, String -> String.get b i == '\001'
+#ifdef BIGSTRING
   | TBool, Bigstring -> Bigstringaf.get b i == '\001'
+#endif
   | TByte, Bytes -> Bytes.get_int8 b i
   | TByte, String -> String.get_int8 b i
+#ifdef BIGSTRING
   | TByte, Bigstring -> Util.as_signed 8 (Char.code (Bigstringaf.get b i))
+#endif
   | TUByte, Bytes -> Bytes.get b i
   | TUByte, String -> String.get b i
+#ifdef BIGSTRING
   | TUByte, Bigstring -> Bigstringaf.get b i
+#endif
   | TShort, Bytes -> Bytes.get_int16_le b i
   | TShort, String -> String.get_int16_le b i
+#ifdef BIGSTRING
   | TShort, Bigstring -> Util.as_signed 16 (Bigstringaf.get_int16_le b i)
+#endif
   | TUShort, Bytes -> Bytes.get_uint16_le b i
   | TUShort, String -> String.get_uint16_le b i
+#ifdef BIGSTRING
   | TUShort, Bigstring -> Bigstringaf.get_int16_le b i
+#endif
   | TInt, Bytes -> Bytes.get_int32_le b i
   | TInt, String -> String.get_int32_le b i
+#ifdef BIGSTRING
   | TInt, Bigstring -> Bigstringaf.get_int32_le b i
+#endif
   | TUInt, Bytes -> Bytes.get_int32_le b i
   | TUInt, String -> String.get_int32_le b i
+#ifdef BIGSTRING
   | TUInt, Bigstring -> Bigstringaf.get_int32_le b i
+#endif
   | TLong, Bytes -> Bytes.get_int64_le b i
   | TLong, String -> String.get_int64_le b i
+#ifdef BIGSTRING
   | TLong, Bigstring -> Bigstringaf.get_int64_le b i
+#endif
   | TULong, Bytes -> Bytes.get_int64_le b i
   | TULong, String -> String.get_int64_le b i
+#ifdef BIGSTRING
   | TULong, Bigstring -> Bigstringaf.get_int64_le b i
+#endif
   | TFloat, Bytes -> Int32.float_of_bits (Bytes.get_int32_le b i)
   | TFloat, String -> Int32.float_of_bits (String.get_int32_le b i)
+#ifdef BIGSTRING
   | TFloat, Bigstring -> Int32.float_of_bits (Bigstringaf.get_int32_le b i)
+#endif
   | TDouble, Bytes -> Int64.float_of_bits (Bytes.get_int64_le b i)
   | TDouble, String -> Int64.float_of_bits (String.get_int64_le b i)
+#ifdef BIGSTRING
   | TDouble, Bigstring -> Int64.float_of_bits (Bigstringaf.get_int64_le b i)
+#endif
 ;;
 
 let[@inline] set_scalar (type a) (t : a ty) b i (x : a) =

@@ -15,7 +15,9 @@ end
 type _ t =
   | Bytes : bytes t
   | String : string t
+#ifdef BIGSTRING
   | Bigstring : Bigstringaf.t t
+#endif
 
 (** Data read by the runtime, not abstract *)
 

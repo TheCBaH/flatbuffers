@@ -1,4 +1,0 @@
-(library
- (name bigstringaf_mel)
- (wrapped false)
- (modes melange))

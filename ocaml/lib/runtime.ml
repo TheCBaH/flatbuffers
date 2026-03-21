@@ -143,13 +143,17 @@ end
 
 let vt_bytes = VT(Primitives.Bytes)
 let vt_string = VT(Primitives.String)
+#ifdef BIGSTRING
 let vt_bigstring = VT(Primitives.Bigstring)
+#endif
 
 let[@inline] vt_of (type a) (p : a Primitives.t) : a vt =
   match p with
   | Primitives.Bytes -> vt_bytes
   | Primitives.String -> vt_string
+#ifdef BIGSTRING
   | Primitives.Bigstring -> vt_bigstring
+#endif
 
 (** User-facing API  *)
 
