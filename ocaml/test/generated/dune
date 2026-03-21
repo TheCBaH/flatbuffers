@@ -4,13 +4,13 @@
 
 (rule
  (alias gen-sample)
- (deps (:schemas %{workspace_root}/flatbuffers/samples/monster.fbs
-       %{workspace_root}/flatbuffers/benchmarks/cpp/flatbuffers/bench.fbs
-       %{workspace_root}/flatbuffers/tests/monster_test.fbs
-       %{workspace_root}/flatbuffers/tests/monster_extra.fbs
-       %{workspace_root}/flatbuffers/tests/arrays_test.fbs
-       %{workspace_root}/flatbuffers/tests/64bit/test_64bit.fbs)
-  (:include (source_tree %{workspace_root}/flatbuffers/tests/include_test)))
+ (deps (:schemas ../../../flatbuffers/samples/monster.fbs
+       ../../../flatbuffers/benchmarks/cpp/flatbuffers/bench.fbs
+       ../../../flatbuffers/tests/monster_test.fbs
+       ../../../flatbuffers/tests/monster_extra.fbs
+       ../../../flatbuffers/tests/arrays_test.fbs
+       ../../../flatbuffers/tests/64bit/test_64bit.fbs)
+  (:include (source_tree ../../../flatbuffers/tests/include_test)))
  (targets monster.ml monster.mli
           bench.ml bench.mli
           monster_test.ml monster_test.mli
@@ -20,7 +20,7 @@
  (mode promote)
  (action
    (progn
-    (run flatc -I %{workspace_root}/flatbuffers/tests/include_test --ocaml %{schemas}))))
+    (run flatc -I ../../../flatbuffers/tests/include_test --ocaml %{schemas}))))
 
 (rule
  (alias gen-string-union)

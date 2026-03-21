@@ -1,39 +1,39 @@
 (copy_files
- (files %{workspace_root}/ocaml/lib/builder.{ml,mli}))
+ (files ../../lib/builder.{ml,mli}))
 
 (copy_files
- (files %{workspace_root}/ocaml/lib/flatbuffers.ml))
+ (files ../../lib/flatbuffers.ml))
 
 (copy_files
- (files %{workspace_root}/ocaml/lib/read.{ml,mli}))
+ (files ../../lib/read.{ml,mli}))
 
 (copy_files
- (files %{workspace_root}/ocaml/lib/runtime_intf.ml))
+ (files ../../lib/runtime_intf.ml))
 
 (copy_files
- (files %{workspace_root}/ocaml/lib/runtime.mli))
+ (files ../../lib/runtime.mli))
 
 (copy_files
- (files %{workspace_root}/ocaml/lib/util.{ml,mli}))
+ (files ../../lib/util.{ml,mli}))
 
 (rule
  (target primitives.ml)
  (deps
-  (:src %{workspace_root}/ocaml/lib/primitives.ml))
+  (:src ../../lib/primitives.ml))
  (action
   (run %{bin:cppo} -I . -V OCAML:%{ocaml_version} %{src} -o %{target})))
 
 (rule
  (target primitives.mli)
  (deps
-  (:src %{workspace_root}/ocaml/lib/primitives.mli))
+  (:src ../../lib/primitives.mli))
  (action
   (run %{bin:cppo} -I . -V OCAML:%{ocaml_version} %{src} -o %{target})))
 
 (rule
  (target runtime.ml)
  (deps
-  (:src %{workspace_root}/ocaml/lib/runtime.ml))
+  (:src ../../lib/runtime.ml))
  (action
   (run %{bin:cppo} -I . -V OCAML:%{ocaml_version} %{src} -o %{target})))
 
