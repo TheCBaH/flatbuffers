@@ -18,6 +18,9 @@ type _ t =
 #ifdef BIGSTRING
   | Bigstring : Bigstringaf.t t
 #endif
+#ifdef JSDATAVIEW
+  | JsDataView : Js_dataview.t t
+#endif
 
 (** Data read by the runtime, not abstract *)
 

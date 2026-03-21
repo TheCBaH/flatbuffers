@@ -1,6 +1,6 @@
 (executable
  (name test_jsoo)
  (modes js)
- (libraries generated js_of_ocaml)
+ (libraries generated_jsoo js_of_ocaml)
  (preprocess
   (pps js_of_ocaml-ppx)))

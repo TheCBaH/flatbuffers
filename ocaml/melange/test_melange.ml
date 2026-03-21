@@ -2,7 +2,7 @@
 open Monster
 open MyGame.Sample
 
-let () =
+let build () =
   let b = Rt.Builder.create () in
   let sword_name = Rt.String.create b "Sword" in
   let axe_name = Rt.String.create b "Axe" in
@@ -24,8 +24,10 @@ let () =
       |> add_equipped_weapon axe
       |> finish)
   in
-  let buf = Monster.finish_buf Primitives.String b orc in
-  let (Rt.Root (b, monster)) = Monster.root Primitives.String buf in
+  Monster.finish_buf Primitives.Bytes b orc
+
+let verify_monster (type a) (prim : a Primitives.t) (buf : a) =
+  let (Rt.Root (b, monster)) = Monster.root prim buf in
   assert (Monster.hp b monster = 80);
   assert (Monster.mana b monster = 150);
   assert (Monster.name b monster |> Rt.Option.get |> Rt.String.to_string b = "MyMonster");
@@ -48,5 +50,14 @@ let () =
       failwith @@ "Unexpected union member: " ^ Equipment.to_string e)
   in
   assert (Weapon.name b equipped |> Rt.Option.get |> Rt.String.to_string b = "Axe");
-  assert (Weapon.damage b equipped = 5);
-  print_endline "Melange: FlatBuffer was successfully created and verified!"
+  assert (Weapon.damage b equipped = 5)
+
+let () =
+  let buf = build () in
+  (* Test with Bytes buffer *)
+  verify_monster Primitives.Bytes buf;
+  print_endline "Melange: Bytes buffer verified.";
+  (* Test with JsDataView buffer *)
+  let dv = Js_dataview.of_bytes buf ~off:0 ~len:(Bytes.length buf) in
+  verify_monster Primitives.JsDataView dv;
+  print_endline "Melange: JsDataView buffer verified."

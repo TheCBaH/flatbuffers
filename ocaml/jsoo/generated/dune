@@ -1,0 +1,7 @@
+(copy_files
+ (files %{workspace_root}/ocaml/test/generated/monster.{ml,mli}))
+
+(library
+ (name generated_jsoo)
+ (wrapped false)
+ (libraries flatbuffers_jsoo))

@@ -146,6 +146,9 @@ let vt_string = VT(Primitives.String)
 #ifdef BIGSTRING
 let vt_bigstring = VT(Primitives.Bigstring)
 #endif
+#ifdef JSDATAVIEW
+let vt_jsdataview = VT(Primitives.JsDataView)
+#endif
 
 let[@inline] vt_of (type a) (p : a Primitives.t) : a vt =
   match p with
@@ -153,6 +156,9 @@ let[@inline] vt_of (type a) (p : a Primitives.t) : a vt =
   | Primitives.String -> vt_string
 #ifdef BIGSTRING
   | Primitives.Bigstring -> vt_bigstring
+#endif
+#ifdef JSDATAVIEW
+  | Primitives.JsDataView -> vt_jsdataview
 #endif
 
 (** User-facing API  *)

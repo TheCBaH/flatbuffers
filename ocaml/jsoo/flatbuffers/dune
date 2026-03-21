@@ -1,20 +1,20 @@
 (copy_files
- (files ../../lib/builder.{ml,mli}))
+ (files %{workspace_root}/ocaml/lib/builder.{ml,mli}))
 
 (copy_files
- (files ../../lib/flatbuffers.ml))
+ (files %{workspace_root}/ocaml/lib/flatbuffers.ml))
 
 (copy_files
- (files ../../lib/read.{ml,mli}))
+ (files %{workspace_root}/ocaml/lib/read.{ml,mli}))
 
 (copy_files
- (files ../../lib/runtime_intf.ml))
+ (files %{workspace_root}/ocaml/lib/runtime_intf.ml))
 
 (copy_files
- (files ../../lib/runtime.mli))
+ (files %{workspace_root}/ocaml/lib/runtime.mli))
 
 (copy_files
- (files ../../lib/util.{ml,mli}))
+ (files %{workspace_root}/ocaml/lib/util.{ml,mli}))
 
 (copy_files
  (files %{workspace_root}/ocaml/js_dataview.mli))
@@ -22,25 +22,27 @@
 (rule
  (target primitives.ml)
  (deps
-  (:src ../../lib/primitives.ml))
+  (:src %{workspace_root}/ocaml/lib/primitives.ml))
  (action
   (run %{bin:cppo} -D JSDATAVIEW -I . -V OCAML:%{ocaml_version} %{src} -o %{target})))
 
 (rule
  (target primitives.mli)
  (deps
-  (:src ../../lib/primitives.mli))
+  (:src %{workspace_root}/ocaml/lib/primitives.mli))
  (action
   (run %{bin:cppo} -D JSDATAVIEW -I . -V OCAML:%{ocaml_version} %{src} -o %{target})))
 
 (rule
  (target runtime.ml)
  (deps
-  (:src ../../lib/runtime.ml))
+  (:src %{workspace_root}/ocaml/lib/runtime.ml))
  (action
   (run %{bin:cppo} -D JSDATAVIEW -I . -V OCAML:%{ocaml_version} %{src} -o %{target})))
 
 (library
- (name flatbuffers_mel)
+ (name flatbuffers_jsoo)
  (wrapped false)
- (modes melange))
+ (libraries js_of_ocaml)
+ (preprocess
+  (pps js_of_ocaml-ppx)))
