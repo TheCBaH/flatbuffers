@@ -1,6 +1,27 @@
 (copy_files
  (files %{workspace_root}/ocaml/test/generated/monster.{ml,mli}))
 
+(copy_files
+ (files %{workspace_root}/ocaml/test/generated/monster_test.{ml,mli}))
+
+(copy_files
+ (files %{workspace_root}/ocaml/test/generated/monster_extra.{ml,mli}))
+
+(copy_files
+ (files %{workspace_root}/ocaml/test/generated/arrays_test.{ml,mli}))
+
+(copy_files
+ (files %{workspace_root}/ocaml/test/generated/test64_bit.{ml,mli}))
+
+(copy_files
+ (files %{workspace_root}/ocaml/test/generated/string_union.{ml,mli}))
+
+(copy_files
+ (files %{workspace_root}/ocaml/test/generated/more_defaults.{ml,mli}))
+
+(copy_files
+ (files %{workspace_root}/ocaml/test/generated/casing_test.{ml,mli}))
+
 (library
  (name generated_jsoo)
  (wrapped false)
