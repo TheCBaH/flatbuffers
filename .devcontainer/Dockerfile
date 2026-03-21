@@ -1,4 +1,4 @@
-ARG VARIANT=12
+ARG VARIANT=13
 FROM debian:${VARIANT}
 RUN set -eux;\
     apt-get update;\
