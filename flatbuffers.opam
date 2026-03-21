@@ -10,7 +10,7 @@ homepage: "https://github.com/username/reponame"
 doc: "https://url/to/documentation"
 bug-reports: "https://github.com/username/reponame/issues"
 depends: [
-  "dune" {>= "3.4"}
+  "dune" {>= "3.8"}
   "ocaml" {>= "4.13"}
   "bigstringaf"
   "cppo" {build & >= "1.1.0"}

@@ -1,7 +1,7 @@
 (library
  (name fixtures)
  (modules fixtures)
- (libraries generated alcotest)
+ (libraries generated alcotest unix bigstringaf)
  (modes byte))
 
 (tests

@@ -1,0 +1,8 @@
+(copy_files
+ (files %{workspace_root}/ocaml/test/generated/monster.{ml,mli}))
+
+(library
+ (name generated_mel)
+ (wrapped false)
+ (modes melange)
+ (libraries flatbuffers_mel))

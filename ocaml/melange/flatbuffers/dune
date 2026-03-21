@@ -1,0 +1,33 @@
+(copy_files
+ (files %{workspace_root}/ocaml/lib/builder.{ml,mli}))
+
+(copy_files
+ (files %{workspace_root}/ocaml/lib/flatbuffers.ml))
+
+(copy_files
+ (files %{workspace_root}/ocaml/lib/primitives.{ml,mli}))
+
+(copy_files
+ (files %{workspace_root}/ocaml/lib/read.{ml,mli}))
+
+(copy_files
+ (files %{workspace_root}/ocaml/lib/runtime_intf.ml))
+
+(copy_files
+ (files %{workspace_root}/ocaml/lib/runtime.mli))
+
+(copy_files
+ (files %{workspace_root}/ocaml/lib/util.{ml,mli}))
+
+(rule
+ (target runtime.ml)
+ (deps
+  (:src %{workspace_root}/ocaml/lib/runtime.ml))
+ (action
+  (run %{bin:cppo} -I . -V OCAML:%{ocaml_version} %{src} -o %{target})))
+
+(library
+ (name flatbuffers_mel)
+ (wrapped false)
+ (modes melange)
+ (libraries bigstringaf_mel))

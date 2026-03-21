@@ -13,7 +13,7 @@
             "upgradePackages": "false"
         },
         "./features/ocaml": {
-            "packages": "bigstringaf cppo alcotest memtrace benchmark"
+            "packages": "bigstringaf cppo alcotest memtrace benchmark js_of_ocaml js_of_ocaml-compiler js_of_ocaml-ppx melange"
         },
         "./features/gh": {}
     },

@@ -2,7 +2,7 @@ SUBMODULE := flatbuffers
 PATCH := patches/ocaml-integration.patch
 FLATC := flatc
 
-.PHONY: all patch flatc deps test generate generate-check bench clean clean-flatc rebuild-patch
+.PHONY: all patch flatc deps test test-jsoo test-melange generate generate-check bench clean clean-flatc rebuild-patch
 
 all: flatc test
 
@@ -46,6 +46,14 @@ generate-check: generate
 		exit 1; \
 	fi
 	@echo "Generated files are up to date"
+
+test-jsoo:
+	opam exec -- dune build --root . --ignore-promoted-rules ocaml/jsoo/test_jsoo.bc.js
+	node _build/default/ocaml/jsoo/test_jsoo.bc.js
+
+test-melange:
+	opam exec -- dune build --root . --ignore-promoted-rules ocaml/melange/
+	node _build/default/ocaml/melange/output/ocaml/melange/test_melange.js
 
 bench: flatc
 	opam exec -- dune exec --root . --profile=release --display=quiet ocaml/test/bench/fb_bench.exe
