@@ -17,7 +17,7 @@
  (files ../../lib/util.{ml,mli}))
 
 (copy_files
- (files %{workspace_root}/ocaml/js_dataview.mli))
+ (files ../../js_dataview.mli))
 
 (rule
  (target primitives.ml)
