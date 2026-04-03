@@ -5,6 +5,7 @@ set -x
 echo "Activating feature 'OCaml'"
 PACKAGES=${PACKAGES:-$@}
 SYSTEM_PACKAGES=${SYSTEM_PACKAGES:-}
+PIN_PACKAGES=${PIN_PACKAGES:-}
 OCAML_VERSION=${VERSION:-4.14.1}
 OPAM_OPTIONS=''
 if [ -n "${OPTIONS:-}" ]; then
@@ -82,6 +83,7 @@ check_packages\
  ${SYSTEM_PACKAGES}\
  opam\
 
+export OPAMJOBS="$(getconf _NPROCESSORS_ONLN)"
 opam init --no-setup --disable-sandboxing --bare
 eval $(opam env)
 opam switch create $OCAML_VERSION ${OPAM_OPTIONS}
@@ -91,9 +93,46 @@ BASE_PACKAGES="\
  ocamlformat\
  ocamlformat-rpc\
 "
-ALL_PACKAGES="${BASE_PACKAGES} ${PACKAGES}"
+OPAM_PACKAGES="${BASE_PACKAGES}"
+for pkg in ${PACKAGES}; do
+    case "$pkg" in
+        *#*)
+            pkg_name=$(echo "$pkg" | cut -d'#' -f1)
+            pkg_ver=$(echo "$pkg" | cut -d'#' -f2)
+            opam pin add --no-action "$pkg_name" "$pkg_ver"
+            OPAM_PACKAGES="${OPAM_PACKAGES} ${pkg_name}"
+            ;;
+        *)
+            OPAM_PACKAGES="${OPAM_PACKAGES} ${pkg}"
+            ;;
+    esac
+done
 
-opam install ${ALL_PACKAGES}
+if [ -n "${PIN_PACKAGES}" ]; then
+    OLDIFS="$IFS"
+    IFS=','
+    for entry in ${PIN_PACKAGES}; do
+        IFS="$OLDIFS"
+        entry=$(echo "$entry" | xargs)
+        if [ -n "$entry" ]; then
+            case "$entry" in
+                *#*)
+                    pkg_name=$(echo "$entry" | cut -d'#' -f1)
+                    pkg_ver=$(echo "$entry" | cut -d'#' -f2)
+                    opam pin add --no-action "$pkg_name" "$pkg_ver"
+                    ;;
+                *)
+                    pkg_name=$(echo "$entry" | awk '{print $1}')
+                    opam pin add --no-action $entry
+                    ;;
+            esac
+            OPAM_PACKAGES="${OPAM_PACKAGES} ${pkg_name}"
+        fi
+    done
+    IFS="$OLDIFS"
+fi
+
+opam install ${OPAM_PACKAGES}
 
 opam clean --repo-cache
 opam list
