@@ -1,26 +1,25 @@
 name: devcontainer
-description: Setup devcontainer on GitHub runner
+author: Vladimir Silyaev
+description: Setup devcontainer on ubuntu GitHub runner
 inputs:
   name:
-    description: 'Name of container saved in the repository'
+    description: "Name of container saved in the repository, default 'devcontainer'"
     required: false
     default: 'devcontainer'
   registry:
-    description: 'Docker registry server address'
+    description: 'Server address of Docker registry. If not set then will default to Docker Hub'
     required: false
     default: 'ghcr.io'
   username:
-    description: 'Username for Docker registry'
-    required: false
-    default: ''
+    description: 'Username used to log against the Docker registry'
+    required: true
   password:
-    description: 'Password or token for Docker registry'
-    required: false
-    default: ''
+    description: 'Password or personal access token used to log against the Docker registry'
+    required: true
 
 outputs:
   exec:
-    description: 'Command prefix to run commands in the container'
+    description: 'prefix that should be inserted to run commands in the container'
     value: ${{ steps.setup.outputs.exec }}
 
 runs:
@@ -32,9 +31,10 @@ runs:
       run: |
         echo "::group::cache"
         npm install -g @devcontainers/cli
-        IMAGE_ID=${{ inputs.registry }}/$GITHUB_REPOSITORY/${{ inputs.name }}
+        ARCH=$(uname -m)
+        IMAGE_ID=${{ inputs.registry }}/$GITHUB_REPOSITORY/${{ inputs.name }}-${ARCH}
         IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-        TAG="$GITHUB_REF_NAME"
+        TAG="${GITHUB_BASE_REF:-${GITHUB_REF_NAME}}"
         TAG=$(echo $TAG | tr '[A-Z].' '[a-z]_')
         old_id=''
         if docker pull $IMAGE_ID:$TAG; then
@@ -44,9 +44,9 @@ runs:
         env BUILDKIT_PROGRESS=plain devcontainer build --image-name $IMAGE_ID --cache-from $IMAGE_ID:$TAG --workspace-folder .
         echo "::group::up"
         env BUILDKIT_PROGRESS=plain devcontainer up --workspace-folder .
-        echo "exec=devcontainer exec --workspace-folder ." >> $GITHUB_OUTPUT
-        echo "::group::push"
-        if [ -n '${{ inputs.password }}' ]; then
+        echo "EXEC=devcontainer exec --workspace-folder ." >> $GITHUB_OUTPUT
+        if [ -n '${{ inputs.password }}' -a -z "${GITHUB_BASE_REF:-}" ]; then
+          echo "::group::push"
           new_id=$(docker image inspect $IMAGE_ID --format "{{.ID}}")
           if docker tag $IMAGE_ID $IMAGE_ID:$TAG ; then
             if [ "$old_id" != "$new_id" ]; then
