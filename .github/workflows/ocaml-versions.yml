@@ -1,0 +1,19 @@
+name: OCaml Versions
+
+on:
+  workflow_call:
+    outputs:
+      versions:
+        description: 'JSON array of OCaml versions to build and test'
+        value: ${{ jobs.versions.outputs.versions }}
+
+jobs:
+  versions:
+    runs-on: ubuntu-slim
+    outputs:
+      versions: ${{ steps.versions.outputs.versions }}
+    steps:
+    - name: versions
+      id: versions
+      run: |
+        echo 'versions=["4.14.3","5.2.1","5.3.0","5.4.1"]' >> $GITHUB_OUTPUT

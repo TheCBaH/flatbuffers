@@ -6,13 +6,16 @@ on:
   workflow_dispatch:
 
 jobs:
+  versions:
+    uses: ./.github/workflows/ocaml-versions.yml
   build:
+    needs: versions
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, ubuntu-24.04-arm]
-        ocaml_version: ['4.14.3', '5.2.1', '5.3.0', '5.4.1']
+        ocaml_version: ${{ fromJson(needs.versions.outputs.versions) }}
     steps:
     - name: checkout
       uses: actions/checkout@v6
