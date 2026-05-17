@@ -1,3 +1,4 @@
 _build/
 build/
 flatc
+.devcontainer/devcontainer-lock.json
