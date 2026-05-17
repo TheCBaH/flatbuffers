@@ -18,8 +18,10 @@ make bench          # Run benchmarks
 make clean          # Clean everything (dune + flatc + reset submodule)
 make clean-flatc    # Clean only flatc build and reset submodule
 make generate       # Regenerate promoted test schemas from .fbs definitions
-make generate-check # Regenerate test schemas and verify promoted files match
+make generate-check # Regenerate schemas + verify all generated/derived files match
 make rebuild-patch  # Regenerate patch from current submodule state
+make update-opam    # Recompute flatbuffers-tools.opam extra-source SHA and checksum
+make check-opam     # Verify extra-source SHA in opam matches current submodule (CI)
 
 # Run tests without flatc (uses pre-generated promoted files)
 opam exec -- dune test --ignore-promoted-rules
@@ -36,6 +38,21 @@ opam exec -- dune test --ignore-promoted-rules
 - `src/bfbs_gen_ocaml.{cpp,h}` — OCaml code generator, maintained here, copied into submodule at build time
 - `patches/ocaml-integration.patch` — patch that registers the OCaml generator with flatc (adds `kOCaml` language flag, CMake source entries, parser feature allowlists, and generator registration in `flatc_main.cpp`)
 - `Makefile` orchestrates: copy generator → apply patch → cmake → build flatc
+
+### Updating the Submodule
+
+When the `flatbuffers/` submodule is bumped (manually or by Dependabot),
+`flatbuffers-tools.opam` must be updated to match — it contains a hardcoded
+archive URL and SHA256 checksum tied to the exact submodule commit:
+
+```bash
+make update-opam    # fetch archive, recompute SHA256, update flatbuffers-tools.opam
+make generate-check # verify OCaml generated files and opam file are all in sync
+```
+
+CI (`ocaml-build.yml`) runs `make generate-check`, which includes `make check-opam`.
+If a Dependabot PR fails with "SHA out of sync", check out the branch, run
+`make update-opam`, commit, and push.
 
 ### Updating the Integration Patch
 

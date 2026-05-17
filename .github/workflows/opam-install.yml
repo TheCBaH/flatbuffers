@@ -1,10 +1,10 @@
 name: opam pin install
 
-# Verifies that the package installs and tests correctly via opam, using
-# the git ref under test as the package source. No local source checkout.
-#
-# Test data from the flatbuffers/ git submodule is fetched from
-# raw.githubusercontent.com at the exact submodule SHA — no git clone needed.
+# Verifies the full install chain from the git ref under test without any local
+# source checkout: flatbuffers-tools (C++ flatc build) then flatbuffers (OCaml
+# library + tests). Both packages are pinned to the same git ref.
+# flatbuffers-tools.opam declares an extra-source for the flatbuffers C++
+# archive so opam downloads it during the pre-sandbox fetch phase.
 
 on:
   push:
@@ -12,16 +12,20 @@ on:
   workflow_dispatch:
 
 jobs:
+  versions:
+    uses: ./.github/workflows/ocaml-versions.yml
+
   opam-pin:
+    needs: versions
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        ocaml-compiler: ["5.2", "4.14"]
+        ocaml-compiler: ${{ fromJson(needs.versions.outputs.versions) }}
     runs-on: ${{ matrix.os }}
 
     steps:
-      # No source checkout — opam fetches the package directly from git.
+      # No source checkout — opam fetches the packages directly from git.
       # For pull_request events github.sha is a synthetic merge commit that
       # does not exist as a real push; use the actual PR head SHA instead.
       - name: resolve git ref
@@ -39,13 +43,25 @@ jobs:
         with:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
 
-      - name: pin from git ref
+      - name: pin packages from git ref
         run: |
           opam pin add flatbuffers \
             "git+https://github.com/${{ steps.ref.outputs.repo }}.git#${{ steps.ref.outputs.sha }}" \
             --no-action -y
+          opam pin add flatbuffers-tools \
+            "git+https://github.com/${{ steps.ref.outputs.repo }}.git#${{ steps.ref.outputs.sha }}" \
+            --no-action -y
 
-      - name: install deps
+      - name: install flatbuffers-tools deps
+        run: opam install flatbuffers-tools --deps-only -y
+
+      - name: install flatbuffers-tools
+        run: opam install flatbuffers-tools -y
+
+      - name: verify flatc
+        run: opam exec -- flatc.ocaml --version
+
+      - name: install flatbuffers deps
         run: opam install flatbuffers --deps-only --with-test -y
 
       - name: install flatbuffers
