@@ -25,7 +25,7 @@ make rebuild-patch  # Regenerate patch from current submodule state
 opam exec -- dune test --ignore-promoted-rules
 
 # Generate OCaml bindings from a schema
-./flatc --ocaml path/to/schema.fbs
+./flatc.ocaml --ocaml path/to/schema.fbs
 ```
 
 ## Architecture
@@ -75,5 +75,5 @@ Tests in `ocaml/test/monster_test.ml` read binary test data from the submodule: 
 ## Key Conventions
 
 - Runtime library uses `cppo` preprocessor for OCaml version detection (`ocaml/lib/dune`)
-- `dune-workspace` adds `.` to PATH so dune can find the `flatc` binary at project root
+- `dune-workspace` adds `.` to PATH so dune can find the `flatc.ocaml` binary at project root
 - The integration patch touches stable registration APIs (enum flags, CMake source lists) that rarely change structurally across upstream updates

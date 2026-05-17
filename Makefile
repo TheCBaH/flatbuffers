@@ -1,6 +1,6 @@
 SUBMODULE := flatbuffers
 PATCH := patches/ocaml-integration.patch
-FLATC := flatc
+FLATC := flatc.ocaml
 
 .PHONY: all patch flatc deps test test-jsoo test-melange generate generate-check bench clean clean-flatc rebuild-patch
 
@@ -26,7 +26,7 @@ rebuild-patch:
 flatc: patch
 	mkdir -p $(SUBMODULE)/build
 	cd $(SUBMODULE)/build && cmake .. -DFLATBUFFERS_BUILD_TESTS=OFF
-	$(MAKE) -C $(SUBMODULE)/build -j$$(nproc) flatc
+	$(MAKE) -C $(SUBMODULE)/build -j$(nproc) flatc
 	cp $(SUBMODULE)/build/flatc $(FLATC)
 	./$(FLATC) --version
 
