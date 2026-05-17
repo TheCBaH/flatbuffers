@@ -7,29 +7,33 @@
 (generate_opam_files true)
 
 (source
- (github username/reponame))
+ (github TheCBaH/flatbuffers))
 
-(authors "Author Name")
+(authors "Vladimir Silyaev")
 
-(maintainers "Maintainer Name")
+(maintainers "Vladimir Silyaev <thecbah@gmail.com>")
 
 (license Apache-2.0)
 
-(documentation https://url/to/documentation)
+(documentation https://github.com/TheCBaH/flatbuffers)
 
 (package
  (name flatbuffers)
- (synopsis "A short synopsis")
- (description "A longer description")
+ (synopsis "OCaml runtime and code generator for FlatBuffers serialization")
+ (description
+  "FlatBuffers is a cross-platform serialization library by Google. This package provides an OCaml runtime library and a flatc code generator backend that produces OCaml bindings from .fbs schema files.")
  (depends
   (ocaml (>= 4.13))
-   bigstringaf
+  bigstringaf
   (cppo (and :build (>= 1.1.0)))
+  (melange :build)
+  js_of_ocaml
+  (js_of_ocaml-ppx :build)
   (memtrace :with-test)
   (benchmark :with-test)
   (alcotest (and :with-test (>= 1.7))))
  (tags
-  (topics "to describe" your project)))
+  (flatbuffers serialization binary ocaml)))
 
 ; to make running ocamldebug easier
 (wrapped_executables false)

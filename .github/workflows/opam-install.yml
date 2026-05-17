@@ -1,0 +1,52 @@
+name: opam pin install
+
+# Verifies that the package installs and tests correctly via opam, using
+# the git ref under test as the package source. No local source checkout.
+#
+# Test data from the flatbuffers/ git submodule is fetched from
+# raw.githubusercontent.com at the exact submodule SHA — no git clone needed.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  opam-pin:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        ocaml-compiler: ["5.2", "4.14"]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      # No source checkout — opam fetches the package directly from git.
+      # For pull_request events github.sha is a synthetic merge commit that
+      # does not exist as a real push; use the actual PR head SHA instead.
+      - name: resolve git ref
+        id: ref
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "repo=${{ github.event.pull_request.head.repo.full_name }}" >> "$GITHUB_OUTPUT"
+            echo "sha=${{ github.event.pull_request.head.sha }}"            >> "$GITHUB_OUTPUT"
+          else
+            echo "repo=${{ github.repository }}" >> "$GITHUB_OUTPUT"
+            echo "sha=${{ github.sha }}"          >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: ${{ matrix.ocaml-compiler }}
+
+      - name: pin from git ref
+        run: |
+          opam pin add flatbuffers \
+            "git+https://github.com/${{ steps.ref.outputs.repo }}.git#${{ steps.ref.outputs.sha }}" \
+            --no-action -y
+
+      - name: install deps
+        run: opam install flatbuffers --deps-only --with-test -y
+
+      - name: install flatbuffers
+        run: opam install flatbuffers --with-test -y

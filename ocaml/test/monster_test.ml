@@ -620,8 +620,8 @@ let check_extension_ident () =
   Alcotest.(check (option string)) "identifier" (Some "MONS") Monster.identifier
 ;;
 
-let gold_monsterdata = "../../flatbuffers/tests/monsterdata_test.mon"
-let python_monsterdata = "../../flatbuffers/tests/monsterdata_python_wire.mon"
+let gold_monsterdata = "monsterdata_test.mon"
+let python_monsterdata = "monsterdata_python_wire.mon"
 
 let test_cases =
   Alcotest.
