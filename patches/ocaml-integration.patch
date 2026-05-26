@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 7bf48e6a..5ddfba99 100644
+index eb5bed52..cd29f951 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -182,6 +182,7 @@ set(FlatBuffers_Compiler_SRCS
@@ -67,7 +67,7 @@ index ce9b8c4a..f75a7289 100644
    flatbuffers::FlatCOptions options =
        flatc.ParseFromCommandLineArguments(argc, argv);
 diff --git a/src/idl_parser.cpp b/src/idl_parser.cpp
-index caeca93d..b5d4152b 100644
+index b1bdffa0..46bd26a1 100644
 --- a/src/idl_parser.cpp
 +++ b/src/idl_parser.cpp
 @@ -2797,7 +2797,7 @@ bool Parser::SupportsOptionalScalars(const flatbuffers::IDLOptions& opts) {

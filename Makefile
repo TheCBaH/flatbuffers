@@ -9,7 +9,7 @@ all: flatc test
 
 patch:
 	@if [ -d $(SUBMODULE)/.git ] || [ -f $(SUBMODULE)/.git ]; then \
-		if ! git -C $(SUBMODULE) diff --quiet; then \
+		if ! git -C $(SUBMODULE) diff HEAD --quiet; then \
 			echo "Submodule already has local changes, skipping patch"; \
 		else \
 			cp src/bfbs_gen_ocaml.cpp src/bfbs_gen_ocaml.h $(SUBMODULE)/src/; \
@@ -27,11 +27,11 @@ patch:
 	fi
 
 rebuild-patch:
-	@if git -C $(SUBMODULE) diff --quiet; then \
+	@if git -C $(SUBMODULE) diff HEAD --quiet; then \
 		echo "Error: submodule has no local changes to capture" >&2; \
 		exit 1; \
 	fi
-	git -C $(SUBMODULE) diff > $(PATCH)
+	git -C $(SUBMODULE) diff HEAD > $(PATCH)
 	@echo "Patch rebuilt: $(PATCH)"
 
 flatc: patch
@@ -96,8 +96,8 @@ bench: flatc
 clean:
 	opam exec -- dune clean
 	rm -rf $(SUBMODULE)/build $(FLATC)
-	git -C $(SUBMODULE) checkout -- . 2>/dev/null || true
+	git -C $(SUBMODULE) checkout HEAD -- . 2>/dev/null || true
 
 clean-flatc:
 	rm -rf $(SUBMODULE)/build $(FLATC)
-	git -C $(SUBMODULE) checkout -- . 2>/dev/null || true
+	git -C $(SUBMODULE) checkout HEAD -- . 2>/dev/null || true
