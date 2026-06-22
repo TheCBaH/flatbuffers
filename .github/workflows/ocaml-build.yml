@@ -18,7 +18,7 @@ jobs:
         ocaml_version: ${{ fromJson(needs.versions.outputs.versions) }}
     steps:
     - name: checkout
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         submodules: true
     - name: devcontainer
