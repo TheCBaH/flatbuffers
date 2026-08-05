@@ -24,6 +24,11 @@
             "default": "",
             "description": "additional system packages"
         },
+        "repositories": {
+            "type": "string",
+            "default": "",
+            "description": "comma-separated extra opam repositories to add before installing packages: 'name url' pairs (e.g. 'rocq-released https://rocq-prover.org/opam/released')"
+        },
         "pin-packages": {
             "type": "string",
             "default": "",

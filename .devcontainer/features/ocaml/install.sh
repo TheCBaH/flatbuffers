@@ -6,7 +6,8 @@ echo "Activating feature 'OCaml'"
 PACKAGES=${PACKAGES:-$@}
 SYSTEM_PACKAGES=${SYSTEM_PACKAGES:-}
 PIN_PACKAGES=${PIN_PACKAGES:-}
-OCAML_VERSION=${VERSION:-4.14.1}
+REPOSITORIES=${REPOSITORIES:-}
+OCAML_VERSION=${VERSION:-4.14.3}
 OPAM_OPTIONS=''
 if [ -n "${OPTIONS:-}" ]; then
     OPAM_OPTIONS="--packages=ocaml-variants.${OCAML_VERSION}+options,${OPTIONS}"
@@ -87,6 +88,23 @@ export OPAMJOBS="$(getconf _NPROCESSORS_ONLN)"
 opam init --no-setup --disable-sandboxing --bare
 eval $(opam env)
 opam switch create $OCAML_VERSION ${OPAM_OPTIONS}
+
+if [ -n "${REPOSITORIES}" ]; then
+    OLDIFS="$IFS"
+    IFS=','
+    for entry in ${REPOSITORIES}; do
+        IFS="$OLDIFS"
+        entry=$(echo "$entry" | xargs)
+        if [ -n "$entry" ]; then
+            repo_name=$(echo "$entry" | awk '{print $1}')
+            repo_url=$(echo "$entry" | awk '{print $2}')
+            opam repo add "$repo_name" "$repo_url"
+        fi
+    done
+    IFS="$OLDIFS"
+    opam update
+fi
+
 BASE_PACKAGES="\
  dune\
  ocaml-lsp-server\
