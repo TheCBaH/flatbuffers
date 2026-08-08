@@ -180,7 +180,7 @@ opam install ${OPAM_PACKAGES}
 
 opam clean --repo-cache
 opam list
-chown -R ${USERNAME} $OPAMROOT
+chown -R ${USERNAME}:${USERNAME} $OPAMROOT
 
 apt-get autoremove -y
 apt-get clean -y
