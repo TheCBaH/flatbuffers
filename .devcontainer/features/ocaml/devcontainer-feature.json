@@ -1,13 +1,18 @@
 {
     "name": "ocaml/opam toolchains",
     "id": "ocaml",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "description": "Install ocaml/opam toolchains",
     "options": {
         "packages": {
             "type": "string",
             "default": "",
-            "description": "space-separated packages to install; use 'name#version' to pin a specific version (e.g. 'utop ocamlformat#0.28.0')"
+            "description": "space-separated packages to install; use 'name#version' to pin a specific version (e.g. 'utop ocamlformat#0.28.0'). Installation fails if a package is unavailable"
+        },
+        "optional-packages": {
+            "type": "string",
+            "default": "",
+            "description": "space-separated packages to install only when opam reports them available for the selected switch and platform; same 'name#version' pin syntax as 'packages' (e.g. 'melange')"
         },
         "version": {
             "type": "string",
