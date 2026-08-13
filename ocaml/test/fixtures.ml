@@ -62,18 +62,21 @@ let bigstring_map_file path =
   Bigarray.array1_of_genarray ga
 ;;
 
-let bigstring_of_file fbfile =
-  In_channel.with_open_bin fbfile (fun ic ->
-    let s = In_channel.input_all ic in
-    Bigstringaf.of_string ~off:0 ~len:(String.length s) s)
-;;
-
 let string_of_file fbfile =
-  In_channel.with_open_bin fbfile (fun ic -> In_channel.input_all ic)
+  let ic = open_in_bin fbfile in
+  try
+    let contents = really_input_string ic (in_channel_length ic) in
+    close_in ic;
+    contents
+  with exn ->
+    close_in_noerr ic;
+    raise exn
 ;;
 
-let bytes_of_file fbfile =
-  In_channel.with_open_bin fbfile (fun ic ->
-    let s = In_channel.input_all ic in
-    Bytes.of_string s)
+let bigstring_of_file fbfile =
+  let s = string_of_file fbfile in
+  Bigstringaf.of_string ~off:0 ~len:(String.length s) s
+;;
+
+let bytes_of_file fbfile = Bytes.of_string (string_of_file fbfile)
 ;;

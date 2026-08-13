@@ -5,5 +5,5 @@ let () =
   let b = Rt.Builder.create () in
   Fixtures.create_example_monster b
   |> Monster.finish_buf Flatbuffers.Primitives.Bytes b
-  |> Out_channel.output_bytes stdout
+  |> output_bytes stdout
 ;;

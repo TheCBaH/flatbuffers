@@ -14,8 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm]
-        ocaml_version: ${{ fromJson(needs.versions.outputs.versions) }}
+        include: ${{ fromJson(needs.versions.outputs.builds_matrix) }}
     permissions:
       packages: write
     steps:
@@ -29,4 +28,6 @@ jobs:
         OCAML_VERSION: ${{ matrix.ocaml_version }}
       with:
         variant: ${{ matrix.ocaml_version }}
+        platform: ${{ matrix.platform }}
+        username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}

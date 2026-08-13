@@ -14,8 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, ubuntu-24.04-arm]
-        ocaml_version: ${{ fromJson(needs.versions.outputs.versions) }}
+        include: ${{ fromJson(needs.versions.outputs.builds_matrix) }}
     steps:
     - name: checkout
       uses: actions/checkout@v7
@@ -28,6 +27,9 @@ jobs:
         OCAML_VERSION: ${{ matrix.ocaml_version }}
       with:
         variant: ${{ matrix.ocaml_version }}
+        platform: ${{ matrix.platform }}
+        username: ${{ github.actor }}
+        password: ''
     - name: setup
       run: |
         echo 'EXEC=${{ steps.devcontainer.outputs.exec }}' >> $GITHUB_ENV
@@ -47,9 +49,14 @@ jobs:
       run: |
         ${{ env.EXEC }} make test-jsoo
     - name: test melange
+      # Melange requires OCaml 4.14+ and does not support 32-bit x86 or ARM.
+      if: matrix.ocaml_version != '4.13.1' && matrix.platform != 'linux/i386' && matrix.platform != 'linux/arm/v7'
       run: |
         ${{ env.EXEC }} make test-melange
     - name: benchmark
+      # The benchmark checksum uses OCaml int values that cannot represent the
+      # 64-bit fixture ID on 32-bit targets.
+      if: matrix.platform != 'linux/i386' && matrix.platform != 'linux/arm/v7'
       run: |
         ${{ env.EXEC }} make bench
     - name: generate-check

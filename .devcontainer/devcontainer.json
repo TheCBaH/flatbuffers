@@ -14,7 +14,8 @@
         },
         "./features/ocaml": {
             "version": "${localEnv:OCAML_VERSION}",
-            "packages": "bigstringaf cppo alcotest memtrace benchmark js_of_ocaml js_of_ocaml-compiler js_of_ocaml-ppx melange"
+            "packages": "alcotest benchmark bigstringaf cppo js_of_ocaml js_of_ocaml-compiler js_of_ocaml-ppx memtrace",
+            "optional-packages": "melange"
         },
         "./features/gh": {}
     },

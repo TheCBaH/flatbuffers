@@ -6,14 +6,59 @@ on:
       versions:
         description: 'JSON array of OCaml versions to build and test'
         value: ${{ jobs.versions.outputs.versions }}
+      builds_matrix:
+        description: 'JSON array of {os, ocaml_version, platform} objects for build and test jobs'
+        value: ${{ jobs.versions.outputs.builds_matrix }}
 
 jobs:
   versions:
     runs-on: ubuntu-slim
     outputs:
       versions: ${{ steps.versions.outputs.versions }}
+      builds_matrix: ${{ steps.versions.outputs.builds_matrix }}
     steps:
     - name: versions
       id: versions
       run: |
-        echo 'versions=["4.14.3","5.2.1","5.3.0","5.4.1"]' >> $GITHUB_OUTPUT
+        python3 - <<'EOF'
+        import json
+        import os
+
+        versions = ["4.13.1", "4.14.3", "5.2.1", "5.3.0", "5.4.1"]
+        # Test all supported compilers on the native 64-bit architectures.
+        # OCaml 4.14 also covers the supported 32-bit targets; OCaml 5 no
+        # longer supports 32-bit runtimes, and the oldest supported switch is
+        # intentionally limited to native targets.
+        no_32bit = {"4.13.1"}
+        builds = []
+        for version in versions:
+            builds.append({
+                "os": "ubuntu-24.04",
+                "ocaml_version": version,
+                "platform": "linux/amd64",
+            })
+            builds.append({
+                "os": "ubuntu-24.04-arm",
+                "ocaml_version": version,
+                "platform": "linux/arm64",
+            })
+            if not version.startswith("5") and version not in no_32bit:
+                builds.append({
+                    "os": "ubuntu-24.04",
+                    "ocaml_version": version,
+                    "platform": "linux/i386",
+                })
+                builds.append({
+                    "os": "ubuntu-24.04-arm",
+                    "ocaml_version": version,
+                    "platform": "linux/arm/v7",
+                })
+
+        def write_output(file, name, value):
+            file.write(f"{name}<<__OUTPUT__\n{value}\n__OUTPUT__\n")
+
+        with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+            write_output(output, "versions", json.dumps(versions, indent=2))
+            write_output(output, "builds_matrix", json.dumps(builds, indent=2))
+        EOF
+        cat "$GITHUB_OUTPUT"

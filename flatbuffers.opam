@@ -17,7 +17,7 @@ depends: [
   "ocaml" {>= "4.13"}
   "bigstringaf"
   "cppo" {build & >= "1.1.0"}
-  "melange" {build}
+  "melange" {build & arch != "x86_32" & arch != "arm32"}
   "js_of_ocaml"
   "js_of_ocaml-ppx" {build}
   "memtrace" {with-test}
