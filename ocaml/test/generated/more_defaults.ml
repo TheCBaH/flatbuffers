@@ -4,9 +4,24 @@
     flatc version: 25.12.19
 *)
 
-[@@@warning "-32"]
+[@@@warning "-32-39"]
 
 module Rt = Flatbuffers.Runtime
+
+module Verify = struct
+  module V = Flatbuffers.Verifier
+
+  let rec table_more_defaults__0 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_vector v ~name:"ints" ~voff:4 ~required:false ~off64:false ~vec64:false ~elem_size:4
+         && V.field_vector v ~name:"floats" ~voff:6 ~required:false ~off64:false ~vec64:false ~elem_size:4
+         && V.field_string v ~name:"empty_string" ~voff:8 ~required:false ~off64:false
+         && V.field_string v ~name:"some_string" ~voff:10 ~required:false ~off64:false
+         && V.field_vector v ~name:"abcs" ~voff:12 ~required:false ~off64:false ~vec64:false ~elem_size:4
+         && V.field_vector v ~name:"bools" ~voff:14 ~required:false ~off64:false ~vec64:false ~elem_size:1
+         )
+end
 
 (* Enum ABC (//more_defaults.fbs) *)
 module rec Abc : sig
@@ -52,6 +67,8 @@ and MoreDefaults : sig
   val extension : string option
   val identifier : string option
   val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+  val verify : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (unit, Flatbuffers.Verifier.error) result
+  val root_verified : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (t Rt.root, Flatbuffers.Verifier.error) result
   val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
   val ints : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Int.Vector.t) Rt.fbopt
@@ -95,6 +112,12 @@ end = struct
   let extension = None
   let identifier = None
   let[@inline] root ?(size_prefixed = false) ?(off = 0) p b = Rt.get_root p b ~size_prefixed ~off
+  let verify ?options ?size_prefixed ?off p b =
+    Flatbuffers.Verifier.verify_root ?options ?size_prefixed ?off ?identifier p b Verify.table_more_defaults__0
+  let root_verified ?options ?size_prefixed ?off p b =
+    match verify ?options ?size_prefixed ?off p b with
+    | Ok () -> Ok (root ?size_prefixed ?off p b)
+    | Error e -> Error e
   let finish_buf ?(size_prefixed = false) = Rt.Builder.finish ?identifier ~size_prefixed
 
   let[@inline] ints b o = Rt.Ref.read_table_opt b o 4

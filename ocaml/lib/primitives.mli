@@ -24,6 +24,7 @@ type _ t =
 
 (** Data read by the runtime, not abstract *)
 
+val length : 'b t -> 'b -> int
 val get_string : 'b t -> 'b -> off:int -> len:int -> string
 val get_uoffset : 'b t -> 'b -> int -> int
 val get_uoffset64 : 'b t -> 'b -> int -> int

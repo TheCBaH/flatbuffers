@@ -498,6 +498,8 @@ module rec MyGame : sig
       val identifier : string option
       val has_identifier : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> bool
       val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+      val verify : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (unit, Flatbuffers.Verifier.error) result
+      val root_verified : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (t Rt.root, Flatbuffers.Verifier.error) result
       val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
       val pos : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Vec3.t) Rt.fbopt

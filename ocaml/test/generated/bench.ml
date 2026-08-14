@@ -4,7 +4,7 @@
     flatc version: 25.12.19
 *)
 
-[@@@warning "-32"]
+[@@@warning "-32-39"]
 
 module Rt = Flatbuffers.Runtime
 
@@ -25,6 +25,27 @@ module Struct = struct
     Rt.Builder.set_scalar TUShort b (i + 24) size_;
     Rt.Builder.set_padding b (i + 26) 6;
     ()
+end
+
+module Verify = struct
+  module V = Flatbuffers.Verifier
+
+  let rec table_foo_bar__3 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_inline v ~name:"sibling" ~voff:4 ~required:false ~size:32 ~align:8
+         && V.field_string v ~name:"name" ~voff:6 ~required:false ~off64:false
+         && V.field_inline v ~name:"rating" ~voff:8 ~required:false ~size:8 ~align:8
+         && V.field_inline v ~name:"postfix" ~voff:10 ~required:false ~size:1 ~align:1
+         )
+  and table_foo_bar_container__4 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_vector_table v ~name:"list" ~voff:4 ~required:false ~off64:false ~vec64:false table_foo_bar__3
+         && V.field_inline v ~name:"initialized" ~voff:6 ~required:false ~size:1 ~align:1
+         && V.field_inline v ~name:"fruit" ~voff:8 ~required:false ~size:2 ~align:2
+         && V.field_string v ~name:"location" ~voff:10 ~required:false ~off64:false
+         )
 end
 
 module rec BenchmarksFlatbuffers : sig
@@ -137,6 +158,8 @@ module rec BenchmarksFlatbuffers : sig
     val extension : string option
     val identifier : string option
     val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+    val verify : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (unit, Flatbuffers.Verifier.error) result
+    val root_verified : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (t Rt.root, Flatbuffers.Verifier.error) result
     val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
     val list : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, FooBar.Vector.t) Rt.fbopt
@@ -392,6 +415,8 @@ end = struct
     val extension : string option
     val identifier : string option
     val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+    val verify : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (unit, Flatbuffers.Verifier.error) result
+    val root_verified : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (t Rt.root, Flatbuffers.Verifier.error) result
     val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
     val list : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, FooBar.Vector.t) Rt.fbopt
@@ -429,6 +454,12 @@ end = struct
     let extension = None
     let identifier = None
     let[@inline] root ?(size_prefixed = false) ?(off = 0) p b = Rt.get_root p b ~size_prefixed ~off
+    let verify ?options ?size_prefixed ?off p b =
+      Flatbuffers.Verifier.verify_root ?options ?size_prefixed ?off ?identifier p b Verify.table_foo_bar_container__4
+    let root_verified ?options ?size_prefixed ?off p b =
+      match verify ?options ?size_prefixed ?off p b with
+      | Ok () -> Ok (root ?size_prefixed ?off p b)
+      | Error e -> Error e
     let finish_buf ?(size_prefixed = false) = Rt.Builder.finish ?identifier ~size_prefixed
 
     let[@inline] list b o = Rt.Ref.read_table_opt b o 4

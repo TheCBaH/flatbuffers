@@ -4,7 +4,7 @@
     flatc version: 25.12.19
 *)
 
-[@@@warning "-32"]
+[@@@warning "-32-39"]
 
 module Rt = Flatbuffers.Runtime
 
@@ -15,6 +15,27 @@ module Union = struct
     | 1L when Option.is_some greeting -> Option.get greeting (Rt.Ref.read_table b o i)
     | 2L when Option.is_some name -> Option.get name (Rt.Ref.read_table b o i)
     | _ -> default t
+end
+
+module Verify = struct
+  module V = Flatbuffers.Verifier
+
+  let rec table_envelope__0 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_union v ~name:"content" ~type_voff:4 ~voff:6 ~required:false ~tag_size:1 union_content__2
+         )
+  and table_greeting__1 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_string v ~name:"message" ~voff:4 ~required:false ~off64:false
+         )
+  and union_content__2 v tag slot =
+    match tag with
+    | 0L -> V.union_none v slot
+    | 1L -> V.union_table v slot ~variant:"greeting" table_greeting__1
+    | 2L -> V.union_string v slot ~variant:"name"
+    | _ -> V.union_unknown v tag slot
 end
 
 (* Table Greeting (//string_union.fbs) *)
@@ -123,6 +144,8 @@ and Envelope : sig
   val extension : string option
   val identifier : string option
   val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+  val verify : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (unit, Flatbuffers.Verifier.error) result
+  val root_verified : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (t Rt.root, Flatbuffers.Verifier.error) result
   val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
   val content_type : 'b Rt.buf -> ('b, t) Rt.fb -> Content.t
@@ -153,6 +176,12 @@ end = struct
   let extension = None
   let identifier = None
   let[@inline] root ?(size_prefixed = false) ?(off = 0) p b = Rt.get_root p b ~size_prefixed ~off
+  let verify ?options ?size_prefixed ?off p b =
+    Flatbuffers.Verifier.verify_root ?options ?size_prefixed ?off ?identifier p b Verify.table_envelope__0
+  let root_verified ?options ?size_prefixed ?off p b =
+    match verify ?options ?size_prefixed ?off p b with
+    | Ok () -> Ok (root ?size_prefixed ?off p b)
+    | Error e -> Error e
   let finish_buf ?(size_prefixed = false) = Rt.Builder.finish ?identifier ~size_prefixed
 
   let[@inline] content_type b o = Rt.UType.(read_table_default b o 4 ~default:(of_default 0L))

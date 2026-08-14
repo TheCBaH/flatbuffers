@@ -896,6 +896,138 @@ let test_casing_roundtrip () =
   verify Primitives.Bytes buf_bytes;
   verify Primitives.JsDataView (to_dv buf_bytes)
 
+(* ── Verification ── *)
+
+module Vf = Flatbuffers.Verifier
+
+let vkind = function
+  | Ok () -> None
+  | Error (e : Vf.error) -> Some e.kind
+
+(* Run the same buffer through every backend available here and require they
+   agree on acceptance and on the error kind. *)
+let verify_backends msg buf =
+  let open Monster_test in
+  let open MyGame.Example in
+  let a = Monster.verify Primitives.Bytes buf in
+  let b = Monster.verify Primitives.String (Bytes.to_string buf) in
+  let c = Monster.verify Primitives.JsDataView (to_dv buf) in
+  check (msg ^ " Bytes/String agree") (vkind a = vkind b);
+  check (msg ^ " Bytes/DataView agree") (vkind a = vkind c);
+  a
+
+let is_ok = function Ok () -> true | Error _ -> false
+
+let example_monster_buf () =
+  let open Monster_test in
+  let open MyGame.Example in
+  let b = Rt.Builder.create () in
+  create_example_monster b |> Monster.finish_buf Primitives.Bytes b
+
+let test_verify_valid () =
+  let buf = example_monster_buf () in
+  check "valid buffer accepted" (is_ok (verify_backends "valid" buf))
+
+let test_verify_size_prefixed () =
+  let open Monster_test in
+  let open MyGame.Example in
+  let b = Rt.Builder.create () in
+  let buf =
+    create_example_monster b |> Monster.finish_buf Primitives.Bytes ~size_prefixed:true b
+  in
+  check "size-prefixed accepted"
+    (is_ok (Monster.verify ~size_prefixed:true Primitives.Bytes buf));
+  check "size-prefixed accepted (DataView)"
+    (is_ok (Monster.verify ~size_prefixed:true Primitives.JsDataView (to_dv buf)));
+  check "size-prefixed read as plain rejected"
+    (not (is_ok (Monster.verify Primitives.Bytes buf)))
+
+let test_verify_rejects () =
+  let open Monster_test in
+  let open MyGame.Example in
+  let buf = example_monster_buf () in
+  let bad_ident = Bytes.copy buf in
+  Bytes.blit_string "XXXX" 0 bad_ident 4 4;
+  check "bad identifier rejected" (not (is_ok (verify_backends "ident" bad_ident)));
+  let zero_root = Bytes.copy buf in
+  Bytes.set_int32_le zero_root 0 0l;
+  check "zero root offset rejected" (not (is_ok (verify_backends "root" zero_root)));
+  let b = Rt.Builder.create () in
+  let no_name =
+    Monster.Builder.(start b |> add_hp 3 |> finish) |> Monster.finish_buf Primitives.Bytes b
+  in
+  check "missing required field rejected"
+    (vkind (verify_backends "required" no_name) = Some Vf.Missing_required_field);
+  check "empty buffer rejected" (not (is_ok (verify_backends "empty" Bytes.empty)))
+
+let test_verify_truncation () =
+  let buf = example_monster_buf () in
+  for i = 0 to Bytes.length buf - 1 do
+    ignore (verify_backends (Printf.sprintf "truncation %d" i) (Bytes.sub buf 0 i))
+  done
+
+let test_verify_mutation () =
+  let buf = example_monster_buf () in
+  for i = 0 to Bytes.length buf - 1 do
+    let t = Bytes.copy buf in
+    Bytes.set t i (Char.chr (Char.code (Bytes.get t i) lxor 0xFF));
+    ignore (verify_backends (Printf.sprintf "flip %d" i) t)
+  done
+
+let test_verify_nested () =
+  let open Monster_test in
+  let open MyGame.Example in
+  let b = Rt.Builder.create () in
+  let inner = build_nested_monster_buf b ~name:"inner" ~hp:1 ~mana:2 in
+  Rt.Builder.reset b;
+  let buf = build_outer_with_nested b ~outer_name:"outer" ~inner_buf:inner in
+  check "nested accepted" (is_ok (verify_backends "nested" buf));
+  check "nested accepted (DataView)"
+    (is_ok (Monster.verify Primitives.JsDataView (to_dv buf)))
+
+let test_verify_limits () =
+  let open Monster_test in
+  let open MyGame.Example in
+  let b = Rt.Builder.create () in
+  let rec build i =
+    let inner = if i >= 4 then None else Some (build (i + 1)) in
+    let name = Rt.String.create b (string_of_int i) in
+    let t = Monster.Builder.(start b |> add_name name) in
+    let t =
+      match inner with None -> t | Some e -> Monster.Builder.add_enemy e t
+    in
+    Monster.Builder.finish t
+  in
+  let buf = build 1 |> Monster.finish_buf Primitives.Bytes b in
+  check "chain accepted" (is_ok (Monster.verify Primitives.Bytes buf));
+  let at n = Monster.verify ~options:{ Vf.default_options with max_depth = n }
+               Primitives.JsDataView (to_dv buf) in
+  check "depth 4 accepted" (is_ok (at 4));
+  check "depth 3 rejected" (vkind (at 3) = Some Vf.Depth_limit_exceeded)
+
+let test_verify_offset64 () =
+  let open Test64_bit in
+  let b = Rt.Builder.create () in
+  let far_vec = Rt.UByte.Vector.create b [| '\x01'; '\x02' |] in
+  let far_str = Rt.String.create b "hello64" in
+  let big_vec = Rt.UByte.Vector64.create b [| '\xAA'; '\xBB' |] in
+  let buf =
+    RootTable.Builder.(
+      start b |> add_far_vector far_vec |> add_a 1l |> add_far_string far_str
+      |> add_big_vector big_vec |> finish)
+    |> RootTable.finish_buf Primitives.Bytes b
+  in
+  check "64-bit accepted" (is_ok (RootTable.verify Primitives.Bytes buf));
+  check "64-bit accepted (DataView)"
+    (is_ok (RootTable.verify Primitives.JsDataView (to_dv buf)));
+  for i = 0 to Bytes.length buf - 1 do
+    let t = Bytes.sub buf 0 i in
+    let a = RootTable.verify Primitives.Bytes t in
+    let c = RootTable.verify Primitives.JsDataView (to_dv t) in
+    check (Printf.sprintf "64-bit truncation %d agrees" i)
+      (vkind a = vkind c)
+  done
+
 (* ── Run all ── *)
 
 let run name f =
@@ -946,6 +1078,15 @@ let () =
   run "object API roundtrip" test_more_defaults_obj_api;
   Printf.printf "JSOO: Casing\n%!";
   run "casing roundtrip" test_casing_roundtrip;
+  Printf.printf "JSOO: Verification\n%!";
+  run "verify valid" test_verify_valid;
+  run "verify size-prefixed" test_verify_size_prefixed;
+  run "verify rejects" test_verify_rejects;
+  run "verify truncation sweep" test_verify_truncation;
+  run "verify mutation sweep" test_verify_mutation;
+  run "verify nested" test_verify_nested;
+  run "verify limits" test_verify_limits;
+  run "verify 64-bit" test_verify_offset64;
   Printf.printf "\nJSOO: %d passed, %d failed (of %d)\n%!"
     (!tests_run - !tests_failed) !tests_failed !tests_run;
   if !tests_failed > 0 then exit 1

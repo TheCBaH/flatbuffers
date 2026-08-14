@@ -4,9 +4,28 @@
     flatc version: 25.12.19
 *)
 
-[@@@warning "-32"]
+[@@@warning "-32-39"]
 
 module Rt = Flatbuffers.Runtime
+
+module Verify = struct
+  module V = Flatbuffers.Verifier
+
+  let rec table_monster_extra__17 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_inline v ~name:"d0" ~voff:4 ~required:false ~size:8 ~align:8
+         && V.field_inline v ~name:"d1" ~voff:6 ~required:false ~size:8 ~align:8
+         && V.field_inline v ~name:"d2" ~voff:8 ~required:false ~size:8 ~align:8
+         && V.field_inline v ~name:"d3" ~voff:10 ~required:false ~size:8 ~align:8
+         && V.field_inline v ~name:"f0" ~voff:12 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"f1" ~voff:14 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"f2" ~voff:16 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"f3" ~voff:18 ~required:false ~size:4 ~align:4
+         && V.field_vector v ~name:"dvec" ~voff:20 ~required:false ~off64:false ~vec64:false ~elem_size:8
+         && V.field_vector v ~name:"fvec" ~voff:22 ~required:false ~off64:false ~vec64:false ~elem_size:4
+         )
+end
 
 module rec MyGame : sig
   (* Table MyGame.MonsterExtra (//monster_extra.fbs) *)
@@ -21,6 +40,8 @@ module rec MyGame : sig
     val identifier : string option
     val has_identifier : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> bool
     val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+    val verify : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (unit, Flatbuffers.Verifier.error) result
+    val root_verified : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (t Rt.root, Flatbuffers.Verifier.error) result
     val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
     val d0 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
@@ -80,6 +101,8 @@ end = struct
     val identifier : string option
     val has_identifier : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> bool
     val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+    val verify : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (unit, Flatbuffers.Verifier.error) result
+    val root_verified : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (t Rt.root, Flatbuffers.Verifier.error) result
     val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
     val d0 : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
@@ -136,6 +159,12 @@ end = struct
     let identifier = Some "MONE"
     let has_identifier ?(size_prefixed = false) ?(off = 0) p b = Rt.get_identifier p b ~size_prefixed ~off = Option.get identifier
     let[@inline] root ?(size_prefixed = false) ?(off = 0) p b = Rt.get_root p b ~size_prefixed ~off
+    let verify ?options ?size_prefixed ?off p b =
+      Flatbuffers.Verifier.verify_root ?options ?size_prefixed ?off ?identifier p b Verify.table_monster_extra__17
+    let root_verified ?options ?size_prefixed ?off p b =
+      match verify ?options ?size_prefixed ?off p b with
+      | Ok () -> Ok (root ?size_prefixed ?off p b)
+      | Error e -> Error e
     let finish_buf ?(size_prefixed = false) = Rt.Builder.finish ?identifier ~size_prefixed
 
     let[@inline] d0 b o = Rt.Double.(read_table_default b o 4 ~default:(of_default nan))

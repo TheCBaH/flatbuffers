@@ -4,7 +4,7 @@
     flatc version: 25.12.19
 *)
 
-[@@@warning "-32"]
+[@@@warning "-32-39"]
 
 module Rt = Flatbuffers.Runtime
 
@@ -15,6 +15,31 @@ module Struct = struct
     Rt.Builder.set_padding b (i + 4) 4;
     Rt.Builder.set_scalar TDouble b (i + 8) b_;
     ()
+end
+
+module Verify = struct
+  module V = Flatbuffers.Verifier
+
+  let rec table_root_table__19 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_vector v ~name:"far_vector" ~voff:4 ~required:false ~off64:true ~vec64:false ~elem_size:1
+         && V.field_inline v ~name:"a" ~voff:6 ~required:false ~size:4 ~align:4
+         && V.field_string v ~name:"far_string" ~voff:8 ~required:false ~off64:true
+         && V.field_vector v ~name:"big_bool_vector" ~voff:10 ~required:false ~off64:true ~vec64:true ~elem_size:1
+         && V.field_vector v ~name:"big_vector" ~voff:12 ~required:false ~off64:true ~vec64:true ~elem_size:1
+         && V.field_string v ~name:"near_string" ~voff:14 ~required:false ~off64:false
+         && V.field_nested_buffer v ~name:"nested_root" ~voff:16 ~required:false ~off64:true ~vec64:true table_root_table__19
+         && V.field_vector v ~name:"far_struct_vector" ~voff:18 ~required:false ~off64:true ~vec64:false ~elem_size:16
+         && V.field_vector v ~name:"big_struct_vector" ~voff:20 ~required:false ~off64:true ~vec64:true ~elem_size:16
+         && V.field_vector_table v ~name:"many_vectors" ~voff:22 ~required:false ~off64:false ~vec64:false table_wrapper_table__20
+         && V.field_vector v ~name:"forced_aligned_vector" ~voff:24 ~required:false ~off64:true ~vec64:true ~elem_size:1
+         )
+  and table_wrapper_table__20 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_vector v ~name:"vector" ~voff:4 ~required:false ~off64:true ~vec64:false ~elem_size:1
+         )
 end
 
 (* Struct LeafStruct (//test_64bit.fbs) *)
@@ -125,6 +150,8 @@ and RootTable : sig
   val extension : string option
   val identifier : string option
   val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+  val verify : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (unit, Flatbuffers.Verifier.error) result
+  val root_verified : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (t Rt.root, Flatbuffers.Verifier.error) result
   val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
   val far_vector : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
@@ -184,6 +211,12 @@ end = struct
   let extension = None
   let identifier = None
   let[@inline] root ?(size_prefixed = false) ?(off = 0) p b = Rt.get_root p b ~size_prefixed ~off
+  let verify ?options ?size_prefixed ?off p b =
+    Flatbuffers.Verifier.verify_root ?options ?size_prefixed ?off ?identifier p b Verify.table_root_table__19
+  let root_verified ?options ?size_prefixed ?off p b =
+    match verify ?options ?size_prefixed ?off p b with
+    | Ok () -> Ok (root ?size_prefixed ?off p b)
+    | Error e -> Error e
   let finish_buf ?(size_prefixed = false) = Rt.Builder.finish ?identifier ~size_prefixed
 
   let[@inline] far_vector b o = Rt.Ref64.read_table_opt b o 4

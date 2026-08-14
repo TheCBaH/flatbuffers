@@ -60,8 +60,10 @@ std::set<std::string> OCamlKeywords() {
            // Generator-synthesized identifiers (snake_case — fields/functions)
            "obj", "unpack", "pack", "to_string", "extension", "identifier",
            "root", "finish_buf", "has_identifier", "lookup_by_key",
+           "verify", "root_verified",
            // Generator-synthesized identifiers (UpperCamel — modules)
-           "Rt", "Builder", "Vector", "Vector64" };
+           "Rt", "Builder", "Vector", "Vector64", "Verify", "Verifier",
+           "Struct", "Union" };
 }
 
 Namer::Config OCamlDefaultConfig() {
@@ -94,7 +96,9 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
       : BaseBfbsGenerator(),
         root_node_(),
         ident_counter_(0),
+        verify_counter_(0),
         enum_reader_idents_(),
+        verify_idents_(),
         flatc_version_(flatc_version),
         namer_(OCamlDefaultConfig(), OCamlKeywords()) {}
 
@@ -117,6 +121,7 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
     // generate out-of-line definitions to avoid references between modules
     GenerateStructSetFns(impl);
     GenerateUnionReadFns(impl);
+    GenerateVerifyFns(impl);
 
     // generate user-facing modules
     EmitCode(intf, impl);
@@ -380,6 +385,237 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
     impl += "end\n\n";
   }
 
+  // ===== Verification =====
+
+  std::string VerifyIdent(const std::string &kind, const std::string &name) {
+    std::string ident = verify_idents_[name];
+    if (ident.empty()) {
+      ident = kind + "_" + namer_.Function(namer_.Denamespace(name)) + "__" +
+              NumToString(verify_counter_++);
+      verify_idents_[name] = ident;
+    }
+    return ident;
+  }
+
+  std::string TableVerifyIdent(const r::Object *object) {
+    return VerifyIdent("table", object->name()->str());
+  }
+
+  std::string UnionVerifyIdent(const r::Enum *enum_def) {
+    return VerifyIdent("union", enum_def->name()->str());
+  }
+
+  const r::Field *FindFieldById(const r::Object *object, int64_t id) {
+    const r::Field *found = nullptr;
+    ForAllFields(object, /*reverse=*/false, [&](const r::Field *field) {
+      if (static_cast<int64_t>(field->id()) == id) found = field;
+    });
+    return found;
+  }
+
+  // True for the implicit discriminator field of a union or union vector; it
+  // is verified together with the value field it belongs to.
+  static bool IsUnionTypeField(const r::Field *field) {
+    const r::BaseType bt = field->type()->base_type();
+    if (bt == r::UType) return true;
+    return (bt == r::Vector || bt == r::Vector64) &&
+           field->type()->element() == r::UType;
+  }
+
+  // Byte size of a vector element as laid out in the buffer.
+  uint32_t VectorElementSize(const r::Type *type) {
+    const r::BaseType elem = type->element();
+    if (elem == r::Obj) {
+      auto obj = GetObject(type, /*element_type=*/true);
+      // Tables are referenced by a 32-bit offset, structs are inline.
+      return obj->is_struct() ? obj->bytesize() : 4;
+    }
+    if (elem == r::String) return 4;
+    return type->element_size();
+  }
+
+  std::string BoolLit(bool b) const { return b ? "true" : "false"; }
+
+  // One field check inside a table verifier callback.
+  std::string GenerateFieldVerify(const r::Object *object,
+                                  const r::Field *field) {
+    const r::BaseType bt = field->type()->base_type();
+    const std::string name = "\"" + namer_.Field(*field) + "\"";
+    const std::string voff = NumToString(field->offset());
+    const std::string required = BoolLit(field->required());
+    const bool vec64 = (bt == r::Vector64);
+    const std::string off64 = BoolLit(field->offset64() || vec64);
+    const std::string common =
+        " ~name:" + name + " ~voff:" + voff + " ~required:" + required;
+
+    if (bt == r::Union) {
+      const r::Field *type_field = FindFieldById(object, field->id() - 1);
+      if (!type_field) return "{{ ERROR union type field }}";
+      auto enum_def = GetEnum(field->type());
+      return "V.field_union v ~name:" + name +
+             " ~type_voff:" + NumToString(type_field->offset()) +
+             " ~voff:" + voff + " ~required:" + required + " ~tag_size:" +
+             NumToString(enum_def->underlying_type()->base_size()) + " " +
+             UnionVerifyIdent(enum_def);
+    }
+
+    if ((bt == r::Vector || bt == r::Vector64) &&
+        field->type()->element() == r::Union) {
+      const r::Field *type_field = FindFieldById(object, field->id() - 1);
+      if (!type_field) return "{{ ERROR union vector type field }}";
+      auto enum_def = GetEnum(field->type(), /*element_type=*/true);
+      return "V.field_union_vector v ~name:" + name +
+             " ~type_voff:" + NumToString(type_field->offset()) +
+             " ~voff:" + voff + " ~required:" + required + " ~tag_size:" +
+             NumToString(enum_def->underlying_type()->base_size()) + " " +
+             UnionVerifyIdent(enum_def);
+    }
+
+    if (IsScalar(bt)) {
+      const uint32_t size = field->type()->base_size();
+      return "V.field_inline v" + common + " ~size:" + NumToString(size) +
+             " ~align:" + NumToString(size);
+    }
+
+    if (bt == r::String) {
+      return "V.field_string v" + common + " ~off64:" + off64;
+    }
+
+    if (bt == r::Obj) {
+      auto obj = GetObject(field->type());
+      if (obj->is_struct()) {
+        return "V.field_inline v" + common +
+               " ~size:" + NumToString(obj->bytesize()) +
+               " ~align:" + NumToString(obj->minalign());
+      }
+      return "V.field_table v" + common + " ~off64:" + off64 + " " +
+             TableVerifyIdent(obj);
+    }
+
+    if (bt == r::Vector || bt == r::Vector64) {
+      const std::string widths =
+          " ~off64:" + off64 + " ~vec64:" + BoolLit(vec64);
+
+      // A [ubyte] vector annotated nested_flatbuffer is verified both as a
+      // byte vector and, recursively, as a buffer of the referenced root.
+      auto nested_type = GetNestedFlatbuffer(field);
+      if (!nested_type.empty()) {
+        auto nested_obj = FindObjectByName(nested_type, object->name()->str());
+        if (nested_obj && !nested_obj->is_struct()) {
+          return "V.field_nested_buffer v" + common + widths + " " +
+                 TableVerifyIdent(nested_obj);
+        }
+      }
+
+      const r::BaseType elem = field->type()->element();
+      if (elem == r::String) {
+        return "V.field_vector_string v" + common + widths;
+      }
+      if (elem == r::Obj) {
+        auto obj = GetObject(field->type(), /*element_type=*/true);
+        if (!obj->is_struct()) {
+          return "V.field_vector_table v" + common + widths + " " +
+                 TableVerifyIdent(obj);
+        }
+      }
+      return "V.field_vector v" + common + widths +
+             " ~elem_size:" + NumToString(VectorElementSize(field->type()));
+    }
+
+    // Fixed-size arrays only occur inside structs, which are verified as one
+    // inline range by their containing table.
+    return "{{ ERROR GenerateFieldVerify }}";
+  }
+
+  void GenerateTableVerify(const r::Object *object, const std::string &indent,
+                           std::string &impl) {
+    std::vector<std::string> checks;
+    ForAllFields(object, /*reverse=*/false, [&](const r::Field *field) {
+      if (field->deprecated()) return;
+      if (IsUnionTypeField(field)) return;
+      checks.push_back(GenerateFieldVerify(object, field));
+    });
+
+    impl += TableVerifyIdent(object) + " v pos =\n";
+    impl += indent + "  V.enter_table v pos\n";
+    if (checks.empty()) {
+      impl += indent + "  && V.exit_table v true\n";
+      return;
+    }
+    impl += indent + "  && V.exit_table v\n";
+    for (size_t i = 0; i < checks.size(); i++) {
+      impl += indent + "       " + (i == 0 ? "(  " : "&& ") + checks[i] + "\n";
+    }
+    impl += indent + "       )\n";
+  }
+
+  void GenerateUnionVerify(const r::Enum *enum_def, const std::string &indent,
+                           std::string &impl) {
+    impl += UnionVerifyIdent(enum_def) + " v tag slot =\n";
+    impl += indent + "  match tag with\n";
+    ForAllEnumValues(enum_def, [&](const r::EnumVal *e) {
+      const std::string variant = "\"" + namer_.Variant(e->name()->str()) + "\"";
+      const r::BaseType bt = e->union_type()->base_type();
+      impl += indent + "  | " + Int64ToString(e->value()) + " -> ";
+      if (bt == r::None) {
+        impl += "V.union_none v slot\n";
+      } else if (bt == r::String) {
+        impl += "V.union_string v slot ~variant:" + variant + "\n";
+      } else if (bt == r::Obj) {
+        auto obj = GetObject(e->union_type());
+        if (obj->is_struct()) {
+          impl += "V.union_struct v slot ~variant:" + variant +
+                  " ~size:" + NumToString(obj->bytesize()) +
+                  " ~align:" + NumToString(obj->minalign()) + "\n";
+        } else {
+          impl += "V.union_table v slot ~variant:" + variant + " " +
+                  TableVerifyIdent(obj) + "\n";
+        }
+      } else {
+        impl += "V.union_unknown v tag slot\n";
+      }
+    });
+    impl += indent + "  | _ -> V.union_unknown v tag slot\n";
+  }
+
+  // Emits a hidden `module Verify` holding one callback per table and one
+  // dispatcher per union. They form a single `let rec` group so recursive and
+  // cross-namespace schemas need no forward declarations, and they stay out of
+  // the .mli because only the root wrappers are declared there.
+  void GenerateVerifyFns(std::string &impl) {
+    const auto indent = Indent(1);
+
+    std::vector<const r::Object *> tables;
+    ForAllObjects(schema_->objects(), [&](const r::Object *object) {
+      if (!object->is_struct()) tables.push_back(object);
+    });
+    std::vector<const r::Enum *> unions;
+    ForAllEnums(schema_->enums(), [&](const r::Enum *enum_def) {
+      if (enum_def->is_union()) unions.push_back(enum_def);
+    });
+
+    if (tables.empty() && unions.empty()) return;
+
+    // Assign identifiers up front so callbacks can refer to each other.
+    for (auto object : tables) TableVerifyIdent(object);
+    for (auto enum_def : unions) UnionVerifyIdent(enum_def);
+
+    impl += "module Verify = struct\n";
+    impl += indent + "module V = Flatbuffers.Verifier\n\n";
+    bool first = true;
+    for (auto object : tables) {
+      impl += indent + (first ? "let rec " : "and ");
+      GenerateTableVerify(object, indent, impl);
+      first = false;
+    }
+    for (auto enum_def : unions) {
+      impl += indent + (first ? "let rec " : "and ");
+      GenerateUnionVerify(enum_def, indent, impl);
+      first = false;
+    }
+    impl += "end\n\n";
+  }
+
   void GenerateEnum(const r::Enum *enum_def, int level, std::string &intf,
                     std::string &impl) {
     const auto indent = Indent(level);
@@ -524,6 +760,30 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
       impl += indent +
               "let[@inline] root ?(size_prefixed = false) ?(off = 0) p b = " +
               RuntimeNS + ".get_root p b ~size_prefixed ~off\n";
+
+      // Structural verification of an untrusted buffer. `root` stays unchecked
+      // and unchanged; `root_verified` verifies once and then hands back the
+      // very same zero-copy root.
+      const std::string verifier_ns = "Flatbuffers.Verifier";
+      const std::string verify_args =
+          "?options:" + verifier_ns + ".options -> ?size_prefixed:bool -> "
+          "?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> ";
+      intf += indent + "val verify : " + verify_args + "(unit, " + verifier_ns +
+              ".error) result\n";
+      impl += indent +
+              "let verify ?options ?size_prefixed ?off p b =\n" + indent +
+              "  " + verifier_ns +
+              ".verify_root ?options ?size_prefixed ?off ?identifier p b "
+              "Verify." +
+              TableVerifyIdent(object) + "\n";
+      intf += indent + "val root_verified : " + verify_args + "(t " +
+              RuntimeNS + ".root, " + verifier_ns + ".error) result\n";
+      impl += indent +
+              "let root_verified ?options ?size_prefixed ?off p b =\n" +
+              indent +
+              "  match verify ?options ?size_prefixed ?off p b with\n" +
+              indent + "  | Ok () -> Ok (root ?size_prefixed ?off p b)\n" +
+              indent + "  | Error e -> Error e\n";
 
       if (schema_->root_table() == object) {
         intf +=
@@ -1724,7 +1984,8 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
     impl += header;
 
     // runtime library
-    impl += "[@@@warning \"-32\"]\n\n";  // turn off unused-value-declaration
+    // -32: unused value declaration, -39: unused rec flag
+    impl += "[@@@warning \"-32-39\"]\n\n";
 
     impl += "module Rt = Flatbuffers.Runtime\n\n";
 
@@ -1942,7 +2203,11 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
 
   Node root_node_;
   int ident_counter_;
+  // Separate from ident_counter_ so adding verifier callbacks does not
+  // renumber the struct/union helper identifiers.
+  int verify_counter_;
   std::map<std::string, std::string> enum_reader_idents_;
+  std::map<std::string, std::string> verify_idents_;
   const std::string flatc_version_;
   const BfbsNamer namer_;
   CodeGenOptions options_;

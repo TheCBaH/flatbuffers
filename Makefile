@@ -92,6 +92,7 @@ test-melange:
 
 bench: flatc
 	opam exec -- dune exec --root . --profile=release --display=quiet ocaml/test/bench/fb_bench.exe
+	opam exec -- dune exec --root . --profile=release --display=quiet ocaml/test/bench/verify_bench.exe
 
 clean:
 	opam exec -- dune clean

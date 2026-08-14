@@ -4,7 +4,7 @@
     flatc version: 25.12.19
 *)
 
-[@@@warning "-32"]
+[@@@warning "-32-39"]
 
 module Rt = Flatbuffers.Runtime
 
@@ -36,6 +36,16 @@ module Struct = struct
     Array.iteri (fun j_ v_ -> set_nested_struct__13 b (i + 384 + j_ * 32) v_) g_;
     Array.iteri (fun j_ v_ -> Rt.Builder.set_scalar TByte b (i + 2432 + j_ * 1) v_) h_;
     ()
+end
+
+module Verify = struct
+  module V = Flatbuffers.Verifier
+
+  let rec table_array_table__18 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_inline v ~name:"a" ~voff:4 ~required:false ~size:160 ~align:8
+         )
 end
 
 module rec MyGame : sig
@@ -156,6 +166,8 @@ module rec MyGame : sig
       val identifier : string option
       val has_identifier : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> bool
       val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+      val verify : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (unit, Flatbuffers.Verifier.error) result
+      val root_verified : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (t Rt.root, Flatbuffers.Verifier.error) result
       val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
       val a : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, ArrayStruct.t) Rt.fbopt
@@ -294,6 +306,8 @@ end = struct
       val identifier : string option
       val has_identifier : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> bool
       val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+      val verify : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (unit, Flatbuffers.Verifier.error) result
+      val root_verified : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (t Rt.root, Flatbuffers.Verifier.error) result
       val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
       val a : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, ArrayStruct.t) Rt.fbopt
@@ -549,6 +563,8 @@ end = struct
       val identifier : string option
       val has_identifier : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> bool
       val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+      val verify : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (unit, Flatbuffers.Verifier.error) result
+      val root_verified : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (t Rt.root, Flatbuffers.Verifier.error) result
       val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
       val a : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, ArrayStruct.t) Rt.fbopt
@@ -578,6 +594,12 @@ end = struct
       let identifier = Some "ARRT"
       let has_identifier ?(size_prefixed = false) ?(off = 0) p b = Rt.get_identifier p b ~size_prefixed ~off = Option.get identifier
       let[@inline] root ?(size_prefixed = false) ?(off = 0) p b = Rt.get_root p b ~size_prefixed ~off
+      let verify ?options ?size_prefixed ?off p b =
+        Flatbuffers.Verifier.verify_root ?options ?size_prefixed ?off ?identifier p b Verify.table_array_table__18
+      let root_verified ?options ?size_prefixed ?off p b =
+        match verify ?options ?size_prefixed ?off p b with
+        | Ok () -> Ok (root ?size_prefixed ?off p b)
+        | Error e -> Error e
       let finish_buf ?(size_prefixed = false) = Rt.Builder.finish ?identifier ~size_prefixed
 
       let[@inline] a b o = Rt.Struct.read_table_opt b o 4

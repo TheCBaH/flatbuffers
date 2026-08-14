@@ -13,3 +13,9 @@
  (modules fb_bench)
  (libraries benchmark memtrace generated)
  (modes exe))
+
+(executable
+ (name verify_bench)
+ (modules verify_bench)
+ (libraries benchmark memtrace generated)
+ (modes exe))

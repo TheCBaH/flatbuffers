@@ -37,6 +37,18 @@ let buf_of_bytes (type b) (prim : b t) b ~off ~len : b =
 #endif
 ;;
 
+let[@inline] length (type b) (prim : b t) (b : b) =
+  match prim with
+  | Bytes -> Bytes.length b
+  | String -> String.length b
+#ifdef BIGSTRING
+  | Bigstring -> Bigstringaf.length b
+#endif
+#ifdef JSDATAVIEW
+  | JsDataView -> Js_dataview.length b
+#endif
+;;
+
 let[@inline] get_string (type b) (prim : b t) (b : b) ~off ~len =
   match prim with
   | Bytes -> Bytes.sub_string b off len

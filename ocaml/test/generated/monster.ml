@@ -4,7 +4,7 @@
     flatc version: 25.12.19
 *)
 
-[@@@warning "-32"]
+[@@@warning "-32-39"]
 
 module Rt = Flatbuffers.Runtime
 
@@ -23,6 +23,35 @@ module Union = struct
     | 0L when Option.is_some none -> Option.get none
     | 1L when Option.is_some weapon -> Option.get weapon (Rt.Ref.read_table b o i)
     | _ -> default t
+end
+
+module Verify = struct
+  module V = Flatbuffers.Verifier
+
+  let rec table_monster__0 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_inline v ~name:"pos" ~voff:4 ~required:false ~size:12 ~align:4
+         && V.field_inline v ~name:"mana" ~voff:6 ~required:false ~size:2 ~align:2
+         && V.field_inline v ~name:"hp" ~voff:8 ~required:false ~size:2 ~align:2
+         && V.field_string v ~name:"name" ~voff:10 ~required:false ~off64:false
+         && V.field_vector v ~name:"inventory" ~voff:14 ~required:false ~off64:false ~vec64:false ~elem_size:1
+         && V.field_inline v ~name:"color" ~voff:16 ~required:false ~size:1 ~align:1
+         && V.field_vector_table v ~name:"weapons" ~voff:18 ~required:false ~off64:false ~vec64:false table_weapon__1
+         && V.field_union v ~name:"equipped" ~type_voff:20 ~voff:22 ~required:false ~tag_size:1 union_equipment__2
+         && V.field_vector v ~name:"path" ~voff:24 ~required:false ~off64:false ~vec64:false ~elem_size:12
+         )
+  and table_weapon__1 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_string v ~name:"name" ~voff:4 ~required:false ~off64:false
+         && V.field_inline v ~name:"damage" ~voff:6 ~required:false ~size:2 ~align:2
+         )
+  and union_equipment__2 v tag slot =
+    match tag with
+    | 0L -> V.union_none v slot
+    | 1L -> V.union_table v slot ~variant:"weapon" table_weapon__1
+    | _ -> V.union_unknown v tag slot
 end
 
 module rec MyGame : sig
@@ -120,6 +149,8 @@ module rec MyGame : sig
       val extension : string option
       val identifier : string option
       val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+      val verify : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (unit, Flatbuffers.Verifier.error) result
+      val root_verified : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (t Rt.root, Flatbuffers.Verifier.error) result
       val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
       val pos : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Vec3.t) Rt.fbopt
@@ -260,6 +291,8 @@ end = struct
       val extension : string option
       val identifier : string option
       val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+      val verify : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (unit, Flatbuffers.Verifier.error) result
+      val root_verified : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (t Rt.root, Flatbuffers.Verifier.error) result
       val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
       val pos : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Vec3.t) Rt.fbopt
@@ -493,6 +526,8 @@ end = struct
       val extension : string option
       val identifier : string option
       val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+      val verify : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (unit, Flatbuffers.Verifier.error) result
+      val root_verified : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (t Rt.root, Flatbuffers.Verifier.error) result
       val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
       val pos : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Vec3.t) Rt.fbopt
@@ -546,6 +581,12 @@ end = struct
       let extension = None
       let identifier = None
       let[@inline] root ?(size_prefixed = false) ?(off = 0) p b = Rt.get_root p b ~size_prefixed ~off
+      let verify ?options ?size_prefixed ?off p b =
+        Flatbuffers.Verifier.verify_root ?options ?size_prefixed ?off ?identifier p b Verify.table_monster__0
+      let root_verified ?options ?size_prefixed ?off p b =
+        match verify ?options ?size_prefixed ?off p b with
+        | Ok () -> Ok (root ?size_prefixed ?off p b)
+        | Error e -> Error e
       let finish_buf ?(size_prefixed = false) = Rt.Builder.finish ?identifier ~size_prefixed
 
       let[@inline] pos b o = Rt.Struct.read_table_opt b o 4

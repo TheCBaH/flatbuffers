@@ -4,9 +4,54 @@
     flatc version: 25.12.19
 *)
 
-[@@@warning "-32"]
+[@@@warning "-32-39"]
 
 module Rt = Flatbuffers.Runtime
+
+module Verify = struct
+  module V = Flatbuffers.Verifier
+
+  let rec table_conv2_doptions__0 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_inline v ~name:"stride_w" ~voff:4 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"stride_h" ~voff:6 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"padding" ~voff:8 ~required:false ~size:4 ~align:4
+         )
+  and table_lstmoptions__1 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_inline v ~name:"num_units" ~voff:4 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"cell_clip" ~voff:6 ~required:false ~size:4 ~align:4
+         )
+  and table_rnnconfig__2 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_inline v ~name:"hidden_size" ~voff:4 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"time_major" ~voff:6 ~required:false ~size:1 ~align:1
+         )
+  and table_svdfparams__3 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_inline v ~name:"rank" ~voff:4 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"activation" ~voff:6 ~required:false ~size:4 ~align:4
+         )
+  and table_simple_table__4 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_inline v ~name:"value" ~voff:4 ~required:false ~size:4 ~align:4
+         && V.field_table v ~name:"lstm" ~voff:6 ~required:false ~off64:false table_lstmoptions__1
+         && V.field_table v ~name:"rnn" ~voff:8 ~required:false ~off64:false table_rnnconfig__2
+         && V.field_table v ~name:"topk" ~voff:10 ~required:false ~off64:false table_top_kv2_params__5
+         && V.field_table v ~name:"conv" ~voff:12 ~required:false ~off64:false table_conv2_doptions__0
+         && V.field_table v ~name:"svdf" ~voff:14 ~required:false ~off64:false table_svdfparams__3
+         )
+  and table_top_kv2_params__5 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_inline v ~name:"k" ~voff:4 ~required:false ~size:4 ~align:4
+         )
+end
 
 module rec Casing : sig
   (* Table casing.Conv2DOptions (//casing_test.fbs) *)
@@ -165,6 +210,8 @@ module rec Casing : sig
     val extension : string option
     val identifier : string option
     val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+    val verify : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (unit, Flatbuffers.Verifier.error) result
+    val root_verified : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (t Rt.root, Flatbuffers.Verifier.error) result
     val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
     val value : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
@@ -526,6 +573,8 @@ end = struct
     val extension : string option
     val identifier : string option
     val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+    val verify : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (unit, Flatbuffers.Verifier.error) result
+    val root_verified : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (t Rt.root, Flatbuffers.Verifier.error) result
     val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
     val value : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
@@ -569,6 +618,12 @@ end = struct
     let extension = None
     let identifier = None
     let[@inline] root ?(size_prefixed = false) ?(off = 0) p b = Rt.get_root p b ~size_prefixed ~off
+    let verify ?options ?size_prefixed ?off p b =
+      Flatbuffers.Verifier.verify_root ?options ?size_prefixed ?off ?identifier p b Verify.table_simple_table__4
+    let root_verified ?options ?size_prefixed ?off p b =
+      match verify ?options ?size_prefixed ?off p b with
+      | Ok () -> Ok (root ?size_prefixed ?off p b)
+      | Error e -> Error e
     let finish_buf ?(size_prefixed = false) = Rt.Builder.finish ?identifier ~size_prefixed
 
     let[@inline] value b o = Rt.Int.(read_table_default b o 4 ~default:(of_default 0L))

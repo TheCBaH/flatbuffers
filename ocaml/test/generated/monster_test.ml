@@ -4,7 +4,7 @@
     flatc version: 25.12.19
 *)
 
-[@@@warning "-32"]
+[@@@warning "-32-39"]
 
 module Rt = Flatbuffers.Runtime
 
@@ -72,6 +72,143 @@ module Union = struct
     | 2L when Option.is_some ts -> Option.get ts (Rt.Ref.read_table b o i)
     | 3L when Option.is_some m2 -> Option.get m2 (Rt.Ref.read_table b o i)
     | _ -> default t
+end
+
+module Verify = struct
+  module V = Flatbuffers.Verifier
+
+  let rec table_monster__5 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_inline v ~name:"pos" ~voff:4 ~required:false ~size:32 ~align:8
+         && V.field_inline v ~name:"mana" ~voff:6 ~required:false ~size:2 ~align:2
+         && V.field_inline v ~name:"hp" ~voff:8 ~required:false ~size:2 ~align:2
+         && V.field_string v ~name:"name" ~voff:10 ~required:true ~off64:false
+         && V.field_vector v ~name:"inventory" ~voff:14 ~required:false ~off64:false ~vec64:false ~elem_size:1
+         && V.field_inline v ~name:"color" ~voff:16 ~required:false ~size:1 ~align:1
+         && V.field_union v ~name:"test" ~type_voff:18 ~voff:20 ~required:false ~tag_size:1 union_any__14
+         && V.field_vector v ~name:"test4" ~voff:22 ~required:false ~off64:false ~vec64:false ~elem_size:4
+         && V.field_vector_string v ~name:"testarrayofstring" ~voff:24 ~required:false ~off64:false ~vec64:false
+         && V.field_vector_table v ~name:"testarrayoftables" ~voff:26 ~required:false ~off64:false ~vec64:false table_monster__5
+         && V.field_table v ~name:"enemy" ~voff:28 ~required:false ~off64:false table_monster__5
+         && V.field_nested_buffer v ~name:"testnestedflatbuffer" ~voff:30 ~required:false ~off64:false ~vec64:false table_monster__5
+         && V.field_table v ~name:"testempty" ~voff:32 ~required:false ~off64:false table_stat__7
+         && V.field_inline v ~name:"testbool" ~voff:34 ~required:false ~size:1 ~align:1
+         && V.field_inline v ~name:"testhashs32_fnv1" ~voff:36 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"testhashu32_fnv1" ~voff:38 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"testhashs64_fnv1" ~voff:40 ~required:false ~size:8 ~align:8
+         && V.field_inline v ~name:"testhashu64_fnv1" ~voff:42 ~required:false ~size:8 ~align:8
+         && V.field_inline v ~name:"testhashs32_fnv1_a" ~voff:44 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"testhashu32_fnv1_a" ~voff:46 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"testhashs64_fnv1_a" ~voff:48 ~required:false ~size:8 ~align:8
+         && V.field_inline v ~name:"testhashu64_fnv1_a" ~voff:50 ~required:false ~size:8 ~align:8
+         && V.field_vector v ~name:"testarrayofbools" ~voff:52 ~required:false ~off64:false ~vec64:false ~elem_size:1
+         && V.field_inline v ~name:"testf" ~voff:54 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"testf2" ~voff:56 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"testf3" ~voff:58 ~required:false ~size:4 ~align:4
+         && V.field_vector_string v ~name:"testarrayofstring2" ~voff:60 ~required:false ~off64:false ~vec64:false
+         && V.field_vector v ~name:"testarrayofsortedstruct" ~voff:62 ~required:false ~off64:false ~vec64:false ~elem_size:8
+         && V.field_vector v ~name:"flex" ~voff:64 ~required:false ~off64:false ~vec64:false ~elem_size:1
+         && V.field_vector v ~name:"test5" ~voff:66 ~required:false ~off64:false ~vec64:false ~elem_size:4
+         && V.field_vector v ~name:"vector_of_longs" ~voff:68 ~required:false ~off64:false ~vec64:false ~elem_size:8
+         && V.field_vector v ~name:"vector_of_doubles" ~voff:70 ~required:false ~off64:false ~vec64:false ~elem_size:8
+         && V.field_table v ~name:"parent_namespace_test" ~voff:72 ~required:false ~off64:false table_in_parent_namespace__11
+         && V.field_vector_table v ~name:"vector_of_referrables" ~voff:74 ~required:false ~off64:false ~vec64:false table_referrable__6
+         && V.field_inline v ~name:"single_weak_reference" ~voff:76 ~required:false ~size:8 ~align:8
+         && V.field_vector v ~name:"vector_of_weak_references" ~voff:78 ~required:false ~off64:false ~vec64:false ~elem_size:8
+         && V.field_vector_table v ~name:"vector_of_strong_referrables" ~voff:80 ~required:false ~off64:false ~vec64:false table_referrable__6
+         && V.field_inline v ~name:"co_owning_reference" ~voff:82 ~required:false ~size:8 ~align:8
+         && V.field_vector v ~name:"vector_of_co_owning_references" ~voff:84 ~required:false ~off64:false ~vec64:false ~elem_size:8
+         && V.field_inline v ~name:"non_owning_reference" ~voff:86 ~required:false ~size:8 ~align:8
+         && V.field_vector v ~name:"vector_of_non_owning_references" ~voff:88 ~required:false ~off64:false ~vec64:false ~elem_size:8
+         && V.field_union v ~name:"any_unique" ~type_voff:90 ~voff:92 ~required:false ~tag_size:1 union_any_unique_aliases__16
+         && V.field_union v ~name:"any_ambiguous" ~type_voff:94 ~voff:96 ~required:false ~tag_size:1 union_any_ambiguous_aliases__15
+         && V.field_vector v ~name:"vector_of_enums" ~voff:98 ~required:false ~off64:false ~vec64:false ~elem_size:1
+         && V.field_inline v ~name:"signed_enum" ~voff:100 ~required:false ~size:1 ~align:1
+         && V.field_nested_buffer v ~name:"testrequirednestedflatbuffer" ~voff:102 ~required:false ~off64:false ~vec64:false table_monster__5
+         && V.field_vector_table v ~name:"scalar_key_sorted_tables" ~voff:104 ~required:false ~off64:false ~vec64:false table_stat__7
+         && V.field_inline v ~name:"native_inline" ~voff:106 ~required:false ~size:4 ~align:2
+         && V.field_inline v ~name:"long_enum_non_enum_default" ~voff:108 ~required:false ~size:8 ~align:8
+         && V.field_inline v ~name:"long_enum_normal_default" ~voff:110 ~required:false ~size:8 ~align:8
+         && V.field_inline v ~name:"nan_default" ~voff:112 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"inf_default" ~voff:114 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"positive_inf_default" ~voff:116 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"infinity_default" ~voff:118 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"positive_infinity_default" ~voff:120 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"negative_inf_default" ~voff:122 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"negative_infinity_default" ~voff:124 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"double_inf_default" ~voff:126 ~required:false ~size:8 ~align:8
+         )
+  and table_referrable__6 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_inline v ~name:"id" ~voff:4 ~required:false ~size:8 ~align:8
+         )
+  and table_stat__7 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_string v ~name:"id" ~voff:4 ~required:false ~off64:false
+         && V.field_inline v ~name:"val_" ~voff:6 ~required:false ~size:8 ~align:8
+         && V.field_inline v ~name:"count" ~voff:8 ~required:false ~size:2 ~align:2
+         )
+  and table_test_simple_table_with_enum__8 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_inline v ~name:"color" ~voff:4 ~required:false ~size:1 ~align:1
+         )
+  and table_type_aliases__9 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_inline v ~name:"i8" ~voff:4 ~required:false ~size:1 ~align:1
+         && V.field_inline v ~name:"u8" ~voff:6 ~required:false ~size:1 ~align:1
+         && V.field_inline v ~name:"i16" ~voff:8 ~required:false ~size:2 ~align:2
+         && V.field_inline v ~name:"u16" ~voff:10 ~required:false ~size:2 ~align:2
+         && V.field_inline v ~name:"i32" ~voff:12 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"u32" ~voff:14 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"i64" ~voff:16 ~required:false ~size:8 ~align:8
+         && V.field_inline v ~name:"u64" ~voff:18 ~required:false ~size:8 ~align:8
+         && V.field_inline v ~name:"f32" ~voff:20 ~required:false ~size:4 ~align:4
+         && V.field_inline v ~name:"f64" ~voff:22 ~required:false ~size:8 ~align:8
+         && V.field_vector v ~name:"v8" ~voff:24 ~required:false ~off64:false ~vec64:false ~elem_size:1
+         && V.field_vector v ~name:"vf64" ~voff:26 ~required:false ~off64:false ~vec64:false ~elem_size:8
+         )
+  and table_monster__10 v pos =
+    V.enter_table v pos
+    && V.exit_table v true
+  and table_in_parent_namespace__11 v pos =
+    V.enter_table v pos
+    && V.exit_table v true
+  and table_table_b__12 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_table v ~name:"a" ~voff:4 ~required:false ~off64:false table_table_a__13
+         )
+  and table_table_a__13 v pos =
+    V.enter_table v pos
+    && V.exit_table v
+         (  V.field_table v ~name:"b" ~voff:4 ~required:false ~off64:false table_table_b__12
+         )
+  and union_any__14 v tag slot =
+    match tag with
+    | 0L -> V.union_none v slot
+    | 1L -> V.union_table v slot ~variant:"monster" table_monster__5
+    | 2L -> V.union_table v slot ~variant:"test_simple_table_with_enum" table_test_simple_table_with_enum__8
+    | 3L -> V.union_table v slot ~variant:"my_game_example2_monster" table_monster__10
+    | _ -> V.union_unknown v tag slot
+  and union_any_ambiguous_aliases__15 v tag slot =
+    match tag with
+    | 0L -> V.union_none v slot
+    | 1L -> V.union_table v slot ~variant:"m1" table_monster__5
+    | 2L -> V.union_table v slot ~variant:"m2" table_monster__5
+    | 3L -> V.union_table v slot ~variant:"m3" table_monster__5
+    | _ -> V.union_unknown v tag slot
+  and union_any_unique_aliases__16 v tag slot =
+    match tag with
+    | 0L -> V.union_none v slot
+    | 1L -> V.union_table v slot ~variant:"m" table_monster__5
+    | 2L -> V.union_table v slot ~variant:"ts" table_test_simple_table_with_enum__8
+    | 3L -> V.union_table v slot ~variant:"m2" table_monster__10
+    | _ -> V.union_unknown v tag slot
 end
 
 module rec MyGame : sig
@@ -566,6 +703,8 @@ module rec MyGame : sig
       val identifier : string option
       val has_identifier : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> bool
       val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+      val verify : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (unit, Flatbuffers.Verifier.error) result
+      val root_verified : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (t Rt.root, Flatbuffers.Verifier.error) result
       val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
       val pos : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Vec3.t) Rt.fbopt
@@ -1448,6 +1587,8 @@ end = struct
       val identifier : string option
       val has_identifier : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> bool
       val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+      val verify : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (unit, Flatbuffers.Verifier.error) result
+      val root_verified : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (t Rt.root, Flatbuffers.Verifier.error) result
       val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
       val pos : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Vec3.t) Rt.fbopt
@@ -2472,6 +2613,8 @@ end = struct
       val identifier : string option
       val has_identifier : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> bool
       val root : ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> t Rt.root
+      val verify : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (unit, Flatbuffers.Verifier.error) result
+      val root_verified : ?options:Flatbuffers.Verifier.options -> ?size_prefixed:bool -> ?off:int -> 'b Flatbuffers.Primitives.t -> 'b -> (t Rt.root, Flatbuffers.Verifier.error) result
       val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
       val pos : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Vec3.t) Rt.fbopt
@@ -2688,6 +2831,12 @@ end = struct
       let identifier = Some "MONS"
       let has_identifier ?(size_prefixed = false) ?(off = 0) p b = Rt.get_identifier p b ~size_prefixed ~off = Option.get identifier
       let[@inline] root ?(size_prefixed = false) ?(off = 0) p b = Rt.get_root p b ~size_prefixed ~off
+      let verify ?options ?size_prefixed ?off p b =
+        Flatbuffers.Verifier.verify_root ?options ?size_prefixed ?off ?identifier p b Verify.table_monster__5
+      let root_verified ?options ?size_prefixed ?off p b =
+        match verify ?options ?size_prefixed ?off p b with
+        | Ok () -> Ok (root ?size_prefixed ?off p b)
+        | Error e -> Error e
       let finish_buf ?(size_prefixed = false) = Rt.Builder.finish ?identifier ~size_prefixed
 
       let[@inline] pos b o = Rt.Struct.read_table_opt b o 4
