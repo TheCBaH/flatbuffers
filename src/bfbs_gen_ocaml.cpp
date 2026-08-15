@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <iostream>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <queue>
@@ -2283,26 +2284,23 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
   }
 
   struct Node {
+    std::string source_name;
     std::string name;
     int level = 0;
     const r::Enum *enum_def = nullptr;
     const r::Object *object = nullptr;
-    std::map<std::string, size_t> children;
     std::vector<Node> nodes;
   };
 
   std::vector<std::string> NamespaceComponents(const std::string &full_name) {
     std::vector<std::string> labels;
-    {
-      std::string ns, rest = full_name;
-      while (rest != "") {
-        labels.push_back(namer_.Denamespace(rest, ns));
-        rest = ns;
-      }
+    size_t begin = 0;
+    while (begin < full_name.size()) {
+      const size_t end = full_name.find('.', begin);
+      labels.push_back(full_name.substr(begin, end - begin));
+      if (end == std::string::npos) break;
+      begin = end + 1;
     }
-
-    // TODO(dmitrig): cleanup
-    std::reverse(labels.begin(), labels.end());
     return labels;
   }
 
@@ -2323,21 +2321,23 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
   }
 
   Node *AddNode(const std::string &full_name) {
-    std::vector<std::string> labels = NamespaceComponents(full_name);
-
-    // TODO(dmitrig): simplify
+    const auto labels = NamespaceComponents(full_name);
     Node *current = &root_node_;
     int level = 0;
-    for (const auto &l : labels) {
-      if (current->children.find(l) == current->children.end()) {
-        Node n;
-        n.name = namer_.Namespace(l);
-        n.level = level;
-        current->nodes.push_back(n);
-        current->children[l] = current->nodes.size() - 1;
+    for (const auto &label : labels) {
+      auto child = std::find_if(
+          current->nodes.begin(), current->nodes.end(),
+          [&](const Node &node) { return node.source_name == label; });
+      if (child == current->nodes.end()) {
+        Node node;
+        node.source_name = label;
+        node.name = namer_.Namespace(label);
+        node.level = level;
+        current->nodes.push_back(std::move(node));
+        child = std::prev(current->nodes.end());
       }
       level++;
-      current = &current->nodes.at(current->children[l]);
+      current = &*child;
     }
 
     return current;
