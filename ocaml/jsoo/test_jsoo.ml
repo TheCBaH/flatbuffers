@@ -222,6 +222,32 @@ let test_builder_reset () =
   check_eq "reset buffers match" ~expected:buf buf'
 ;;
 
+let test_builder_exact_capacity () =
+  let open Monster_test in
+  let check_build msg f =
+    check
+      msg
+      (try
+         f ();
+         true
+       with
+       | _ -> false)
+  in
+  let expected = Array.init 16 Char.chr in
+  check_build "exact-capacity vector" (fun () ->
+    let b = Rt.Builder.create ~init_capacity:16 () in
+    ignore (Rt.UByte.Vector.create b expected));
+  check_build "exact-capacity vector64" (fun () ->
+    let b = Rt.Builder.create ~init_capacity:16 () in
+    ignore (Rt.Long.Vector64.create b [| 1L; 2L |]));
+  check_build "exact-capacity nested vector" (fun () ->
+    let b = Rt.Builder.create ~init_capacity:16 () in
+    ignore (Rt.create_nested_vector b (Bytes.init 16 Char.chr)));
+  check_build "exact-capacity string" (fun () ->
+    let b = Rt.Builder.create ~init_capacity:16 () in
+    ignore (Rt.String.create b "abcdefghijkl"))
+;;
+
 let test_defaults_not_written () =
   let open Monster_test in
   let open MyGame.Example in
@@ -1161,6 +1187,7 @@ let () =
   run "size-prefixed" test_generated_size_prefixed;
   run "extra floats (nan/inf)" test_monster_extra_floats;
   run "builder reset" test_builder_reset;
+  run "builder exact capacity" test_builder_exact_capacity;
   run "defaults not written" test_defaults_not_written;
   run "enum names" test_enum_names;
   run "extension/identifier" test_extension_ident;

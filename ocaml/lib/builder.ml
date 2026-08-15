@@ -113,13 +113,20 @@ let set_nested b t =
   if t then b.nested_start <- b.length else b.nested_start <- -1
 ;;
 
+let invalid_size name message = invalid_arg ("Builder." ^ name ^ ": " ^ message)
+
+let checked_add_size name a b =
+  if a < 0 || b < 0 || a > max_int - b then invalid_size name "size overflow";
+  a + b
+;;
+
 let ensure_capacity b n =
   let old_len = Bytes.length !(b.buf) in
   if old_len < n
   then (
     let new_len = ref old_len in
     while !new_len < n do
-      new_len := 2 * !new_len
+      new_len := if !new_len > max_int / 2 then n else 2 * !new_len
     done;
     let buf' = Bytes.extend !(b.buf) (!new_len - old_len) 0 in
     b.buf := buf')
@@ -132,11 +139,16 @@ let current b = Bytes.length !(b.buf) - b.length
 let current_offset b = b.length
 
 (* Add padding so that, after writing [additional_bytes], the buffer size is a
-     multiple of [align]. Ensures space for [additional_bytes] more bytes *)
-let prealign b ?(additional_bytes = 0) align =
+     multiple of [align]. Ensures space for [additional_bytes] plus
+     [reserve_bytes], but only the alignment padding advances the builder. *)
+let prealign b ?(additional_bytes = 0) ?(reserve_bytes = 0) align =
+  if align <= 0 then invalid_size "prealign" "alignment must be positive";
+  let unpadded_length = checked_add_size "prealign" b.length additional_bytes in
+  let pad_bytes = -unpadded_length land (align - 1) in
+  let padded_length = checked_add_size "prealign" unpadded_length pad_bytes in
+  let required_capacity = checked_add_size "prealign" padded_length reserve_bytes in
   b.minalign <- Int.max align b.minalign;
-  let pad_bytes = -(b.length + additional_bytes) land (align - 1) in
-  ensure_capacity b (b.length + additional_bytes + pad_bytes);
+  ensure_capacity b required_capacity;
   if pad_bytes != 0
   then (
     b.length <- b.length + pad_bytes;
@@ -147,6 +159,18 @@ let prealign b ?(additional_bytes = 0) align =
 let prep ~align ~bytes b =
   prealign b align ~additional_bytes:bytes;
   b.length <- b.length + bytes
+;;
+
+let prep_with_prefix ~align ~bytes ~prefix_bytes b =
+  prealign b align ~additional_bytes:bytes ~reserve_bytes:prefix_bytes;
+  b.length <- b.length + bytes
+;;
+
+let vector_payload_size name ~n_elts ~elt_size =
+  if n_elts < 0 then invalid_size name "element count must be non-negative";
+  if elt_size <= 0 then invalid_size name "element size must be positive";
+  if n_elts > max_int / elt_size then invalid_size name "size overflow";
+  n_elts * elt_size
 ;;
 
 (* TODO: could check id vs n_fields from table start *)
@@ -228,11 +252,13 @@ let add_shared_string b s o = Hashtbl.add b.strings s o
 let vector_len_size = 4
 
 let start_vector b ~n_elts ~elt_size =
-  prep b ~align:(Int.max vector_len_size elt_size) ~bytes:(n_elts * elt_size);
-  (* TODO: hack? *)
-  ensure_capacity b vector_len_size;
+  let bytes = vector_payload_size "start_vector" ~n_elts ~elt_size in
+  prep_with_prefix
+    b
+    ~align:(Int.max vector_len_size elt_size)
+    ~bytes
+    ~prefix_bytes:vector_len_size;
   Primitives.set_int32_le !(b.buf) (current b - vector_len_size) (Int32.of_int n_elts);
-  (* set_uint b (-vector_len_size) (Int32.of_int n_elts); *)
   set_nested b true
 ;;
 
@@ -271,8 +297,12 @@ let create_vector_ref b a =
 let vector64_len_size = 8
 
 let start_vector64 b ~n_elts ~elt_size =
-  prep b ~align:(Int.max vector64_len_size elt_size) ~bytes:(n_elts * elt_size);
-  ensure_capacity b vector64_len_size;
+  let bytes = vector_payload_size "start_vector64" ~n_elts ~elt_size in
+  prep_with_prefix
+    b
+    ~align:(Int.max vector64_len_size elt_size)
+    ~bytes
+    ~prefix_bytes:vector64_len_size;
   Primitives.set_int64_le !(b.buf) (current b - vector64_len_size) (Int64.of_int n_elts);
   set_nested b true
 ;;
@@ -335,8 +365,11 @@ let create_string b s =
 let create_nested_vector b (finished_buf : bytes) =
   let len = Bytes.length finished_buf in
   (* nested flatbuffers need alignment >= 4 for the root offset *)
-  prep b ~align:(Int.max vector_len_size 4) ~bytes:len;
-  ensure_capacity b vector_len_size;
+  prep_with_prefix
+    b
+    ~align:(Int.max vector_len_size 4)
+    ~bytes:len
+    ~prefix_bytes:vector_len_size;
   Primitives.set_int32_le !(b.buf) (current b - vector_len_size) (Int32.of_int len);
   Bytes.blit finished_buf 0 !(b.buf) (current b) len;
   set_nested b true;
