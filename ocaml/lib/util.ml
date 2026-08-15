@@ -7,8 +7,9 @@ let as_signed bits i =
   (i lsl shift) asr shift
 ;;
 
-(* non-allocating version of Int32.unsigned_to_int
-   TODO: could use int32_unsigned_of_int that checks bounds? *)
+(* [Int32.unsigned_to_int] returns an option. Baseline native and JavaScript
+   compilers allocate its [Some] result in this offset-read hot path, so keep
+   the same bounds semantics without the intermediate option. *)
 #if TARGET_INT_SIZE = 63
 let int32_unsigned_to_int n = Int32.to_int n land ((0xFFFF lsl 16) lor 0xFFFF)
 #else

@@ -14,6 +14,30 @@ let check msg ok =
 
 let check_eq msg ~expected actual = check msg (expected = actual)
 
+let test_unsigned_uoffset_boundaries () =
+  let check_value name value expected =
+    let bytes = Bytes.create 4 in
+    Primitives.set_int32_le bytes 0 value;
+    match expected with
+    | Some expected ->
+      check_eq name ~expected (Primitives.get_uoffset Primitives.Bytes bytes 0)
+    | None ->
+      check
+        name
+        (try
+           ignore (Primitives.get_uoffset Primitives.Bytes bytes 0);
+           false
+         with
+         | _ -> true)
+  in
+  check_value "zero" 0l (Some 0);
+  check_value "max_int" Int32.max_int (Some max_int);
+  check_value "max_int + 1" Int32.min_int None;
+  check_value "0x7fffffff" Int32.max_int (Some max_int);
+  check_value "0x80000000" Int32.min_int None;
+  check_value "0xffffffff" Int32.minus_one None
+;;
+
 (* ── Monster sample (monster.fbs) ── *)
 
 let test_monster_sample () =
@@ -1249,6 +1273,8 @@ let run name f =
 ;;
 
 let () =
+  Printf.printf "JSOO: Wire format\n%!";
+  run "unsigned uoffset boundaries" test_unsigned_uoffset_boundaries;
   Printf.printf "JSOO: Monster sample\n%!";
   run "sample build+read" test_monster_sample;
   Printf.printf "JSOO: Monster test\n%!";
