@@ -33,6 +33,26 @@ jobs:
     - name: setup
       run: |
         echo 'EXEC=${{ steps.devcontainer.outputs.exec }}' >> $GITHUB_ENV
+    - name: ccache keys
+      id: ccache_keys
+      run: |
+        platform='${{ matrix.platform }}'
+        {
+          echo "month=$(date +'%Y-%m')"
+          echo "platform=${platform//\//-}"
+          echo "flatbuffers=$(git rev-parse HEAD:flatbuffers)"
+        } >> "$GITHUB_OUTPUT"
+    # The runner manages this cache while the devcontainer uses the same files
+    # through the workspace bind mount. The C++ build is independent of the
+    # OCaml version, so all compiler jobs for one target platform share it.
+    - name: ccache cache
+      uses: actions/cache@v6
+      with:
+        path: flatbuffers/.ccache
+        key: ccache-${{ steps.ccache_keys.outputs.platform }}-${{ steps.ccache_keys.outputs.month }}-${{ steps.ccache_keys.outputs.flatbuffers }}-${{ hashFiles('Makefile', 'src/bfbs_gen_ocaml.cpp', 'src/bfbs_gen_ocaml.h', 'patches/ocaml-integration.patch') }}
+        restore-keys: |
+          ccache-${{ steps.ccache_keys.outputs.platform }}-${{ steps.ccache_keys.outputs.month }}-${{ steps.ccache_keys.outputs.flatbuffers }}-
+          ccache-${{ steps.ccache_keys.outputs.platform }}-${{ steps.ccache_keys.outputs.month }}-
     - name: info
       run: |
         ${{ env.EXEC }} sh -c '
@@ -56,7 +76,18 @@ jobs:
         ${{ env.EXEC }} make format-check
     - name: build flatc
       run: |
-        ${{ env.EXEC }} make flatc
+        mkdir -p flatbuffers/.ccache
+        # $PWD must expand inside the devcontainer.
+        # shellcheck disable=SC2016
+        ${{ env.EXEC }} sh -ceu '
+          export CCACHE_DIR="$PWD/flatbuffers/.ccache"
+          export CCACHE_MAXSIZE=500M
+          export CCACHE_COMPILERCHECK=content
+          export CMAKE_CXX_COMPILER_LAUNCHER=ccache
+          ccache --zero-stats
+          make flatc
+          ccache --show-stats
+        '
         if [ "${{ matrix.platform }}" = linux/s390x ]; then
           file flatc.ocaml | grep -E 'IBM S/390|s390'
         fi

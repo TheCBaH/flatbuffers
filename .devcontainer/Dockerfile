@@ -4,6 +4,7 @@ RUN set -eux;\
     apt-get update;\
     env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends\
   ca-certificates\
+  ccache\
   cmake\
   curl\
   g++\
