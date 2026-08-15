@@ -265,6 +265,120 @@ let check_vector_movement_rejected () =
   check_reusable "after vector movement error" b
 ;;
 
+let read_string_refs vector64 buf =
+  let (Rt.Root (view, vector)) = Rt.get_root P.Bytes buf in
+  let refs =
+    if vector64
+    then Rt.Ref64.Vector.to_array view vector
+    else Rt.Ref.Vector.to_array view vector
+  in
+  Array.map (Rt.String.to_string view) refs
+;;
+
+let check_reference_vector_forms () =
+  let expected = [| "a shared string long enough to grow the buffer"; "tail" |] in
+  let build create_refs =
+    let b = B.create ~init_capacity:16 () in
+    let shared = Rt.String.create_shared b expected.(0) in
+    let shared_again = Rt.String.create_shared b expected.(0) in
+    let tail = Rt.String.create b expected.(1) in
+    let vector = create_refs b [| shared; shared_again; tail |] in
+    finish_root b vector
+  in
+  let expected_repeated = [| expected.(0); expected.(0); expected.(1) |] in
+  Alcotest.(check (array string))
+    "32-bit repeated/shared/grown"
+    expected_repeated
+    (read_string_refs false (build B.create_vector_ref));
+  Alcotest.(check (array string))
+    "64-bit repeated/shared/grown"
+    expected_repeated
+    (read_string_refs true (build B.create_vector_ref64));
+  let check_empty vector64 create_refs =
+    let b = B.create ~init_capacity:16 () in
+    let buf = finish_root b (create_refs b [||]) in
+    Alcotest.(check (array string)) "empty" [||] (read_string_refs vector64 buf)
+  in
+  check_empty false B.create_vector_ref;
+  check_empty true B.create_vector_ref64
+;;
+
+let check_invalid_reference_offsets () =
+  let check create_refs name expected b offset =
+    let before = B.Unsafe.current_offset b in
+    Alcotest.check_raises name (Invalid_argument expected) (fun () ->
+      ignore (create_refs b [| offset |]));
+    Alcotest.(check bool)
+      (name ^ " leaves builder unchanged")
+      true
+      (before = B.Unsafe.current_offset b)
+  in
+  let foreign_builder = B.create ~init_capacity:16 () in
+  let foreign = Rt.String.create foreign_builder "foreign" in
+  let b = B.create ~init_capacity:16 () in
+  check
+    B.create_vector_ref
+    "foreign 32-bit offset"
+    "Builder.create_vector_ref: offset belongs to another builder"
+    b
+    foreign;
+  check
+    B.create_vector_ref64
+    "foreign 64-bit offset"
+    "Builder.create_vector_ref64: offset belongs to another builder"
+    b
+    foreign;
+  Alcotest.check_raises
+    "foreign root offset"
+    (Invalid_argument "Builder.finish: offset belongs to another builder")
+    (fun () -> ignore (finish_root b foreign));
+  ignore (B.start_table b ~n_fields:2);
+  Alcotest.check_raises
+    "foreign table reference"
+    (Invalid_argument "Builder.push_slot_ref: offset belongs to another builder")
+    (fun () -> ignore (B.push_slot_ref 0 foreign b));
+  Alcotest.check_raises
+    "foreign 64-bit table reference"
+    (Invalid_argument "Builder.push_slot_ref64: offset belongs to another builder")
+    (fun () -> ignore (B.push_slot_ref64 0 foreign b));
+  Alcotest.check_raises
+    "foreign union reference"
+    (Invalid_argument "Builder.push_slot_union: offset belongs to another builder")
+    (fun () -> ignore (B.push_slot_union 0 1 '\x01' foreign b));
+  finish_table b;
+  let stale = Rt.String.create b "stale" in
+  B.reset b;
+  check
+    B.create_vector_ref
+    "stale 32-bit offset"
+    "Builder.create_vector_ref: offset belongs to an earlier build cycle"
+    b
+    stale;
+  check
+    B.create_vector_ref64
+    "stale 64-bit offset"
+    "Builder.create_vector_ref64: offset belongs to an earlier build cycle"
+    b
+    stale;
+  let live = Rt.String.create b "live" in
+  let position = B.Unsafe.current_offset b in
+  check
+    B.create_vector_ref
+    "current position is not an object"
+    "Builder.create_vector_ref: offset does not identify a completed object"
+    b
+    position;
+  let vector = B.create_vector_ref b [| live |] in
+  ignore (finish_root b vector);
+  check
+    B.create_vector_ref
+    "offset after finish"
+    "Builder.create_vector_ref: offset belongs to an earlier build cycle"
+    b
+    live;
+  check_reusable "after invalid reference offsets" b
+;;
+
 let test_cases =
   [ Alcotest.test_case "Exact-capacity scalar vectors" `Quick check_exact_capacity_scalar
   ; Alcotest.test_case "Exact-capacity strings" `Quick check_exact_capacity_string
@@ -281,5 +395,7 @@ let test_cases =
       check_finish_and_reset_while_nested
   ; Alcotest.test_case "Invalid table fields" `Quick check_invalid_table_fields
   ; Alcotest.test_case "Vector movement" `Quick check_vector_movement_rejected
+  ; Alcotest.test_case "Reference vector forms" `Quick check_reference_vector_forms
+  ; Alcotest.test_case "Invalid reference offsets" `Quick check_invalid_reference_offsets
   ]
 ;;

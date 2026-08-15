@@ -1,12 +1,19 @@
-(* flatbuffers constructed back-to-front. Offsets are relative to the end of the buffer *)
-type offset = int
+(** FlatBuffers are constructed back-to-front. [index] is relative to the end
+    of the buffer; the remaining fields prevent an offset from escaping its
+    builder, build cycle, or completed-object constructor. *)
+type offset =
+  { index : int
+  ; owner : bytes ref
+  ; cycle : unit ref
+  ; object_offset : bool
+  }
 
 (* dynamic array of offsets, sorted by a compare function. Used to dedupe vtables *)
 module IndCache = struct
   type t =
-    { mutable buf : offset array
+    { mutable buf : int array
     ; mutable length : int
-    ; compare : offset -> offset -> int
+    ; compare : int -> int -> int
     }
 
   let make n compare = { buf = Array.make n (-1); length = 0; compare }
@@ -91,18 +98,20 @@ type state =
 
 type t =
   { buf : bytes ref
+  ; mutable cycle : unit ref
   ; mutable length : int
   ; mutable cur_vtable : int array
   ; mutable cur_vtable_len : int
   ; mutable minalign : int
   ; mutable state : state
-  ; strings : (string, int) Hashtbl.t
+  ; strings : (string, offset) Hashtbl.t
   ; vtables : IndCache.t
   }
 
 let create ?(init_capacity = 1024) () =
   let buf = ref (Bytes.create (Int.max init_capacity 16)) in
   { buf
+  ; cycle = ref ()
   ; length = 0
   ; cur_vtable = [||]
   ; cur_vtable_len = 0
@@ -132,6 +141,7 @@ let require_idle name b =
 ;;
 
 let reset_unchecked b =
+  b.cycle <- ref ();
   b.length <- 0;
   b.cur_vtable_len <- 0;
   b.minalign <- 1;
@@ -168,8 +178,40 @@ let ensure_capacity b n =
 (* Current index (for writing into buf) *)
 let current b = Bytes.length !(b.buf) - b.length
 
-(* current offset (index from end of buf) *)
-let current_offset b = b.length
+let make_offset b ~object_offset index =
+  { index; owner = b.buf; cycle = b.cycle; object_offset }
+;;
+
+(* Current position, not a completed-object offset. *)
+let current_offset b = make_offset b ~object_offset:false b.length
+let completed_offset b index = make_offset b ~object_offset:true index
+
+let validate_offset name b o =
+  if o.owner != b.buf
+  then invalid_arg (Printf.sprintf "Builder.%s: offset belongs to another builder" name);
+  if o.cycle != b.cycle
+  then
+    invalid_arg
+      (Printf.sprintf "Builder.%s: offset belongs to an earlier build cycle" name);
+  if not o.object_offset
+  then
+    invalid_arg
+      (Printf.sprintf "Builder.%s: offset does not identify a completed object" name);
+  if o.index <= 0 || o.index > b.length
+  then
+    invalid_arg
+      (Printf.sprintf "Builder.%s: offset is not behind the write position" name)
+;;
+
+let relative_offset name ~width b i o =
+  validate_offset name b o;
+  let relative = b.length - i - o.index in
+  if relative <= 0
+  then invalid_arg (Printf.sprintf "Builder.%s: offset is not behind its reference" name);
+  if width = 4 && Int64.of_int relative > 0xffff_ffffL
+  then invalid_arg (Printf.sprintf "Builder.%s: relative offset exceeds 32 bits" name);
+  relative
+;;
 
 (* Add padding so that, after writing [additional_bytes], the buffer size is a
      multiple of [align]. Ensures space for [additional_bytes] plus
@@ -242,7 +284,10 @@ let set_padding b i n = Bytes.fill !(b.buf) (current b + i) n '\000'
 let set_uoffset b i o =
   let i' = current b + i in
   let b' = !(b.buf) in
-  Primitives.set_int32_le b' i' (Int32.of_int (Bytes.length b' - o - i'))
+  Primitives.set_int32_le
+    b'
+    i'
+    (Int32.of_int (relative_offset "set_uoffset" ~width:4 b i o))
 ;;
 
 let push_slot_scalar t f x b =
@@ -265,6 +310,7 @@ let push_slot_scalar_default t f ~default x b =
 
 let push_slot_ref f x b =
   validate_slot_id "push_slot_ref" (require_table "push_slot_ref" b) f;
+  validate_offset "push_slot_ref" b x;
   let size = 4 in
   prep ~align:size ~bytes:size b;
   set_uoffset b 0 x;
@@ -276,11 +322,15 @@ let push_slot_ref f x b =
 let set_uoffset64 b i o =
   let i' = current b + i in
   let b' = !(b.buf) in
-  Primitives.set_int64_le b' i' (Int64.of_int (Bytes.length b' - o - i'))
+  Primitives.set_int64_le
+    b'
+    i'
+    (Int64.of_int (relative_offset "set_uoffset64" ~width:8 b i o))
 ;;
 
 let push_slot_ref64 f x b =
   validate_slot_id "push_slot_ref64" (require_table "push_slot_ref64" b) f;
+  validate_offset "push_slot_ref64" b x;
   let size = 8 in
   prep ~align:size ~bytes:size b;
   set_uoffset64 b 0 x;
@@ -292,6 +342,7 @@ let[@inline] push_slot_union ft fo t o b =
   let table = require_table "push_slot_union" b in
   validate_slot_id "push_slot_union" table ft;
   validate_slot_id "push_slot_union" table fo;
+  validate_offset "push_slot_union" b o;
   let size = 4 in
   prep ~align:1 ~bytes:1 b;
   set_scalar TUByte b 0 t;
@@ -316,16 +367,22 @@ let add_shared_string b s o = Hashtbl.add b.strings s o
 (* size of vector length field *)
 let vector_len_size = 4
 
-let start_vector b ~n_elts ~elt_size =
-  require_idle "start_vector" b;
-  let bytes = vector_payload_size "start_vector" ~n_elts ~elt_size in
+let start_vector_with_prefix name b ~prefix_size ~n_elts ~elt_size =
+  require_idle name b;
+  let bytes = vector_payload_size name ~n_elts ~elt_size in
   prep_with_prefix
     b
-    ~align:(Int.max vector_len_size elt_size)
+    ~align:(Int.max prefix_size elt_size)
     ~bytes
-    ~prefix_bytes:vector_len_size;
-  Primitives.set_int32_le !(b.buf) (current b - vector_len_size) (Int32.of_int n_elts);
-  b.state <- Vector { start = b.length; prefix_size = vector_len_size; n_elts; elt_size }
+    ~prefix_bytes:prefix_size;
+  if prefix_size = vector_len_size
+  then Primitives.set_int32_le !(b.buf) (current b - prefix_size) (Int32.of_int n_elts)
+  else Primitives.set_int64_le !(b.buf) (current b - prefix_size) (Int64.of_int n_elts);
+  b.state <- Vector { start = b.length; prefix_size; n_elts; elt_size }
+;;
+
+let start_vector b ~n_elts ~elt_size =
+  start_vector_with_prefix "start_vector" b ~prefix_size:vector_len_size ~n_elts ~elt_size
 ;;
 
 let end_vector_with_prefix name expected_prefix b =
@@ -341,7 +398,7 @@ let end_vector_with_prefix name expected_prefix b =
            vector.elt_size);
     b.length <- b.length + expected_prefix;
     b.state <- Idle;
-    current_offset b
+    completed_offset b b.length
   | state ->
     invalid_state
       name
@@ -363,43 +420,78 @@ let create_vector t b a =
   end_vector b
 ;;
 
-let create_vector_ref b a =
-  (* TODO *)
-  let size = 4 in
-  let len = Array.length a in
-  start_vector b ~n_elts:len ~elt_size:size;
-  for i = 0 to len - 1 do
-    set_uoffset b (i * size) a.(i)
-  done;
-  end_vector b
-;;
-
 (* 64-bit length vector *)
 let vector64_len_size = 8
 
 let start_vector64 b ~n_elts ~elt_size =
-  require_idle "start_vector64" b;
-  let bytes = vector_payload_size "start_vector64" ~n_elts ~elt_size in
-  prep_with_prefix
+  start_vector_with_prefix
+    "start_vector64"
     b
-    ~align:(Int.max vector64_len_size elt_size)
-    ~bytes
-    ~prefix_bytes:vector64_len_size;
-  Primitives.set_int64_le !(b.buf) (current b - vector64_len_size) (Int64.of_int n_elts);
-  b.state
-  <- Vector { start = b.length; prefix_size = vector64_len_size; n_elts; elt_size }
+    ~prefix_size:vector64_len_size
+    ~n_elts
+    ~elt_size
 ;;
 
 let end_vector64 b = end_vector_with_prefix "end_vector64" vector64_len_size b
 
-let create_vector_ref64 b a =
-  let size = 8 in
+let projected_vector_payload_end name b ~prefix_size ~n_elts ~elt_size =
+  let bytes = vector_payload_size name ~n_elts ~elt_size in
+  let align = Int.max prefix_size elt_size in
+  let unpadded_length = checked_add_size name b.length bytes in
+  let padding = -unpadded_length land (align - 1) in
+  checked_add_size name unpadded_length padding
+;;
+
+let validate_vector_offsets name b ~width ~payload_end a =
+  Array.iteri
+    (fun i o ->
+       validate_offset name b o;
+       let position = i * width in
+       let relative = payload_end - position - o.index in
+       if relative <= 0
+       then
+         invalid_arg
+           (Printf.sprintf "Builder.%s: offset is not behind its reference" name);
+       if width = 4 && Int64.of_int relative > 0xffff_ffffL
+       then
+         invalid_arg (Printf.sprintf "Builder.%s: relative offset exceeds 32 bits" name))
+    a
+;;
+
+let create_vector_ref_with name b ~width ~start ~finish ~set a =
+  require_idle name b;
   let len = Array.length a in
-  start_vector64 b ~n_elts:len ~elt_size:size;
+  let payload_end =
+    projected_vector_payload_end name b ~prefix_size:width ~n_elts:len ~elt_size:width
+  in
+  validate_vector_offsets name b ~width ~payload_end a;
+  start b ~n_elts:len ~elt_size:width;
   for i = 0 to len - 1 do
-    set_uoffset64 b (i * size) a.(i)
+    set b (i * width) a.(i)
   done;
-  end_vector64 b
+  finish b
+;;
+
+let create_vector_ref b a =
+  create_vector_ref_with
+    "create_vector_ref"
+    b
+    ~width:vector_len_size
+    ~start:start_vector
+    ~finish:end_vector
+    ~set:set_uoffset
+    a
+;;
+
+let create_vector_ref64 b a =
+  create_vector_ref_with
+    "create_vector_ref64"
+    b
+    ~width:vector64_len_size
+    ~start:start_vector64
+    ~finish:end_vector64
+    ~set:set_uoffset64
+    a
 ;;
 
 let create_vector64 t b a =
@@ -512,11 +604,12 @@ let end_table b =
     (Int32.of_int (vt_offset - table_offset));
   b.cur_vtable_len <- 0;
   b.state <- Idle;
-  table_offset
+  completed_offset b table_offset
 ;;
 
 let finish ?identifier ?(size_prefixed = false) prim b o =
   require_idle "finish" b;
+  validate_offset "finish" b o;
   let ident_length = Option.fold identifier ~none:0 ~some:String.length in
   let offset_length = 4 in
   let prefix_length = if size_prefixed then 4 else 0 in

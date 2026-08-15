@@ -1,8 +1,10 @@
 (** Back-to-front construction of FlatBuffers messages. *)
 
-(** An offset identifies an object already serialized by a builder. Offsets are
-    valid only with the builder and build cycle that created them; using one
-    after {!reset} or {!finish}, or with another builder, is invalid. *)
+(** An offset identifies a completed object already serialized by a builder.
+    Offsets are valid only with the builder and build cycle that created them;
+    using one after {!reset} or {!finish}, or with another builder, raises
+    [Invalid_argument]. There is no public null/sentinel offset: optional
+    references are represented by omitting their table slot. *)
 type offset
 
 type t
@@ -50,9 +52,11 @@ val push_slot_union : int -> int -> Primitives.T.ubyte -> offset -> t -> t
 val push_slot_struct : (t -> int -> 'a -> unit) -> int -> int -> int -> 'a -> t -> t
 
 (** Create complete vectors and strings while the builder is idle. Reference
-    arrays must contain offsets previously returned by the same builder.
-    Element order is preserved. The [size] supplied to a struct-vector writer
-    is the exact writable size of each element. *)
+    arrays must contain completed-object offsets previously returned by the
+    same builder in its current build cycle; all offsets are validated before
+    the builder moves. Repeated offsets are allowed and element order is
+    preserved. The [size] supplied to a struct-vector writer is the exact
+    writable size of each element. *)
 val create_vector : 'a Primitives.ty -> t -> 'a array -> offset
 
 val create_vector_ref : t -> offset array -> offset
