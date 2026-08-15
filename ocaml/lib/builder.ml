@@ -442,32 +442,44 @@ let projected_vector_payload_end name b ~prefix_size ~n_elts ~elt_size =
   checked_add_size name unpadded_length padding
 ;;
 
-let validate_vector_offsets name b ~width ~payload_end a =
+let validate_vector_offsets name b ~width ~payload_end ~offset_of a =
   Array.iteri
-    (fun i o ->
-       validate_offset name b o;
-       let position = i * width in
-       let relative = payload_end - position - o.index in
-       if relative <= 0
-       then
-         invalid_arg
-           (Printf.sprintf "Builder.%s: offset is not behind its reference" name);
-       if width = 4 && Int64.of_int relative > 0xffff_ffffL
-       then
-         invalid_arg (Printf.sprintf "Builder.%s: relative offset exceeds 32 bits" name))
+    (fun i value ->
+       match offset_of value with
+       | None -> ()
+       | Some o ->
+         validate_offset name b o;
+         let position = i * width in
+         let relative = payload_end - position - o.index in
+         if relative <= 0
+         then
+           invalid_arg
+             (Printf.sprintf "Builder.%s: offset is not behind its reference" name);
+         if width = 4 && Int64.of_int relative > 0xffff_ffffL
+         then
+           invalid_arg (Printf.sprintf "Builder.%s: relative offset exceeds 32 bits" name))
     a
 ;;
 
-let create_vector_ref_with name b ~width ~start ~finish ~set a =
+let set_null_uoffset b width i =
+  if width = 4
+  then Primitives.set_int32_le !(b.buf) (current b + i) 0l
+  else Primitives.set_int64_le !(b.buf) (current b + i) 0L
+;;
+
+let create_vector_ref_with name b ~width ~start ~finish ~set ~offset_of a =
   require_idle name b;
   let len = Array.length a in
   let payload_end =
     projected_vector_payload_end name b ~prefix_size:width ~n_elts:len ~elt_size:width
   in
-  validate_vector_offsets name b ~width ~payload_end a;
+  validate_vector_offsets name b ~width ~payload_end ~offset_of a;
   start b ~n_elts:len ~elt_size:width;
   for i = 0 to len - 1 do
-    set b (i * width) a.(i)
+    let position = i * width in
+    match offset_of a.(i) with
+    | None -> set_null_uoffset b width position
+    | Some offset -> set b position offset
   done;
   finish b
 ;;
@@ -480,6 +492,7 @@ let create_vector_ref b a =
     ~start:start_vector
     ~finish:end_vector
     ~set:set_uoffset
+    ~offset_of:(fun offset -> Some offset)
     a
 ;;
 
@@ -491,7 +504,33 @@ let create_vector_ref64 b a =
     ~start:start_vector64
     ~finish:end_vector64
     ~set:set_uoffset64
+    ~offset_of:(fun offset -> Some offset)
     a
+;;
+
+let create_union_vector tag_type b tags values =
+  require_idle "create_union_vector" b;
+  let length = Array.length tags in
+  if Array.length values <> length
+  then invalid_arg "Builder.create_union_vector: tag and value lengths differ";
+  ignore
+    (vector_payload_size
+       "create_union_vector"
+       ~n_elts:length
+       ~elt_size:(Primitives.size_scalar tag_type));
+  let values =
+    create_vector_ref_with
+      "create_union_vector"
+      b
+      ~width:vector_len_size
+      ~start:start_vector
+      ~finish:end_vector
+      ~set:set_uoffset
+      ~offset_of:(fun offset -> offset)
+      values
+  in
+  let tags = create_vector tag_type b tags in
+  tags, values
 ;;
 
 let create_vector64 t b a =

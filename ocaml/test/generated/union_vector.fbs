@@ -1,0 +1,19 @@
+namespace UnionVector;
+
+table Sword {
+  damage:int;
+}
+
+table Spell {
+  name:string;
+}
+
+union Item { Sword, Spell, Label:string }
+
+table Inventory {
+  items:[Item];
+  required_items:[Item] (required);
+}
+
+root_type Inventory;
+file_identifier "UVEC";

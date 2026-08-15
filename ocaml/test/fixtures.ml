@@ -3,6 +3,7 @@ module Monster_extra = Generated.Monster_extra
 module Arrays_test = Generated.Arrays_test
 module Test64_bit = Generated.Test64_bit
 module String_union = Generated.String_union
+module Union_vector = Generated.Union_vector
 
 let create_monster ~pos ~hp ~name ~inv ~name2 ~test4 ~strings ~longs ~doubles b =
   let open Monster_test in

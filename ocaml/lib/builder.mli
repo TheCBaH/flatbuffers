@@ -61,6 +61,18 @@ val create_vector : 'a Primitives.ty -> t -> 'a array -> offset
 
 val create_vector_ref : t -> offset array -> offset
 val create_vector_ref64 : t -> offset array -> offset
+
+(** [create_union_vector tag_type b tags values] creates the parallel tag and
+    value vectors required by a vector of unions and returns them in that
+    order. [None] is the internal null payload for a [NONE] tag. Tag/value
+    lengths and every present offset are validated before the builder moves. *)
+val create_union_vector
+  :  'a Primitives.ty
+  -> t
+  -> 'a array
+  -> offset option array
+  -> offset * offset
+
 val create_vector64 : 'a Primitives.ty -> t -> 'a array -> offset
 
 val create_vector64_struct

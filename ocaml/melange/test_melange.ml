@@ -1221,6 +1221,48 @@ let test_verify_offset64 () =
   done
 ;;
 
+let test_union_vector () =
+  let open Union_vector in
+  let open UnionVector in
+  let original : Inventory.obj =
+    { items =
+        [| `None_
+         ; `Sword { Sword.damage = 7l }
+         ; `Spell { Spell.name = Some "fire" }
+         ; `Label "potion"
+        |]
+    ; required_items = [| `Label "required" |]
+    }
+  in
+  let builder = Rt.Builder.create () in
+  let bytes =
+    Inventory.pack builder original |> Inventory.finish_buf Primitives.Bytes builder
+  in
+  let verify (type a) (primitive : a Primitives.t) (storage : a) =
+    check "union vector verifies" (is_ok (Inventory.verify primitive storage));
+    let (Rt.Root (buf, inventory)) = Inventory.root primitive storage in
+    let items =
+      Inventory.items_to_array
+        ~none:"none"
+        ~sword:(fun sword -> Printf.sprintf "sword:%ld" (Sword.damage buf sword))
+        ~spell:(fun spell ->
+          let name = Spell.name buf spell |> Rt.Option.get |> Rt.String.to_string buf in
+          "spell:" ^ name)
+        ~label:(fun label -> "label:" ^ Rt.String.to_string buf label)
+        ~default:(fun tag -> "unknown:" ^ Item.to_string tag)
+        buf
+        inventory
+    in
+    check_eq
+      "union vector values"
+      ~expected:[| "none"; "sword:7"; "spell:fire"; "label:potion" |]
+      items;
+    check_eq "union vector object" ~expected:original (Inventory.unpack buf inventory)
+  in
+  verify Primitives.Bytes bytes;
+  verify Primitives.JsDataView (to_dv bytes)
+;;
+
 (* ── Run all ── *)
 
 let run name f =
@@ -1270,6 +1312,8 @@ let () =
   run "greeting roundtrip" test_greeting_roundtrip;
   run "string member roundtrip" test_string_member_roundtrip;
   run "object API roundtrip" test_string_union_obj_api;
+  Printf.printf "Melange: Union vector\n%!";
+  run "roundtrip" test_union_vector;
   Printf.printf "Melange: More defaults\n%!";
   run "empty table defaults" test_more_defaults_empty;
   run "object API roundtrip" test_more_defaults_obj_api;

@@ -98,6 +98,7 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
         ident_counter_(0),
         verify_counter_(0),
         enum_reader_idents_(),
+        union_vector_reader_idents_(),
         verify_idents_(),
         flatc_version_(flatc_version),
         namer_(OCamlDefaultConfig(), OCamlKeywords()) {}
@@ -197,6 +198,18 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
     return read_fn;
   }
 
+  std::string UnionVectorReadIdent(const r::Enum *enum_def) {
+    const auto enum_name = enum_def->name()->str();
+    std::string read_fn = union_vector_reader_idents_[enum_name];
+    if (read_fn.empty()) {
+      read_fn = "read_vector_" +
+                namer_.Function(namer_.Denamespace(enum_name)) + "__" +
+                NumToString(ident_counter_++);
+      union_vector_reader_idents_[enum_name] = read_fn;
+    }
+    return read_fn;
+  }
+
   std::string StructSetIdent(const r::Object *object) {
     const auto object_name = object->name()->str();
     std::string repr = enum_reader_idents_[object_name];
@@ -229,6 +242,16 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
         }
         if (IsScalar(field->type()->element()) && field->type()->index() >= 0) {
           deps.insert(GetEnum(field->type())->name()->str());
+        }
+        if (field->type()->element() == r::Union) {
+          auto enum_def = GetEnum(field->type(), /*element_type=*/true);
+          deps.insert(enum_def->name()->str());
+          ForAllEnumValues(enum_def, [&](const r::EnumVal *e) {
+            if (e->union_type()->base_type() == r::Obj) {
+              auto name = GetObject(e->union_type())->name()->str();
+              if (name != obj_name) deps.insert(name);
+            }
+          });
         }
       }
       if (bt == r::Union) {
@@ -285,6 +308,26 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
         }
       });
       impl += indent + "  | _ -> default t\n";
+
+      if (IsUnionVectorEnum(enum_def)) {
+        const std::string vector_reader_name = UnionVectorReadIdent(enum_def);
+        impl += "\n" + indent + "let " + vector_reader_name + args +
+                " b tags values i =\n";
+        impl += indent + "  let t = " + ns + ".Vector.get b tags i in\n";
+        impl += indent + "  match " + ns + ".to_default t with\n";
+        ForAllEnumValues(enum_def, [&](const reflection::EnumVal *e) {
+          auto arg = namer_.Variable(e->name()->str());
+          impl += indent + "  | " + Int64ToString(e->value()) +
+                  " when Option.is_some " + arg + " -> ";
+          impl += "Option.get " + arg;
+          if (e->union_type()->base_type() == r::None) {
+            impl += "\n";
+          } else {
+            impl += " (Rt.Ref.Vector.get b values i)\n";
+          }
+        });
+        impl += indent + "  | _ -> default t\n";
+      }
     }
     impl += "end\n\n";
   }
@@ -420,6 +463,31 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
     if (bt == r::UType) return true;
     return (bt == r::Vector || bt == r::Vector64) &&
            field->type()->element() == r::UType;
+  }
+
+  static bool IsUnionVectorTypeField(const r::Field *field) {
+    const r::BaseType bt = field->type()->base_type();
+    return (bt == r::Vector || bt == r::Vector64) &&
+           field->type()->element() == r::UType;
+  }
+
+  static bool IsUnionVectorField(const r::Field *field) {
+    const r::BaseType bt = field->type()->base_type();
+    return (bt == r::Vector || bt == r::Vector64) &&
+           field->type()->element() == r::Union;
+  }
+
+  bool IsUnionVectorEnum(const r::Enum *enum_def) {
+    bool found = false;
+    ForAllObjects(schema_->objects(), [&](const r::Object *object) {
+      ForAllFields(object, /*reverse=*/false, [&](const r::Field *field) {
+        if (IsUnionVectorField(field) &&
+            GetEnum(field->type(), /*element_type=*/true) == enum_def) {
+          found = true;
+        }
+      });
+    });
+    return found;
   }
 
   // Byte size of a vector element as laid out in the buffer.
@@ -679,6 +747,22 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
       union_def += indent + "]\n";
       intf += "\n" + union_def;
       impl += "\n" + union_def;
+
+      if (IsUnionVectorEnum(enum_def)) {
+        std::string wip_def = indent + "type wip = [\n";
+        ForAllEnumValues(enum_def, [&](const r::EnumVal *e) {
+          const auto variant = ObjVariantName(e->name()->str());
+          if (e->union_type()->base_type() == r::None) {
+            wip_def += indent + "  | `" + variant + "\n";
+          } else {
+            wip_def += indent + "  | `" + variant + " of " +
+                       GenerateBuilderType(e->union_type(), enum_name) + "\n";
+          }
+        });
+        wip_def += indent + "]\n";
+        intf += "\n" + wip_def;
+        impl += "\n" + wip_def;
+      }
     }
   }
 
@@ -799,6 +883,7 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
     // create all the field accessors.
     ForAllFields(object, /*reverse=*/false, [&](const r::Field *field) {
       if (field->deprecated()) { return; }
+      if (IsUnionVectorTypeField(field)) { return; }
 
       const auto comment = GenerateDocumentation(field->documentation(), level);
       if (!comment.empty()) intf += "\n" + comment;
@@ -847,7 +932,22 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
       }
 
       // generate accessor interface
-      if (field_type == r::Union) {
+      if (IsUnionVectorField(field)) {
+        auto args = GenerateUnionArgTypes(field->type(), obj_name, true);
+        const std::string fn = namer_.Function(field_name);
+        const std::string receiver =
+            " 'b Rt.buf -> ('b, t) " + RuntimeNS + ".fb -> ";
+        intf += indent + "val " + fn + "_length : 'b Rt.buf -> ('b, t) " +
+                RuntimeNS + ".fb -> int\n";
+        intf += indent + "val " + fn + " :" + args + receiver +
+                "int -> 'a\n";
+        intf += indent + "val " + fn + "_iter :" + args + receiver +
+                "('a -> unit) -> unit\n";
+        intf += indent + "val " + fn + "_to_list :" + args + receiver +
+                "'a list\n";
+        intf += indent + "val " + fn + "_to_array :" + args + receiver +
+                "'a array\n";
+      } else if (field_type == r::Union) {
         auto args = GenerateUnionArgTypes(field->type(), obj_name);
         intf += indent + "val " + namer_.Function(field_name) + " :" + args +
                 " 'b Rt.buf -> ('b, t) " + RuntimeNS + ".fb -> 'a\n";
@@ -872,7 +972,39 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
                 " b s = " + GenerateImplNs(field->type()) +
                 ".read_offset b s " + NumToString(field->offset()) + "\n";
       } else {
-        if (field_type == r::Union) {
+        if (IsUnionVectorField(field)) {
+          const r::Field *type_field = FindFieldById(object, field->id() - 1);
+          auto enum_def = GetEnum(field->type(), /*element_type=*/true);
+          const std::string fn = namer_.Function(field_name);
+          const std::string args = GenerateUnionArgs(field->type(), true);
+          const std::string call_args = args + " b o";
+          impl += indent + "let[@inline] " + fn + "_length b o =\n";
+          if (field->required()) {
+            impl += indent + "  Rt.Ref.Vector.length b (Rt.Ref.read_table b o " +
+                    NumToString(type_field->offset()) + ")\n";
+          } else {
+            impl += indent + "  Rt.Option.fold ~none:0";
+            impl += " ~some:(Rt.Ref.Vector.length b)";
+            impl += " (Rt.Ref.read_table_opt b o " +
+                    NumToString(type_field->offset()) + ")\n";
+          }
+          impl += indent + "let[@inline] " + fn + args + " b o i =\n";
+          impl += indent + "  Union." + UnionVectorReadIdent(enum_def) + args +
+                  " b (Rt.Ref.read_table b o " +
+                  NumToString(type_field->offset()) +
+                  ") (Rt.Ref.read_table b o " + NumToString(field->offset()) +
+                  ") i\n";
+          impl += indent + "let " + fn + "_iter" + args + " b o f =\n";
+          impl += indent + "  for i = 0 to " + fn + "_length b o - 1 do\n";
+          impl += indent + "    f (" + fn + call_args + " i)\n";
+          impl += indent + "  done\n";
+          impl += indent + "let " + fn + "_to_list" + args + " b o =\n";
+          impl += indent + "  List.init (" + fn + "_length b o) (" + fn +
+                  call_args + ")\n";
+          impl += indent + "let " + fn + "_to_array" + args + " b o =\n";
+          impl += indent + "  Array.init (" + fn + "_length b o) (" + fn +
+                  call_args + ")\n";
+        } else if (field_type == r::Union) {
           auto ns = GenerateIntfNs(field->type(), obj_name);
           auto args = GenerateUnionArgs(field->type());
           // When the tag vtable slot is absent, read_table_default returns 0
@@ -1016,7 +1148,54 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
         const std::string field_name = namer_.Field(*field);
         const r::BaseType field_type = field->type()->base_type();
 
-        if (field_type == r::UType) {
+        if (IsUnionVectorTypeField(field)) {
+          return;
+        } else if (IsUnionVectorField(field)) {
+          auto enum_def = GetEnum(field->type(), /*element_type=*/true);
+          const std::string fn = namer_.Function(field_name);
+          const std::string union_ns =
+              GenerateIntfNs(field->type(), obj_ns, /*element_type=*/true);
+          const std::string prepared_type = fn + "_prepared";
+          const std::string tag_constructor =
+              "Flatbuffers.Primitives.TUByte";
+
+          intf += indent2 + "type " + prepared_type + "\n";
+          intf += indent2 + "val create_" + fn + " : Rt.Builder.t -> " +
+                  union_ns + ".wip array -> " + prepared_type + "\n";
+          intf += indent2 + "val add_" + fn + " : " + prepared_type +
+                  " -> t -> t\n";
+
+          impl += indent2 + "type " + prepared_type +
+                  " = Rt.Builder.offset * Rt.Builder.offset\n";
+          impl += indent2 + "let create_" + fn + " b values =\n";
+          impl += indent2 + "  let tags = Array.map (function\n";
+          ForAllEnumValues(enum_def, [&](const r::EnumVal *e) {
+            const auto variant = ObjVariantName(e->name()->str());
+            impl += indent2 + "    | `" + variant;
+            if (e->union_type()->base_type() != r::None) impl += " _";
+            impl += " -> " + union_ns + "." +
+                    namer_.Variant(e->name()->str()) + "\n";
+          });
+          impl += indent2 + "  ) values in\n";
+          impl += indent2 + "  let offsets = Array.map (function\n";
+          ForAllEnumValues(enum_def, [&](const r::EnumVal *e) {
+            const auto variant = ObjVariantName(e->name()->str());
+            impl += indent2 + "    | `" + variant;
+            if (e->union_type()->base_type() == r::None) {
+              impl += " -> None\n";
+            } else {
+              impl += " offset -> Some offset\n";
+            }
+          });
+          impl += indent2 + "  ) values in\n";
+          impl += indent2 + "  Rt.Builder.create_union_vector " +
+                  tag_constructor + " b tags offsets\n";
+          impl += indent2 + "let add_" + fn + " (tags, values) t =\n";
+          impl += indent2 + "  let t = Rt.Ref.push_slot " +
+                  NumToString(field->id() - 1) + " tags t in\n";
+          impl += indent2 + "  Rt.Ref.push_slot " +
+                  NumToString(field->id()) + " values t\n";
+        } else if (field_type == r::UType) {
           return;  // no builder function for tags
         } else if (field_type == r::Union) {
           ForAllEnumValues(GetEnum(field->type()), [&](const r::EnumVal *e) {
@@ -1063,10 +1242,10 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
 
     // ===== Object API =====
     {
-      // Count non-deprecated, non-UType fields
+      // Count non-deprecated fields, excluding implicit union discriminators.
       int n_obj_fields = 0;
       ForAllFields(object, false, [&](const r::Field *field) {
-        if (!field->deprecated() && field->type()->base_type() != r::UType)
+        if (!field->deprecated() && !IsUnionTypeField(field))
           n_obj_fields++;
       });
 
@@ -1078,7 +1257,7 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
         std::string obj_def = indent + "type obj = {\n";
         ForAllFields(object, false, [&](const r::Field *field) {
           if (field->deprecated()) return;
-          if (field->type()->base_type() == r::UType) return;
+          if (IsUnionTypeField(field)) return;
           std::string fname = namer_.Field(*field);
           std::string ftype = ObjFieldType(field, obj_name, object->is_struct());
           obj_def += indent + "  " + fname + " : " + ftype + ";\n";
@@ -1197,7 +1376,7 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
           impl += indent + "let " + rec_kw + "unpack b__ o__ : obj = {\n";
           ForAllFields(object, false, [&](const r::Field *field) {
             if (field->deprecated()) return;
-            if (field->type()->base_type() == r::UType) return;
+            if (IsUnionTypeField(field)) return;
             const std::string fname = namer_.Field(*field);
             std::string expr = TableUnpackExpr(field, obj_name);
             impl +=
@@ -1219,7 +1398,7 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
           // Prepare phase: create offsets
           ForAllFields(object, false, [&](const r::Field *field) {
             if (field->deprecated()) return;
-            if (field->type()->base_type() == r::UType) return;
+            if (IsUnionTypeField(field)) return;
             TablePackPrepare(field, obj_name, level, impl);
           });
 
@@ -1227,7 +1406,7 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
           impl += indent + "  let t = Builder.start b__ in\n";
           ForAllFields(object, false, [&](const r::Field *field) {
             if (field->deprecated()) return;
-            if (field->type()->base_type() == r::UType) return;
+            if (IsUnionTypeField(field)) return;
             TablePackAdd(field, obj_name, level, impl);
           });
           impl += indent + "  Builder.finish t\n";
@@ -1267,6 +1446,15 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
           field->type()->element() == r::Obj) {
         if (GetObject(field->type(), true)->name()->str() == obj_name)
           self_ref = true;
+      }
+      if ((bt == r::Vector || bt == r::Vector64) &&
+          field->type()->element() == r::Union) {
+        ForAllEnumValues(GetEnum(field->type(), /*element_type=*/true),
+                         [&](const r::EnumVal *e) {
+          if (e->union_type()->base_type() == r::Obj &&
+              GetObject(e->union_type())->name()->str() == obj_name)
+            self_ref = true;
+        });
       }
       if (bt == r::Union) {
         ForAllEnumValues(GetEnum(field->type()), [&](const r::EnumVal *e) {
@@ -1336,7 +1524,11 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
     if (bt == r::Vector || bt == r::Vector64) {
       auto elem = field->type()->element();
       std::string et;
-      if (elem == r::String) {
+      if (elem == r::Union) {
+        auto enum_def = GetEnum(field->type(), /*element_type=*/true);
+        auto rel = NamespaceRelComponents(enum_def->name()->str(), in_ns);
+        et = NsRef(rel, "obj");
+      } else if (elem == r::String) {
         et = "string";
       } else if (IsScalar(elem)) {
         if (field->type()->index() >= 0)
@@ -1405,7 +1597,29 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
       std::string vec_ns = GenerateIntfNs(field->type(), in_ns);
 
       std::string body;
-      if (elem == r::String) {
+      if (elem == r::Union) {
+        auto enum_def = GetEnum(field->type(), /*element_type=*/true);
+        body = "Array.init (" + fname + "_length b__ o__) (fun i -> " +
+               fname;
+        ForAllEnumValues(enum_def, [&](const r::EnumVal *e) {
+          const auto variant = ObjVariantName(e->name()->str());
+          if (e->union_type()->base_type() == r::None) {
+            body += " ~none:`" + variant;
+          } else if (e->union_type()->base_type() == r::Obj) {
+            auto obj = GetObject(e->union_type());
+            auto rel = NamespaceRelComponents(obj->name()->str(), in_ns);
+            body += " ~" + namer_.Variable(e->name()->str()) +
+                    ":(fun x -> `" + variant + " (" + NsRef(rel, "unpack") +
+                    " b__ x))";
+          } else if (e->union_type()->base_type() == r::String) {
+            body += " ~" + namer_.Variable(e->name()->str()) +
+                    ":(fun x -> `" + variant + " (" + RuntimeNS +
+                    ".String.to_string b__ x))";
+          }
+        });
+        body += " ~default:(fun _ -> `" + ObjVariantName("NONE") +
+                ") b__ o__ i)";
+      } else if (elem == r::String) {
         body = "Array.map (fun s -> " + RuntimeNS +
                ".String.to_string b__ s) (" + vec_ns + ".to_array b__ v)";
       } else if (IsScalar(elem)) {
@@ -1418,7 +1632,9 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
                ".to_array b__ v)";
       }
 
-      if (field->required()) {
+      if (elem == r::Union) {
+        return body;
+      } else if (field->required()) {
         return "(let v = " + fname + " b__ o__ in " + body + ")";
       } else {
         return RuntimeNS + ".Option.fold ~none:[||] ~some:(fun v -> " +
@@ -1502,7 +1718,27 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
       bool is_v64 = (bt == r::Vector64);
       std::string vs = is_v64 ? "64" : "";
 
-      if (elem == r::String) {
+      if (elem == r::Union) {
+        auto enum_def = GetEnum(field->type(), /*element_type=*/true);
+        impl += ind + "let " + fname + "' = Builder.create_" + fname +
+                " b__ (Array.map (function\n";
+        ForAllEnumValues(enum_def, [&](const r::EnumVal *e) {
+          const auto variant = ObjVariantName(e->name()->str());
+          impl += ind + "  | `" + variant;
+          if (e->union_type()->base_type() == r::None) {
+            impl += " -> `" + variant + "\n";
+          } else if (e->union_type()->base_type() == r::Obj) {
+            auto obj = GetObject(e->union_type());
+            auto rel = NamespaceRelComponents(obj->name()->str(), in_ns);
+            impl += " x -> `" + variant + " (" + NsRef(rel, "pack") +
+                    " b__ x)\n";
+          } else if (e->union_type()->base_type() == r::String) {
+            impl += " x -> `" + variant + " (" + RuntimeNS +
+                    ".String.create b__ x)\n";
+          }
+        });
+        impl += ind + ") obj." + fname + ") in\n";
+      } else if (elem == r::String) {
         impl += ind + "let " + fname + "' = " + RuntimeNS +
                 ".String.Vector.create b__ (Array.map (fun s -> " + RuntimeNS +
                 ".String.create b__ s) obj." + fname + ") in\n";
@@ -1858,9 +2094,10 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
   }
 
   std::string GenerateUnionArgTypes(const r::Type *type,
-                                    const std::string &in_ns) {
+                                    const std::string &in_ns,
+                                    bool element_type = false) {
     std::string args = "";
-    ForAllEnumValues(GetEnum(type), [&](const reflection::EnumVal *e) {
+    ForAllEnumValues(GetEnum(type, element_type), [&](const reflection::EnumVal *e) {
       if (e->union_type()->base_type() == r::None) {
         args += " ?none:'a ->";
       } else {
@@ -1868,15 +2105,19 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
                 GenerateReaderType(e->union_type(), in_ns) + " -> 'a) ->";
       }
     });
-    args += " default:(" + GenerateType(type, in_ns) + " -> 'a) ->";
+    const std::string tag_type =
+        element_type ? GenerateIntfNs(type, in_ns, true) + ".t"
+                     : GenerateType(type, in_ns);
+    args += " default:(" + tag_type + " -> 'a) ->";
     return args;
   }
 
   // TODO(dmitrig): this uses the literal name, which may include long
   // namespaces. Check what other generators do
-  std::string GenerateUnionArgs(const r::Type *type) {
+  std::string GenerateUnionArgs(const r::Type *type,
+                                bool element_type = false) {
     std::string args = "";
-    ForAllEnumValues(GetEnum(type), [&](const r::EnumVal *e) {
+    ForAllEnumValues(GetEnum(type, element_type), [&](const r::EnumVal *e) {
       args += " ?" + namer_.Variable(e->name()->str());
     });
     args += " ~default";
@@ -2207,6 +2448,7 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
   // renumber the struct/union helper identifiers.
   int verify_counter_;
   std::map<std::string, std::string> enum_reader_idents_;
+  std::map<std::string, std::string> union_vector_reader_idents_;
   std::map<std::string, std::string> verify_idents_;
   const std::string flatc_version_;
   const BfbsNamer namer_;

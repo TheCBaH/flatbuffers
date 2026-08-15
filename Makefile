@@ -54,7 +54,7 @@ test: flatc
 	opam exec -- dune test --root . --ignore-promoted-rules
 
 generate: flatc
-	opam exec -- dune build --root . --force @gen-sample @gen-string-union @gen-more-defaults @gen-casing-test
+	opam exec -- dune build --root . --force @gen-sample @gen-string-union @gen-more-defaults @gen-casing-test @gen-union-vector
 
 generate-check: generate check-opam
 	@if ! git diff --quiet -- ocaml/test/generated/ flatbuffers-tools.opam; then \

@@ -42,3 +42,10 @@
  (targets casing_test.ml casing_test.mli)
  (mode promote)
  (action (run flatc.ocaml --ocaml --bfbs-filenames . %{schema})))
+
+(rule
+ (alias gen-union-vector)
+ (deps (:schema union_vector.fbs))
+ (targets union_vector.ml union_vector.mli)
+ (mode promote)
+ (action (run flatc.ocaml --ocaml --bfbs-filenames . %{schema})))

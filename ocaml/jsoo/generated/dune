@@ -22,6 +22,9 @@
 (copy_files
  (files ../../test/generated/casing_test.{ml,mli}))
 
+(copy_files
+ (files ../../test/generated/union_vector.{ml,mli}))
+
 (library
  (name generated_jsoo)
  (wrapped false)

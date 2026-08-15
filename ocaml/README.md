@@ -57,6 +57,29 @@ specialized generators. They expose the backwards-growing buffer model and
 can corrupt output if indices escape the reserved region, so application code
 should prefer the complete constructors.
 
+### Union vectors
+
+For a field such as `items:[Item]`, the generated table module exposes
+`items_length`, an indexed `items` callback dispatcher, and `items_iter`,
+`items_to_list`, and `items_to_array`. The callbacks have the same shape as a
+scalar union accessor, including `none` and `default` handling.
+
+The generated builder keeps the parallel discriminator and value vectors
+paired behind an opaque prepared value:
+
+```ocaml
+let items =
+  Inventory.Builder.create_items builder
+    [| `None_; `Sword sword; `Label label |]
+in
+Inventory.Builder.(start builder |> add_items items |> finish)
+```
+
+The object API represents the field as an array of the union's polymorphic
+variants and packs or unpacks both vectors together. FlatBuffers rejects the
+`vector64` attribute on union vectors, so this paired API intentionally uses
+the format's 32-bit union-value offsets and vector lengths.
+
 ## Verification
 
 ### Trust model
@@ -206,13 +229,9 @@ reference. This implementation differs in a few places on purpose:
   `[ubyte]` vector it is: its internal encoding is not traversed. Semantic
   FlexBuffer verification needs a FlexBuffer runtime, which OCaml does not have
   yet.
-* **Union vectors.** Verification of `[SomeUnion]` fields is generated and
-  tested against hand-built buffers, but the *reader* generator does not yet
-  produce usable accessors for such fields, so no schema exercises the path
-  end to end.
 * **Structs inside unions** are verified as an inline struct range at the
-  payload offset. As with union vectors, the reader generator does not yet
-  support them, so there is no end-to-end coverage.
+  payload offset, but the reader generator does not yet support them, so there
+  is no end-to-end coverage.
 
 ### Cost
 
@@ -252,7 +271,6 @@ rather than truncated, so a 32-bit build simply refuses buffers with offsets
 or lengths it could not address anyway.
 
 ## TODO
-* generate accessors for vectors of unions
 * FlexBuffer runtime and verifier
 * builder support for key-sorted vectors — `lookup_by_key` is generated and
   binary-searches the vector, but nothing sorts on the way in. There is no
