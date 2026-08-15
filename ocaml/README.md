@@ -210,6 +210,11 @@ OCaml 4.14. They also run the native benchmark suite; checksum expectations and
 allocation totals stay in `int64` where a 31-bit OCaml `int` cannot hold the
 value. Melange remains skipped because it does not support 32-bit architectures.
 
+Big-endian hosts are supported and covered by `linux/s390x` CI. FlatBuffers
+remain little-endian on the wire: native s390x builds select unconditional byte
+swaps at preprocessing time, while the JavaScript backends use explicit
+little-endian access independent of the compiler host.
+
 Code that has to care about the width of an `int` is selected at preprocessing
 time using `TARGET_INT_SIZE`: 31 for native 32-bit targets, 63 for native
 64-bit targets, and 32 for the JavaScript backends. Such code must not write
@@ -227,6 +232,3 @@ or lengths it could not address anyway.
   binary-searches the vector, but nothing sorts on the way in. There is no
   equivalent of the C++ `CreateVectorOfSortedTables`, so callers have to sort
   the array themselves before `Vector.create` or the lookup silently misses.
-* big-endian arch support — all buffer access goes through explicit
-  little-endian accessors, so it ought to work, but no big-endian target is
-  tested anywhere

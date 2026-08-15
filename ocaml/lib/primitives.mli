@@ -26,6 +26,10 @@ type _ t =
 
 val length : 'b t -> 'b -> int
 val get_string : 'b t -> 'b -> off:int -> len:int -> string
+val get_int16_le : bytes -> int -> int
+val set_int16_le : bytes -> int -> int -> unit
+val set_int32_le : bytes -> int -> int32 -> unit
+val set_int64_le : bytes -> int -> int64 -> unit
 val get_uoffset : 'b t -> 'b -> int -> int
 val get_uoffset64 : 'b t -> 'b -> int -> int
 val get_voffset : 'b t -> 'b -> int -> int

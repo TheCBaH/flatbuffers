@@ -41,14 +41,14 @@
  (deps
   (:src ../../lib/primitives.ml))
  (action
-  (run %{bin:cppo} -D JSDATAVIEW -I . -V OCAML:%{ocaml_version} %{src} -o %{target})))
+  (run %{bin:cppo} -D JSDATAVIEW -D MELANGE -I . -V OCAML:%{ocaml_version} %{src} -o %{target})))
 
 (rule
  (target primitives.mli)
  (deps
   (:src ../../lib/primitives.mli))
  (action
-  (run %{bin:cppo} -D JSDATAVIEW -I . -V OCAML:%{ocaml_version} %{src} -o %{target})))
+  (run %{bin:cppo} -D JSDATAVIEW -D MELANGE -I . -V OCAML:%{ocaml_version} %{src} -o %{target})))
 
 (rule
  (target runtime.ml)

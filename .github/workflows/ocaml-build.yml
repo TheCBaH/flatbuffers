@@ -88,7 +88,7 @@ jobs:
           make flatc
           ccache --show-stats
         '
-        if [ "${{ matrix.platform }}" = linux/s390x ]; then
+         if [ "${{ matrix.platform }}" = linux/s390x ]; then
           file flatc.ocaml | grep -E 'IBM S/390|s390'
         fi
     - name: install ocaml deps

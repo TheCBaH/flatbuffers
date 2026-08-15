@@ -57,8 +57,8 @@ let compare_vtable_offsets b o p =
   let b = !b in
   let o = Bytes.length b - o in
   let p = Bytes.length b - p in
-  let leno = Bytes.get_int16_le b o in
-  let lenp = Bytes.get_int16_le b p in
+  let leno = Primitives.get_int16_le b o in
+  let lenp = Primitives.get_int16_le b p in
   let cmp = Int.compare leno lenp in
   if cmp != 0
   then cmp
@@ -164,7 +164,7 @@ let set_padding b i n = Bytes.fill !(b.buf) (current b + i) n '\000'
 let set_uoffset b i o =
   let i' = current b + i in
   let b' = !(b.buf) in
-  Bytes.set_int32_le b' i' (Int32.of_int (Bytes.length b' - o - i'))
+  Primitives.set_int32_le b' i' (Int32.of_int (Bytes.length b' - o - i'))
 ;;
 
 let push_slot_scalar t f x b =
@@ -192,7 +192,7 @@ let push_slot_ref f x b =
 let set_uoffset64 b i o =
   let i' = current b + i in
   let b' = !(b.buf) in
-  Bytes.set_int64_le b' i' (Int64.of_int (Bytes.length b' - o - i'))
+  Primitives.set_int64_le b' i' (Int64.of_int (Bytes.length b' - o - i'))
 ;;
 
 let push_slot_ref64 f x b =
@@ -231,7 +231,7 @@ let start_vector b ~n_elts ~elt_size =
   prep b ~align:(Int.max vector_len_size elt_size) ~bytes:(n_elts * elt_size);
   (* TODO: hack? *)
   ensure_capacity b vector_len_size;
-  Bytes.set_int32_le !(b.buf) (current b - vector_len_size) (Int32.of_int n_elts);
+  Primitives.set_int32_le !(b.buf) (current b - vector_len_size) (Int32.of_int n_elts);
   (* set_uint b (-vector_len_size) (Int32.of_int n_elts); *)
   set_nested b true
 ;;
@@ -273,7 +273,7 @@ let vector64_len_size = 8
 let start_vector64 b ~n_elts ~elt_size =
   prep b ~align:(Int.max vector64_len_size elt_size) ~bytes:(n_elts * elt_size);
   ensure_capacity b vector64_len_size;
-  Bytes.set_int64_le !(b.buf) (current b - vector64_len_size) (Int64.of_int n_elts);
+  Primitives.set_int64_le !(b.buf) (current b - vector64_len_size) (Int64.of_int n_elts);
   set_nested b true
 ;;
 
@@ -337,7 +337,7 @@ let create_nested_vector b (finished_buf : bytes) =
   (* nested flatbuffers need alignment >= 4 for the root offset *)
   prep b ~align:(Int.max vector_len_size 4) ~bytes:len;
   ensure_capacity b vector_len_size;
-  Bytes.set_int32_le !(b.buf) (current b - vector_len_size) (Int32.of_int len);
+  Primitives.set_int32_le !(b.buf) (current b - vector_len_size) (Int32.of_int len);
   Bytes.blit finished_buf 0 !(b.buf) (current b) len;
   set_nested b true;
   end_vector b
@@ -369,12 +369,12 @@ let create_vtable b =
   b.length <- b.length + vtable_len;
   let ind = current b in
   let buf = !(b.buf) in
-  Bytes.set_int16_le buf ind vtable_len;
-  Bytes.set_int16_le buf (ind + 2) table_len;
+  Primitives.set_int16_le buf ind vtable_len;
+  Primitives.set_int16_le buf (ind + 2) table_len;
   for i = 0 to b.cur_vtable_len - 1 do
     let wip_offset = b.cur_vtable.(i) in
     let real_offset = if wip_offset = 0 then 0 else table_offset - wip_offset in
-    Bytes.set_int16_le buf (ind + 4 + (i * 2)) real_offset
+    Primitives.set_int16_le buf (ind + 4 + (i * 2)) real_offset
   done;
   b.length
 ;;
@@ -389,7 +389,7 @@ let end_table b =
   let vt_offset = IndCache.find_or_insert b.vtables vt_offset' in
   if vt_offset != vt_offset' then b.length <- table_offset;
   (* patch the *backwards* offset from table to vtable *)
-  Bytes.set_int32_le
+  Primitives.set_int32_le
     !(b.buf)
     (Bytes.length !(b.buf) - table_offset)
     (Int32.of_int (vt_offset - table_offset));
@@ -410,7 +410,8 @@ let finish ?identifier ?(size_prefixed = false) prim b o =
    | Some s -> set_string b (prefix_length + offset_length) s);
   set_uoffset b prefix_length o;
   if size_prefixed
-  then Bytes.set_int32_le !(b.buf) (current b) (Int32.of_int (b.length - prefix_length));
+  then
+    Primitives.set_int32_le !(b.buf) (current b) (Int32.of_int (b.length - prefix_length));
   let res = Primitives.buf_of_bytes prim !(b.buf) ~off:(current b) ~len:b.length in
   reset b;
   res

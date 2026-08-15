@@ -23,6 +23,7 @@ jobs:
       with:
         submodules: true
     - name: image
+      id: devcontainer
       uses: ./.github/workflows/actions/devcontainer
       env:
         OCAML_VERSION: ${{ matrix.ocaml_version }}
@@ -31,3 +32,12 @@ jobs:
         platform: ${{ matrix.platform }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
+    - name: smoke test (devcontainer)
+      run: |
+        ${{ steps.devcontainer.outputs.exec }} sh -ceu '
+          echo "hello world"
+          if [ "$PLATFORM" = linux/s390x ]; then
+            test "$(dpkg --print-architecture)" = s390x
+            opam exec -- ocamlc -config | grep -q "^architecture: s390x$"
+          fi
+        '

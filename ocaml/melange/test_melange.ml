@@ -29,6 +29,31 @@ let check_float_array msg ~expected actual =
     expected
 ;;
 
+let test_little_endian_primitives () =
+  let buf = Bytes.make 14 '\000' in
+  Primitives.set_int16_le buf 0 0x1234;
+  Primitives.set_int32_le buf 2 0x12345678l;
+  Primitives.set_int64_le buf 6 0x0123456789ABCDEFL;
+  check_eq
+    "wire byte order"
+    ~expected:"\x34\x12\x78\x56\x34\x12\xEF\xCD\xAB\x89\x67\x45\x23\x01"
+    (Bytes.to_string buf);
+  let verify (type a) (prim : a Primitives.t) (storage : a) =
+    check_eq "int16 read" ~expected:0x1234 (Primitives.get_scalar TShort prim storage 0);
+    check_eq
+      "int32 read"
+      ~expected:0x12345678l
+      (Primitives.get_scalar TInt prim storage 2);
+    check_eq
+      "int64 read"
+      ~expected:0x0123456789ABCDEFL
+      (Primitives.get_scalar TLong prim storage 6)
+  in
+  verify Primitives.Bytes buf;
+  verify Primitives.String (Bytes.to_string buf);
+  verify Primitives.JsDataView (to_dv buf)
+;;
+
 (* ── Monster sample (monster.fbs) ── *)
 
 let test_monster_sample () =
@@ -1179,6 +1204,8 @@ let run name f =
 ;;
 
 let () =
+  Printf.printf "Melange: Wire format\n%!";
+  run "little-endian primitives" test_little_endian_primitives;
   Printf.printf "Melange: Monster sample\n%!";
   run "sample build+read" test_monster_sample;
   Printf.printf "Melange: Monster test\n%!";

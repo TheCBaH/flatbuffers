@@ -42,6 +42,11 @@ jobs:
                 "ocaml_version": version,
                 "platform": "linux/arm64",
             })
+            builds.append({
+                "os": "ubuntu-24.04",
+                "ocaml_version": version,
+                "platform": "linux/s390x",
+            })
             if not version.startswith("5") and version not in no_32bit:
                 builds.append({
                     "os": "ubuntu-24.04",
