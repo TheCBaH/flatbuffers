@@ -1,23 +1,24 @@
+#if TARGET_INT_SIZE <> 31 && TARGET_INT_SIZE <> 32 && TARGET_INT_SIZE <> 63
+#error "TARGET_INT_SIZE must be 31, 32, or 63"
+#endif
+
 let as_signed bits i =
-  let shift = Sys.int_size - bits in
+  let shift = TARGET_INT_SIZE - bits in
   (i lsl shift) asr shift
 ;;
 
 (* non-allocating version of Int32.unsigned_to_int
    TODO: could use int32_unsigned_of_int that checks bounds? *)
-let int32_unsigned_to_int =
-  match Sys.word_size with
-  | 32 ->
-    let max_int = Int32.of_int Stdlib.max_int in
-    fun n ->
-      if compare Int32.zero n <= 0 && compare n max_int <= 0
-      then Int32.to_int n
-      else failwith "int32_unsigned_to_int overflow"
-  | 64 ->
-    (* So that it compiles in 32-bit *)
-    let mask = (0xFFFF lsl 16) lor 0xFFFF in
-    fun n -> Int32.to_int n land mask
-  | _ -> assert false
+#if TARGET_INT_SIZE = 63
+let int32_unsigned_to_int n = Int32.to_int n land ((0xFFFF lsl 16) lor 0xFFFF)
+#else
+let int32_unsigned_max_int = Int32.of_int Stdlib.max_int
+
+let int32_unsigned_to_int n =
+  if compare Int32.zero n <= 0 && compare n int32_unsigned_max_int <= 0
+  then Int32.to_int n
+  else failwith "int32_unsigned_to_int overflow"
+#endif
 ;;
 
 (* common fb mappings when using stdlib types *)

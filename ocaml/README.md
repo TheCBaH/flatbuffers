@@ -210,14 +210,15 @@ OCaml 4.14. They also run the native benchmark suite; checksum expectations and
 allocation totals stay in `int64` where a 31-bit OCaml `int` cannot hold the
 value. Melange remains skipped because it does not support 32-bit architectures.
 
-Code that has to care about the width of an `int` should branch on
-`Sys.int_size` rather than assume 63 bits, and must not write integer literals
-above `max_int` for the narrowest supported target (1073741823) — those are a
-compile error on 31-bit, not a truncation. The verifier follows both rules: a
-32- or 64-bit value from the buffer that cannot be represented as a
-non-negative `int` on the current platform is rejected rather than truncated,
-so a 32-bit build simply refuses buffers with offsets or lengths it could not
-address anyway.
+Code that has to care about the width of an `int` is selected at preprocessing
+time using `TARGET_INT_SIZE`: 31 for native 32-bit targets, 63 for native
+64-bit targets, and 32 for the JavaScript backends. Such code must not write
+integer literals above `max_int` for the narrowest supported target
+(1073741823) — those are a compile error on 31-bit, not a truncation. The
+verifier follows both rules: a 32- or 64-bit value from the buffer that cannot
+be represented as a non-negative `int` on the current platform is rejected
+rather than truncated, so a 32-bit build simply refuses buffers with offsets
+or lengths it could not address anyway.
 
 ## TODO
 * generate accessors for vectors of unions

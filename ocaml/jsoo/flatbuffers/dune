@@ -14,13 +14,27 @@
  (files ../../lib/runtime.mli))
 
 (copy_files
- (files ../../lib/verifier.{ml,mli}))
+ (files ../../lib/verifier.mli))
 
 (copy_files
- (files ../../lib/util.{ml,mli}))
+ (files ../../lib/util.mli))
 
 (copy_files
  (files ../../js_dataview.mli))
+
+(rule
+ (target util.ml)
+ (deps
+  (:src ../../lib/util.ml))
+ (action
+  (run %{bin:cppo} -D "TARGET_INT_SIZE 32" %{src} -o %{target})))
+
+(rule
+ (target verifier.ml)
+ (deps
+  (:src ../../lib/verifier.ml))
+ (action
+  (run %{bin:cppo} -D "TARGET_INT_SIZE 32" %{src} -o %{target})))
 
 (rule
  (target primitives.ml)

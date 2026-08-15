@@ -1,5 +1,19 @@
 (library
  (public_name flatbuffers)
  (name flatbuffers)
- (preprocess (action (run %{bin:cppo} -D BIGSTRING -I . -V OCAML:%{ocaml_version} %{input-file})))
+ (preprocess
+  (action
+   (run
+    %{bin:cppo}
+    -D
+    BIGSTRING
+    -D
+    ARCH_%{ocaml-config:architecture}
+    -D
+    "TARGET_INT_SIZE %{ocaml-config:int_size}"
+    -I
+    .
+    -V
+    OCAML:%{ocaml_version}
+    %{input-file})))
  (libraries bigstringaf))

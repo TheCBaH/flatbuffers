@@ -16,6 +16,10 @@
      path is kept in preallocated arrays, and the [error] record is built only
      when a check fails. *)
 
+#if TARGET_INT_SIZE <> 31 && TARGET_INT_SIZE <> 32 && TARGET_INT_SIZE <> 63
+#error "TARGET_INT_SIZE must be 31, 32, or 63"
+#endif
+
 type options =
   { max_depth : int
   ; max_tables : int
@@ -31,7 +35,11 @@ let default_options =
   ; max_tables = 1_000_000
   ; (* Generous enough never to fire on a well-formed buffer, small enough to
        bound expansion through heavily shared sub-objects. *)
-    max_apparent_size = (if Sys.int_size > 32 then 1 lsl 34 else max_int)
+#if TARGET_INT_SIZE = 63
+    max_apparent_size = 1 lsl 34
+#else
+    max_apparent_size = max_int
+#endif
   ; check_alignment = true
   ; check_string_terminator = true
   ; check_nested_flatbuffers = true
@@ -169,19 +177,17 @@ type reader =
    Melange — [Primitives.get_soffset] is an exact, non-allocating conversion,
    and a negative result means the unsigned value is 2^31 or above, which no
    valid 32-bit offset or length reaches: FlatBuffers caps a 32-bit-addressed
-   buffer at 2^31-1 bytes.
+   buffer at 2^31-1 bytes. The build selects this implementation for those
+   targets before the OCaml compiler sees it.
 
    Where [int] is 31 bits (linux/i386, linux/arm/v7) it truncates to the low 31
    bits, and the truncation is not detectable from the result: 0x80000000 comes
    back as 0, a perfectly plausible length, so the verifier would accept a
    buffer whose length the reader then refuses to convert. Inspect the [int32]
    before converting there. *)
+#if TARGET_INT_SIZE = 31
 let u32_reader (type b) (p : b Primitives.t) (b : b) =
-  if Sys.int_size >= 32
-  then fun i ->
-    let s = Primitives.get_soffset p b i in
-    if s >= 0 then s else -1
-  else fun i ->
+  fun i ->
     let x = Primitives.get_scalar Primitives.TInt p b i in
     if Int32.compare x 0l < 0
     then -1
@@ -189,6 +195,13 @@ let u32_reader (type b) (p : b Primitives.t) (b : b) =
       let n = Int32.to_int x in
       if n < 0 then -1 else n)
 ;;
+#else
+let u32_reader (type b) (p : b Primitives.t) (b : b) =
+  fun i ->
+    let s = Primitives.get_soffset p b i in
+    if s >= 0 then s else -1
+;;
+#endif
 
 let reader (type b) (p : b Primitives.t) (b : b) =
   { len = Primitives.length p b
