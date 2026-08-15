@@ -72,13 +72,30 @@ let compare_vtable_offsets b o p =
     !cmp)
 ;;
 
+type table_state =
+  { start : int
+  ; n_fields : int
+  }
+
+type vector_state =
+  { start : int
+  ; prefix_size : int
+  ; n_elts : int
+  ; elt_size : int
+  }
+
+type state =
+  | Idle
+  | Table of table_state
+  | Vector of vector_state
+
 type t =
   { buf : bytes ref
   ; mutable length : int
   ; mutable cur_vtable : int array
   ; mutable cur_vtable_len : int
   ; mutable minalign : int
-  ; mutable nested_start : int (* offset of table/vector start *)
+  ; mutable state : state
   ; strings : (string, int) Hashtbl.t
   ; vtables : IndCache.t
   }
@@ -90,27 +107,43 @@ let create ?(init_capacity = 1024) () =
   ; cur_vtable = [||]
   ; cur_vtable_len = 0
   ; minalign = 1
-  ; nested_start = -1
+  ; state = Idle
   ; strings = Hashtbl.create 0
   ; vtables = IndCache.make 16 (compare_vtable_offsets buf)
   }
 ;;
 
-(* TODO: option to shrink buffer? *)
-let reset b =
+let invalid_state name expected state =
+  let actual =
+    match state with
+    | Idle -> "idle"
+    | Table _ -> "building a table"
+    | Vector { prefix_size = 4; _ } -> "building a 32-bit vector"
+    | Vector _ -> "building a 64-bit vector"
+  in
+  invalid_arg
+    (Printf.sprintf "Builder.%s: expected %s, but builder is %s" name expected actual)
+;;
+
+let require_idle name b =
+  match b.state with
+  | Idle -> ()
+  | state -> invalid_state name "an idle builder" state
+;;
+
+let reset_unchecked b =
   b.length <- 0;
   b.cur_vtable_len <- 0;
   b.minalign <- 1;
-  b.nested_start <- -1;
+  b.state <- Idle;
   Hashtbl.reset b.strings;
   IndCache.reset b.vtables
 ;;
 
-let assert_nested b t = assert (t == (b.nested_start != -1))
-
-let set_nested b t =
-  assert_nested b (not t);
-  if t then b.nested_start <- b.length else b.nested_start <- -1
+(* TODO: option to shrink buffer? *)
+let reset b =
+  require_idle "reset" b;
+  reset_unchecked b
 ;;
 
 let invalid_size name message = invalid_arg ("Builder." ^ name ^ ": " ^ message)
@@ -157,6 +190,9 @@ let prealign b ?(additional_bytes = 0) ?(reserve_bytes = 0) align =
 
 (* TODO: probably more useful api than prealign, replace? *)
 let prep ~align ~bytes b =
+  (match b.state with
+   | Vector _ as state -> invalid_state "prep" "an idle builder or an open table" state
+   | Idle | Table _ -> ());
   prealign b align ~additional_bytes:bytes;
   b.length <- b.length + bytes
 ;;
@@ -173,9 +209,28 @@ let vector_payload_size name ~n_elts ~elt_size =
   n_elts * elt_size
 ;;
 
-(* TODO: could check id vs n_fields from table start *)
+let require_table name b =
+  match b.state with
+  | Table table -> table
+  | state -> invalid_state name "an open table" state
+;;
+
+let validate_slot_id name table id =
+  if id < 0
+  then invalid_arg (Printf.sprintf "Builder.%s: field ID must be non-negative" name);
+  if id >= table.n_fields
+  then
+    invalid_arg
+      (Printf.sprintf
+         "Builder.%s: field ID %d is outside table field count %d"
+         name
+         id
+         table.n_fields)
+;;
+
 let save_slot ~id b =
-  assert_nested b true;
+  let table = require_table "save_slot" b in
+  validate_slot_id "save_slot" table id;
   if id >= b.cur_vtable_len then b.cur_vtable_len <- id + 1;
   b.cur_vtable.(id) <- b.length
 ;;
@@ -192,6 +247,7 @@ let set_uoffset b i o =
 ;;
 
 let push_slot_scalar t f x b =
+  validate_slot_id "push_slot_scalar" (require_table "push_slot_scalar" b) f;
   let size = Primitives.size_scalar t in
   prep ~align:size ~bytes:size b;
   set_scalar t b 0 x;
@@ -200,11 +256,16 @@ let push_slot_scalar t f x b =
 ;;
 
 let push_slot_scalar_default t f ~default x b =
+  validate_slot_id
+    "push_slot_scalar_default"
+    (require_table "push_slot_scalar_default" b)
+    f;
   (* use compare since nan <> nan *)
   if compare x default = 0 then b else push_slot_scalar t f x b
 ;;
 
 let push_slot_ref f x b =
+  validate_slot_id "push_slot_ref" (require_table "push_slot_ref" b) f;
   let size = 4 in
   prep ~align:size ~bytes:size b;
   set_uoffset b 0 x;
@@ -220,6 +281,7 @@ let set_uoffset64 b i o =
 ;;
 
 let push_slot_ref64 f x b =
+  validate_slot_id "push_slot_ref64" (require_table "push_slot_ref64" b) f;
   let size = 8 in
   prep ~align:size ~bytes:size b;
   set_uoffset64 b 0 x;
@@ -228,6 +290,9 @@ let push_slot_ref64 f x b =
 ;;
 
 let[@inline] push_slot_union ft fo t o b =
+  let table = require_table "push_slot_union" b in
+  validate_slot_id "push_slot_union" table ft;
+  validate_slot_id "push_slot_union" table fo;
   let size = 4 in
   prep ~align:1 ~bytes:1 b;
   set_scalar TUByte b 0 t;
@@ -239,6 +304,7 @@ let[@inline] push_slot_union ft fo t o b =
 ;;
 
 let[@inline] push_slot_struct set size align f s b =
+  validate_slot_id "push_slot_struct" (require_table "push_slot_struct" b) f;
   prep ~align ~bytes:size b;
   set b 0 s;
   save_slot ~id:f b;
@@ -252,6 +318,7 @@ let add_shared_string b s o = Hashtbl.add b.strings s o
 let vector_len_size = 4
 
 let start_vector b ~n_elts ~elt_size =
+  require_idle "start_vector" b;
   let bytes = vector_payload_size "start_vector" ~n_elts ~elt_size in
   prep_with_prefix
     b
@@ -259,18 +326,33 @@ let start_vector b ~n_elts ~elt_size =
     ~bytes
     ~prefix_bytes:vector_len_size;
   Primitives.set_int32_le !(b.buf) (current b - vector_len_size) (Int32.of_int n_elts);
-  set_nested b true
+  b.state <- Vector { start = b.length; prefix_size = vector_len_size; n_elts; elt_size }
 ;;
 
-let end_vector b =
-  (* TODO: check we haven't moved since start_vector. Does this make sense? *)
-  (* TODO: rename? or separate bit of state for checking n_elts *)
-  assert (b.nested_start = b.length);
-  set_nested b false;
-  (* skip over size added in start_vector *)
-  b.length <- b.length + vector_len_size;
-  current_offset b
+let end_vector_with_prefix name expected_prefix b =
+  match b.state with
+  | Vector vector when vector.prefix_size = expected_prefix ->
+    if b.length <> vector.start
+    then
+      invalid_arg
+        (Printf.sprintf
+           "Builder.%s: vector payload moved after start (%d elements of %d bytes)"
+           name
+           vector.n_elts
+           vector.elt_size);
+    b.length <- b.length + expected_prefix;
+    b.state <- Idle;
+    current_offset b
+  | state ->
+    invalid_state
+      name
+      (if expected_prefix = vector_len_size
+       then "an open 32-bit vector"
+       else "an open 64-bit vector")
+      state
 ;;
+
+let end_vector b = end_vector_with_prefix "end_vector" vector_len_size b
 
 let create_vector t b a =
   let size = Primitives.size_scalar t in
@@ -297,6 +379,7 @@ let create_vector_ref b a =
 let vector64_len_size = 8
 
 let start_vector64 b ~n_elts ~elt_size =
+  require_idle "start_vector64" b;
   let bytes = vector_payload_size "start_vector64" ~n_elts ~elt_size in
   prep_with_prefix
     b
@@ -304,15 +387,11 @@ let start_vector64 b ~n_elts ~elt_size =
     ~bytes
     ~prefix_bytes:vector64_len_size;
   Primitives.set_int64_le !(b.buf) (current b - vector64_len_size) (Int64.of_int n_elts);
-  set_nested b true
+  b.state
+  <- Vector { start = b.length; prefix_size = vector64_len_size; n_elts; elt_size }
 ;;
 
-let end_vector64 b =
-  assert (b.nested_start = b.length);
-  set_nested b false;
-  b.length <- b.length + vector64_len_size;
-  current_offset b
-;;
+let end_vector64 b = end_vector_with_prefix "end_vector64" vector64_len_size b
 
 let create_vector_ref64 b a =
   let size = 8 in
@@ -353,6 +432,7 @@ let create_vector_struct set ~size b a =
 ;;
 
 let create_string b s =
+  require_idle "create_string" b;
   (* ensure null terminator; there may be more padding inserted *)
   prep b ~align:1 ~bytes:1;
   set_padding b 0 1;
@@ -363,6 +443,7 @@ let create_string b s =
 ;;
 
 let create_nested_vector b (finished_buf : bytes) =
+  require_idle "create_nested_vector" b;
   let len = Bytes.length finished_buf in
   (* nested flatbuffers need alignment >= 4 for the root offset *)
   prep_with_prefix
@@ -372,7 +453,9 @@ let create_nested_vector b (finished_buf : bytes) =
     ~prefix_bytes:vector_len_size;
   Primitives.set_int32_le !(b.buf) (current b - vector_len_size) (Int32.of_int len);
   Bytes.blit finished_buf 0 !(b.buf) (current b) len;
-  set_nested b true;
+  b.state
+  <- Vector
+       { start = b.length; prefix_size = vector_len_size; n_elts = len; elt_size = 1 };
   end_vector b
 ;;
 
@@ -386,17 +469,18 @@ let create_shared_string b s =
 ;;
 
 let start_table b ~n_fields =
+  require_idle "start_table" b;
+  if n_fields < 0 then invalid_arg "Builder.start_table: field count must be non-negative";
   if Array.length b.cur_vtable < n_fields then b.cur_vtable <- Array.make n_fields 0;
   b.cur_vtable_len <- 0;
   Array.fill b.cur_vtable 0 n_fields 0;
-  set_nested b true;
+  b.state <- Table { start = b.length; n_fields };
   b
 ;;
 
-let create_vtable b =
-  assert_nested b true;
+let create_vtable b (table : table_state) =
   let table_offset = b.length in
-  let table_len = table_offset - b.nested_start in
+  let table_len = table_offset - table.start in
   let vtable_len = 2 * (2 + b.cur_vtable_len) in
   prealign b 2 ~additional_bytes:vtable_len;
   b.length <- b.length + vtable_len;
@@ -413,11 +497,12 @@ let create_vtable b =
 ;;
 
 let end_table b =
+  let table = require_table "end_table" b in
   (* add vtable (signed) offset, to be patched later *)
   prep ~align:4 ~bytes:4 b;
   let table_offset = b.length in
   (* serialize vtable *)
-  let vt_offset' = create_vtable b in
+  let vt_offset' = create_vtable b table in
   (* reuse an existing vtable if found, removing extra vtable *)
   let vt_offset = IndCache.find_or_insert b.vtables vt_offset' in
   if vt_offset != vt_offset' then b.length <- table_offset;
@@ -427,12 +512,12 @@ let end_table b =
     (Bytes.length !(b.buf) - table_offset)
     (Int32.of_int (vt_offset - table_offset));
   b.cur_vtable_len <- 0;
-  set_nested b false;
+  b.state <- Idle;
   table_offset
 ;;
 
 let finish ?identifier ?(size_prefixed = false) prim b o =
-  assert_nested b false;
+  require_idle "finish" b;
   let ident_length = Option.fold identifier ~none:0 ~some:String.length in
   let offset_length = 4 in
   let prefix_length = if size_prefixed then 4 else 0 in
@@ -446,6 +531,6 @@ let finish ?identifier ?(size_prefixed = false) prim b o =
   then
     Primitives.set_int32_le !(b.buf) (current b) (Int32.of_int (b.length - prefix_length));
   let res = Primitives.buf_of_bytes prim !(b.buf) ~off:(current b) ~len:b.length in
-  reset b;
+  reset_unchecked b;
   res
 ;;
