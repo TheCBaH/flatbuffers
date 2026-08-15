@@ -30,6 +30,9 @@ type options =
   ; check_nested_flatbuffers : bool
     (** Recurse into fields annotated [nested_flatbuffer]. When false, only
             the containing byte vector is checked. *)
+  ; check_flexbuffers : bool
+    (** Semantically verify fields annotated [flexbuffer]. When false, only
+            the containing byte vector is checked. *)
   ; reject_unknown_union_tags : bool
     (** When false (default, matching upstream), a union discriminator that
             is not known to this schema is accepted after structural checks;
@@ -46,6 +49,7 @@ type path_element =
   | Index of int
   | Union_variant of string
   | Nested_buffer
+  | Flexbuffer
 
 type error_kind =
   | Out_of_bounds of
@@ -68,6 +72,7 @@ type error_kind =
   | Depth_limit_exceeded
   | Table_limit_exceeded
   | Apparent_size_limit_exceeded
+  | Invalid_flexbuffer of Flexbuffers.error
 
 type error = private
   { kind : error_kind
@@ -175,6 +180,15 @@ val field_nested_buffer
   -> off64:bool
   -> vec64:bool
   -> table_fn
+  -> bool
+
+val field_flexbuffer
+  :  t
+  -> name:string
+  -> voff:int
+  -> required:bool
+  -> off64:bool
+  -> vec64:bool
   -> bool
 
 val field_union

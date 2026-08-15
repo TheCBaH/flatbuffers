@@ -16,6 +16,7 @@ module Builder = Builder
 type 'b vt =
   { length_vec : 'b -> Read.offset -> int
   ; get_string : 'b -> Read.offset -> string
+  ; get_flexbuffer_root : 'b -> Read.offset -> Flexbuffers.t
   (* scalar *)
   ; VT_SCALAR_SIGS(bool, Primitives.T.bool)
   ; VT_SCALAR_SIGS(byte, Primitives.T.byte)
@@ -96,6 +97,7 @@ end
 #define VT(prim_) \
   { length_vec = (fun b i -> Read.length_vec prim_ b i) \
   ; get_string = (fun b i -> Read.get_string prim_ b i) \
+  ; get_flexbuffer_root = (fun b i -> Flexbuffers.root ~off:(i + 4) ~len:(Read.length_vec prim_ b i) prim_ b) \
   ; VT_SCALAR_FNS(bool, Primitives.TBool, prim_) \
   ; VT_SCALAR_FNS(byte, Primitives.TByte, prim_) \
   ; VT_SCALAR_FNS(ubyte, Primitives.TUByte, prim_) \
@@ -325,6 +327,8 @@ let[@inline] get_nested_root (type b) (Buf (vt, b) : b buf) (vec_off : Read.offs
   let s = vt.get_string b vec_off in
   get_root Primitives.String s
 ;;
+
+let[@inline] get_flexbuffer_root (Buf (vt, b)) vec_off = vt.get_flexbuffer_root b vec_off
 
 let create_nested_vector = Builder.create_nested_vector
 

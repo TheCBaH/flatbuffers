@@ -589,6 +589,10 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
       const std::string widths =
           " ~off64:" + off64 + " ~vec64:" + BoolLit(vec64);
 
+      if (HasFlexbuffer(field)) {
+        return "V.field_flexbuffer v" + common + widths;
+      }
+
       // A [ubyte] vector annotated nested_flatbuffer is verified both as a
       // byte vector and, recursively, as a buffer of the referenced root.
       auto nested_type = GetNestedFlatbuffer(field);
@@ -1103,6 +1107,19 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
                     ".get_nested_root b v))" +
                     " (" + namer_.Function(field_name) + " b o)\n";
           }
+        }
+
+        if (HasFlexbuffer(field)) {
+          const std::string fn = namer_.Function(field_name);
+          intf += indent + "val " + fn +
+                  "_flexbuffer_root : 'b Rt.buf -> ('b, t) " + RuntimeNS +
+                  ".fb -> Flatbuffers.Flexbuffers.t option\n";
+          impl += indent + "let[@inline] " + fn +
+                  "_flexbuffer_root b o = " + RuntimeNS + ".Option.fold" +
+                  " ~none:None" +
+                  " ~some:(fun v -> Some (" + RuntimeNS +
+                  ".get_flexbuffer_root b v))" +
+                  " (" + fn + " b o)\n";
         }
       }
     });
@@ -2028,6 +2045,11 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
     auto kv = attrs->LookupByKey("nested_flatbuffer");
     if (!kv || !kv->value()) return "";
     return kv->value()->str();
+  }
+
+  bool HasFlexbuffer(const r::Field *field) {
+    auto attrs = field->attributes();
+    return attrs && attrs->LookupByKey("flexbuffer");
   }
 
   // Find an object by its short name (e.g. "Monster") matching the field's

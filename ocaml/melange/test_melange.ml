@@ -1277,6 +1277,19 @@ let test_union_vector () =
   verify Primitives.JsDataView (to_dv bytes)
 ;;
 
+let test_flexbuffers () =
+  let module F = Flatbuffers.Flexbuffers in
+  let bytes = Bytes.of_string "\xd2\x04\x05\x02" in
+  let verify (type a) (primitive : a Primitives.t) (storage : a) =
+    match F.root_verified primitive storage with
+    | Error error -> check (F.error_to_string error) false
+    | Ok root -> check_eq "FlexBuffer int16" ~expected:(Some 1234L) (F.as_int64 root)
+  in
+  verify Primitives.Bytes bytes;
+  verify Primitives.String (Bytes.to_string bytes);
+  verify Primitives.JsDataView (to_dv bytes)
+;;
+
 (* ── Run all ── *)
 
 let run name f =
@@ -1342,6 +1355,8 @@ let () =
   run "verify nested" test_verify_nested;
   run "verify limits" test_verify_limits;
   run "verify 64-bit" test_verify_offset64;
+  Printf.printf "Melange: FlexBuffers\n%!";
+  run "reader and verifier" test_flexbuffers;
   Printf.printf
     "\nMelange: %d passed, %d failed (of %d)\n%!"
     (!tests_run - !tests_failed)

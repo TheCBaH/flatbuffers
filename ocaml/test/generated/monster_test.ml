@@ -108,7 +108,7 @@ module Verify = struct
          && V.field_inline v ~name:"testf3" ~voff:58 ~required:false ~size:4 ~align:4
          && V.field_vector_string v ~name:"testarrayofstring2" ~voff:60 ~required:false ~off64:false ~vec64:false
          && V.field_vector v ~name:"testarrayofsortedstruct" ~voff:62 ~required:false ~off64:false ~vec64:false ~elem_size:8
-         && V.field_vector v ~name:"flex" ~voff:64 ~required:false ~off64:false ~vec64:false ~elem_size:1
+         && V.field_flexbuffer v ~name:"flex" ~voff:64 ~required:false ~off64:false ~vec64:false
          && V.field_vector v ~name:"test5" ~voff:66 ~required:false ~off64:false ~vec64:false ~elem_size:4
          && V.field_vector v ~name:"vector_of_longs" ~voff:68 ~required:false ~off64:false ~vec64:false ~elem_size:8
          && V.field_vector v ~name:"vector_of_doubles" ~voff:70 ~required:false ~off64:false ~vec64:false ~elem_size:8
@@ -745,6 +745,7 @@ module rec MyGame : sig
       val testarrayofstring2 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.Vector.t) Rt.fbopt
       val testarrayofsortedstruct : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Ability.Vector.t) Rt.fbopt
       val flex : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
+      val flex_flexbuffer_root : 'b Rt.buf -> ('b, t) Rt.fb -> Flatbuffers.Flexbuffers.t option
       val test5 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Test.Vector.t) Rt.fbopt
       val vector_of_longs : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Long.Vector.t) Rt.fbopt
       val vector_of_doubles : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Double.Vector.t) Rt.fbopt
@@ -1633,6 +1634,7 @@ end = struct
       val testarrayofstring2 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.Vector.t) Rt.fbopt
       val testarrayofsortedstruct : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Ability.Vector.t) Rt.fbopt
       val flex : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
+      val flex_flexbuffer_root : 'b Rt.buf -> ('b, t) Rt.fb -> Flatbuffers.Flexbuffers.t option
       val test5 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Test.Vector.t) Rt.fbopt
       val vector_of_longs : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Long.Vector.t) Rt.fbopt
       val vector_of_doubles : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Double.Vector.t) Rt.fbopt
@@ -2671,6 +2673,7 @@ end = struct
       val testarrayofstring2 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.Vector.t) Rt.fbopt
       val testarrayofsortedstruct : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Ability.Vector.t) Rt.fbopt
       val flex : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
+      val flex_flexbuffer_root : 'b Rt.buf -> ('b, t) Rt.fb -> Flatbuffers.Flexbuffers.t option
       val test5 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Test.Vector.t) Rt.fbopt
       val vector_of_longs : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Long.Vector.t) Rt.fbopt
       val vector_of_doubles : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Double.Vector.t) Rt.fbopt
@@ -2890,6 +2893,7 @@ end = struct
       let[@inline] testarrayofstring2 b o = Rt.Ref.read_table_opt b o 60
       let[@inline] testarrayofsortedstruct b o = Rt.Ref.read_table_opt b o 62
       let[@inline] flex b o = Rt.Ref.read_table_opt b o 64
+      let[@inline] flex_flexbuffer_root b o = Rt.Option.fold ~none:None ~some:(fun v -> Some (Rt.get_flexbuffer_root b v)) (flex b o)
       let[@inline] test5 b o = Rt.Ref.read_table_opt b o 66
       let[@inline] vector_of_longs b o = Rt.Ref.read_table_opt b o 68
       let[@inline] vector_of_doubles b o = Rt.Ref.read_table_opt b o 70

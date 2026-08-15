@@ -9,5 +9,6 @@ let () =
     ; "Union_vector_test", Union_vector_test.test_cases
     ; "Casing_test", Casing_test.test_cases
     ; "Verifier_test", Verifier_test.test_cases
+    ; "Flexbuffers_test", Flexbuffers_test.test_cases
     ]
 ;;

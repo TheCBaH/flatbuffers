@@ -102,6 +102,36 @@ builder's backing buffer; struct values are sorted before serialization.
 Signed, unsigned, and string keys use their FlatBuffers ordering. Generated
 object `pack` calls the sorted constructor automatically for keyed vectors.
 
+### FlexBuffers
+
+`Flatbuffers.Flexbuffers` provides a zero-copy reader for roots, scalars,
+strings, keys, blobs, maps, and untyped, typed, and fixed vectors. It works on
+the same `Bytes`, `String`, `Bigstringaf`, and JavaScript `DataView` backends as
+the FlatBuffers runtime:
+
+```ocaml
+match Flatbuffers.Flexbuffers.root_verified Flatbuffers.Primitives.Bytes encoded with
+| Error e -> prerr_endline (Flatbuffers.Flexbuffers.error_to_string e)
+| Ok root ->
+  match Flatbuffers.Flexbuffers.as_map root with
+  | None -> ()
+  | Some map -> ignore (Flatbuffers.Flexbuffers.Map.find map "name")
+```
+
+The exact scalar accessors return options instead of applying the coercions of
+some other FlexBuffers runtimes. `as_uint64_bits` returns the format's complete
+unsigned 64-bit bit pattern in an `int64`, including values above
+`Int64.max_int`.
+
+A schema field annotated `flexbuffer` additionally gains a
+`<field>_flexbuffer_root` accessor. Generated verification checks the complete
+dynamic value inside the exact bounds of the containing byte vector. The
+standalone verifier checks widths and types, backward offsets, alignment,
+terminators and UTF-8, map key/value agreement and ordering, plus configurable
+depth, value-count, and apparent-work limits. A FlexBuffers builder is not
+currently part of the OCaml API; encoded values can be created by any
+conforming implementation and stored with the ordinary byte-vector builder.
+
 ## Verification
 
 ### Trust model
@@ -178,6 +208,8 @@ is in range before anything dereferences it:
 * unions and union vectors, as a discriminator/value pair;
 * nested FlatBuffers, verified inside a region narrowed to the containing byte
   vector, without copying it;
+* annotated FlexBuffers, semantically verified inside their containing byte
+  vector;
 * `offset64` fields and `vector64` vectors, with 64-bit values rejected before
   they are converted to an OCaml `int`.
 
@@ -201,6 +233,7 @@ type options =
   ; check_alignment : bool              (* default true *)
   ; check_string_terminator : bool      (* default true *)
   ; check_nested_flatbuffers : bool     (* default true *)
+  ; check_flexbuffers : bool            (* default true *)
   ; reject_unknown_union_tags : bool    (* default false *)
   }
 ```
@@ -211,7 +244,7 @@ the traversal claims to visit; because a DAG can reference the same sub-object
 many times, `max_tables` alone does not bound that. All three are configurable,
 and each produces its own error kind so a rejection can be attributed.
 
-The three `check_*` flags exist because those checks are format policy rather
+The four `check_*` flags exist because those checks are format policy rather
 than memory safety; turning them off keeps the traversal safe but accepts more
 buffers.
 
@@ -245,12 +278,6 @@ reference. This implementation differs in a few places on purpose:
   anything verification accepts can be fully walked by the unchecked readers —
   the corruption sweeps in `test/verifier_test.ml` assert exactly that.
 
-### Limitations
-
-* **FlexBuffers.** A field annotated `flexbuffer` is validated only as the
-  `[ubyte]` vector it is: its internal encoding is not traversed. Semantic
-  FlexBuffer verification needs a FlexBuffer runtime, which OCaml does not have
-  yet.
 ### Cost
 
 Verification is a single traversal that touches every reachable byte range
@@ -287,6 +314,3 @@ verifier follows both rules: a 32- or 64-bit value from the buffer that cannot
 be represented as a non-negative `int` on the current platform is rejected
 rather than truncated, so a 32-bit build simply refuses buffers with offsets
 or lengths it could not address anyway.
-
-## TODO
-* FlexBuffer runtime and verifier

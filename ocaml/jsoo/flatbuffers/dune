@@ -5,6 +5,9 @@
  (files ../../lib/flatbuffers.ml))
 
 (copy_files
+ (files ../../lib/flexbuffers.{ml,mli}))
+
+(copy_files
  (files ../../lib/read.{ml,mli}))
 
 (copy_files

@@ -540,6 +540,7 @@ module rec MyGame : sig
       val testarrayofstring2 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.String.Vector.t) Rt.fbopt
       val testarrayofsortedstruct : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Ability.Vector.t) Rt.fbopt
       val flex : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.UByte.Vector.t) Rt.fbopt
+      val flex_flexbuffer_root : 'b Rt.buf -> ('b, t) Rt.fb -> Flatbuffers.Flexbuffers.t option
       val test5 : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Test.Vector.t) Rt.fbopt
       val vector_of_longs : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Long.Vector.t) Rt.fbopt
       val vector_of_doubles : 'b Rt.buf -> ('b, t) Rt.fb -> ('b, Rt.Double.Vector.t) Rt.fbopt

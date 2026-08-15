@@ -27,6 +27,7 @@ type options =
   ; check_alignment : bool
   ; check_string_terminator : bool
   ; check_nested_flatbuffers : bool
+  ; check_flexbuffers : bool
   ; reject_unknown_union_tags : bool
   }
 
@@ -43,6 +44,7 @@ let default_options =
   ; check_alignment = true
   ; check_string_terminator = true
   ; check_nested_flatbuffers = true
+  ; check_flexbuffers = true
   ; reject_unknown_union_tags = false
   }
 ;;
@@ -52,6 +54,7 @@ type path_element =
   | Index of int
   | Union_variant of string
   | Nested_buffer
+  | Flexbuffer
 
 type error_kind =
   | Out_of_bounds of
@@ -74,6 +77,7 @@ type error_kind =
   | Depth_limit_exceeded
   | Table_limit_exceeded
   | Apparent_size_limit_exceeded
+  | Invalid_flexbuffer of Flexbuffers.error
 
 type error =
   { kind : error_kind
@@ -108,6 +112,7 @@ let pp_error_kind ppf = function
   | Depth_limit_exceeded -> Format.pp_print_string ppf "maximum depth exceeded"
   | Table_limit_exceeded -> Format.pp_print_string ppf "maximum table count exceeded"
   | Apparent_size_limit_exceeded -> Format.pp_print_string ppf "maximum apparent size exceeded"
+  | Invalid_flexbuffer error -> Format.fprintf ppf "invalid FlexBuffer: %a" Flexbuffers.pp_error error
 ;;
 
 let pp_path ppf path =
@@ -119,7 +124,8 @@ let pp_path ppf path =
         | Field f -> Format.fprintf ppf ".%s" f
         | Index i -> Format.fprintf ppf "[%d]" i
         | Union_variant v -> Format.fprintf ppf ":%s" v
-        | Nested_buffer -> Format.pp_print_string ppf "/nested")
+        | Nested_buffer -> Format.pp_print_string ppf "/nested"
+        | Flexbuffer -> Format.pp_print_string ppf "/flexbuffer")
       path
 ;;
 
@@ -169,6 +175,7 @@ type reader =
   ; u32 : int -> int (* unsigned 32-bit, or -1 *)
   ; u64 : int -> int (* unsigned 64-bit, or -1 *)
   ; sub : int -> int -> string
+  ; verify_flexbuffer : off:int -> len:int -> (unit, Flexbuffers.error) result
   }
 
 (* Reading an unsigned 32-bit field needs care about the width of [int].
@@ -215,6 +222,7 @@ let reader (type b) (p : b Primitives.t) (b : b) =
   ; u32 = u32_reader p b
   ; u64 = (fun i -> u64_to_int (Primitives.get_scalar Primitives.TLong p b i))
   ; sub = (fun off len -> Primitives.get_string p b ~off ~len)
+  ; verify_flexbuffer = (fun ~off ~len -> Flexbuffers.verify ~off ~len p b)
   }
 ;;
 
@@ -266,6 +274,7 @@ let path_kind_field = 0
 let path_kind_index = 1
 let path_kind_variant = 2
 let path_kind_nested = 3
+let path_kind_flexbuffer = 4
 
 let grow_path v =
   let n = Array.length v.p_kind in
@@ -304,7 +313,9 @@ let capture_path v =
         then Index v.p_index.(i)
         else if k = path_kind_variant
         then Union_variant v.p_name.(i)
-        else Nested_buffer
+        else if k = path_kind_nested
+        then Nested_buffer
+        else Flexbuffer
       in
       build (i - 1) (e :: acc))
   in
@@ -760,6 +771,34 @@ let field_nested_buffer v ~name ~voff ~required ~off64 ~vec64 fn =
       (t >= 0
        && verify_vector_bytes v t ~len_size ~elem_size:1 >= 0
        && verify_nested_at v t ~len_size fn))
+;;
+
+let field_flexbuffer v ~name ~voff ~required ~off64 ~vec64 =
+  let p = begin_field v ~name ~voff ~required in
+  if p < 0
+  then p = field_absent_ok
+  else (
+    let len_size = if vec64 then 8 else 4 in
+    let t = verify_offset v p ~wide:off64 in
+    let valid_vector =
+      t >= 0 && verify_vector_bytes v t ~len_size ~elem_size:1 >= 0
+    in
+    let valid_flexbuffer =
+      if not valid_vector || not v.opts.check_flexbuffers
+      then valid_vector
+      else (
+        let data = t + len_size in
+        let len = vector_length v t ~len_size in
+        push_path v path_kind_flexbuffer "" 0;
+        let result =
+          match v.rd.verify_flexbuffer ~off:data ~len with
+          | Ok () -> true
+          | Error error -> fail v (Invalid_flexbuffer error) error.offset
+        in
+        pop_path v;
+        result)
+    in
+    end_field v valid_flexbuffer)
 ;;
 
 (* ------------------------------------------------------------------ *)
