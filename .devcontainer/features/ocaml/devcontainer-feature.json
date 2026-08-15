@@ -4,6 +4,11 @@
     "version": "0.0.3",
     "description": "Install ocaml/opam toolchains",
     "options": {
+        "base-packages": {
+            "type": "string",
+            "default": "dune ocaml-lsp-server ocamlformat ocamlformat-rpc",
+            "description": "space-separated packages that make up the minimal toolchain; same 'name#version' pin syntax as 'packages'. Override to customize or version-pin the base toolchain"
+        },
         "packages": {
             "type": "string",
             "default": "",
@@ -12,7 +17,7 @@
         "optional-packages": {
             "type": "string",
             "default": "",
-            "description": "space-separated packages to install only when opam reports them available for the selected switch and platform; same 'name#version' pin syntax as 'packages' (e.g. 'melange')"
+            "description": "space-separated packages to install only when opam can solve them for the selected switch and platform; same 'name#version' pin syntax as 'packages' (e.g. 'melange')"
         },
         "version": {
             "type": "string",

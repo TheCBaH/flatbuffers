@@ -3,6 +3,7 @@ set -eu
 set -x
 
 echo "Activating feature 'OCaml'"
+BASE_PACKAGES=${BASE_PACKAGES:-}
 PACKAGES=${PACKAGES:-$@}
 OPTIONAL_PACKAGES=${OPTIONAL_PACKAGES:-}
 SYSTEM_PACKAGES=${SYSTEM_PACKAGES:-}
@@ -13,7 +14,7 @@ OPAM_OPTIONS=''
 if [ -n "${OPTIONS:-}" ]; then
     OPAM_OPTIONS="--packages=ocaml-variants.${OCAML_VERSION}+options,${OPTIONS}"
 fi
-echo "Selected OCaml:$OCAML_VERSION packages: $PACKAGES optional: ${OPTIONAL_PACKAGES} with ${OPAM_OPTIONS} ${SYSTEM_PACKAGES}"
+echo "Selected OCaml:$OCAML_VERSION base: ${BASE_PACKAGES} packages: $PACKAGES optional: ${OPTIONAL_PACKAGES} with ${OPAM_OPTIONS} ${SYSTEM_PACKAGES}"
 
 # From https://github.com/devcontainers/features/blob/main/src/git/install.sh
 apt_get_update()
@@ -106,14 +107,8 @@ if [ -n "${REPOSITORIES}" ]; then
     opam update
 fi
 
-BASE_PACKAGES="\
- dune\
- ocaml-lsp-server\
- ocamlformat\
- ocamlformat-rpc\
-"
-OPAM_PACKAGES="${BASE_PACKAGES}"
-for pkg in ${PACKAGES}; do
+OPAM_PACKAGES=""
+for pkg in ${BASE_PACKAGES} ${PACKAGES}; do
     case "$pkg" in
         *#*)
             pkg_name=$(echo "$pkg" | cut -d'#' -f1)
@@ -167,12 +162,14 @@ if [ -n "${PIN_PACKAGES}" ]; then
 fi
 
 # Only the packages declared optional may be dropped; anything in PACKAGES or
-# PIN_PACKAGES that opam cannot install must still fail the build.
+# PIN_PACKAGES that opam cannot install must still fail the build. Availability
+# alone is insufficient: a package can exist in the repository while its
+# compiler or platform constraints make the current switch unsatisfiable.
 for pkg in ${OPTIONAL_OPAM_PACKAGES}; do
-    if [ -n "$(opam list --available -s "$pkg")" ]; then
+    if opam install --dry-run ${OPAM_PACKAGES} "$pkg" >/dev/null 2>&1; then
         OPAM_PACKAGES="${OPAM_PACKAGES} ${pkg}"
     else
-        echo "Skipping optional package '$pkg': not available for this switch/platform" >&2
+        echo "Skipping optional package '$pkg': not installable for this switch/platform" >&2
     fi
 done
 
