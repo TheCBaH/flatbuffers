@@ -9,6 +9,8 @@ module type Intf = sig
 
     val create : ?init_capacity:int -> unit -> t
     val reset : t -> unit
+    val capacity : t -> int
+    val trim : ?capacity:int -> t -> unit
   end
 
   (** Abstract buffer handle. Parameter is an existential associating offsets with buffers *)

@@ -14,8 +14,18 @@ type t
 val create : ?init_capacity:int -> unit -> t
 
 (** Clear an idle builder for reuse. Raises [Invalid_argument] if a table or
-    vector is open. *)
+    vector is open. The backing buffer is retained. *)
 val reset : t -> unit
+
+(** Current size of the retained backing buffer. *)
+val capacity : t -> int
+
+(** [trim ?capacity b] clears an idle builder and releases backing-buffer
+    capacity above [capacity]. The default is the builder's initial capacity;
+    capacities below the 16-byte implementation minimum are rounded up. It
+    never grows a smaller buffer. Raises [Invalid_argument] for a negative
+    capacity or while a table or vector is open. *)
+val trim : ?capacity:int -> t -> unit
 
 (** Begin a table with field IDs from zero (inclusive) to [n_fields]
     (exclusive). A table cannot be nested inside another table or an open

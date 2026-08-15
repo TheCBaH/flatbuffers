@@ -98,6 +98,7 @@ type state =
 
 type t =
   { buf : bytes ref
+  ; initial_capacity : int
   ; mutable cycle : unit ref
   ; mutable length : int
   ; mutable cur_vtable : int array
@@ -109,8 +110,10 @@ type t =
   }
 
 let create ?(init_capacity = 1024) () =
-  let buf = ref (Bytes.create (Int.max init_capacity 16)) in
+  let initial_capacity = Int.max init_capacity 16 in
+  let buf = ref (Bytes.create initial_capacity) in
   { buf
+  ; initial_capacity
   ; cycle = ref ()
   ; length = 0
   ; cur_vtable = [||]
@@ -150,10 +153,20 @@ let reset_unchecked b =
   IndCache.reset b.vtables
 ;;
 
-(* TODO: option to shrink buffer? *)
 let reset b =
   require_idle "reset" b;
   reset_unchecked b
+;;
+
+let capacity b = Bytes.length !(b.buf)
+
+let trim ?capacity:requested_capacity b =
+  require_idle "trim" b;
+  let requested_capacity = Option.value requested_capacity ~default:b.initial_capacity in
+  if requested_capacity < 0 then invalid_arg "Builder.trim: capacity must be non-negative";
+  let requested_capacity = Int.max requested_capacity 16 in
+  reset_unchecked b;
+  if capacity b > requested_capacity then b.buf := Bytes.create requested_capacity
 ;;
 
 let invalid_size name message = invalid_arg ("Builder." ^ name ^ ": " ^ message)

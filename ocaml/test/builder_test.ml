@@ -379,6 +379,72 @@ let check_invalid_reference_offsets () =
   check_reusable "after invalid reference offsets" b
 ;;
 
+let check_buffer_retention_policy () =
+  let b = B.create ~init_capacity:32 () in
+  Alcotest.(check int) "initial capacity" 32 (B.capacity b);
+  let large = Array.init 4096 (fun i -> Char.chr (i land 0xff)) in
+  let large_buf = finish_root b (Rt.UByte.Vector.create b large) in
+  let retained = B.capacity b in
+  Alcotest.(check bool) "finish retains grown capacity" true (retained >= 4096);
+  let (Rt.Root (view, vector)) = Rt.get_root P.Bytes large_buf in
+  Alcotest.(check (array char))
+    "large before trim"
+    large
+    (Rt.UByte.Vector.to_array view vector);
+  B.trim ~capacity:128 b;
+  Alcotest.(check int) "explicit trimmed capacity" 128 (B.capacity b);
+  B.reset b;
+  Alcotest.(check int) "reset retains trimmed capacity" 128 (B.capacity b);
+  B.trim ~capacity:256 b;
+  Alcotest.(check int) "trim never grows" 128 (B.capacity b);
+  B.trim b;
+  Alcotest.(check int) "default trims to initial capacity" 32 (B.capacity b);
+  let shared = Rt.String.create_shared b "cached before trim" in
+  B.trim b;
+  Alcotest.check_raises
+    "trim invalidates offsets"
+    (Invalid_argument
+       "Builder.create_vector_ref: offset belongs to an earlier build cycle")
+    (fun () -> ignore (B.create_vector_ref b [| shared |]));
+  let fresh = Rt.String.create_shared b "cached before trim" in
+  let strings = Rt.String.Vector.create b [| fresh |] in
+  let string_buf = finish_root b strings in
+  Alcotest.(check (array string))
+    "shared-string cache cleared"
+    [| "cached before trim" |]
+    (read_string_refs false string_buf);
+  ignore (B.start_table b ~n_fields:1);
+  ignore (B.push_slot_scalar P.TByte 0 7 b);
+  ignore (B.end_table b);
+  B.trim b;
+  ignore (B.start_table b ~n_fields:1);
+  ignore (B.push_slot_scalar P.TByte 0 9 b);
+  let table_buf = finish_root b (B.end_table b) in
+  let (Rt.Root (view, table)) = Rt.get_root P.Bytes table_buf in
+  Alcotest.(check int)
+    "vtable cache cleared"
+    9
+    (Rt.Byte.read_table_default view table 4 ~default:0);
+  let large_again = Array.init 8192 (fun i -> Char.chr (i land 0xff)) in
+  let large_again_buf = finish_root b (Rt.UByte.Vector.create b large_again) in
+  let (Rt.Root (view, vector)) = Rt.get_root P.Bytes large_again_buf in
+  Alcotest.(check (array char))
+    "large after trim"
+    large_again
+    (Rt.UByte.Vector.to_array view vector);
+  Alcotest.check_raises
+    "negative trim capacity"
+    (Invalid_argument "Builder.trim: capacity must be non-negative")
+    (fun () -> B.trim ~capacity:(-1) b);
+  ignore (B.start_table b ~n_fields:0);
+  Alcotest.check_raises
+    "trim while nested"
+    (Invalid_argument
+       "Builder.trim: expected an idle builder, but builder is building a table")
+    (fun () -> B.trim b);
+  finish_table b
+;;
+
 let test_cases =
   [ Alcotest.test_case "Exact-capacity scalar vectors" `Quick check_exact_capacity_scalar
   ; Alcotest.test_case "Exact-capacity strings" `Quick check_exact_capacity_string
@@ -397,5 +463,6 @@ let test_cases =
   ; Alcotest.test_case "Vector movement" `Quick check_vector_movement_rejected
   ; Alcotest.test_case "Reference vector forms" `Quick check_reference_vector_forms
   ; Alcotest.test_case "Invalid reference offsets" `Quick check_invalid_reference_offsets
+  ; Alcotest.test_case "Buffer retention policy" `Quick check_buffer_retention_policy
   ]
 ;;

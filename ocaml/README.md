@@ -57,6 +57,14 @@ specialized generators. They expose the backwards-growing buffer model and
 can corrupt output if indices escape the reserved region, so application code
 should prefer the complete constructors.
 
+Builders retain their largest backing buffer across `finish` and `reset`,
+which avoids allocation for steady-size reuse. After an exceptional one-off
+large message, call `Builder.trim builder` to return to the capacity requested
+at creation, or `Builder.trim ~capacity:n builder` to retain a different upper
+bound. `Builder.capacity` reports the current retained size. Trimming also
+starts a new build cycle and clears shared-string and vtable caches; like
+`reset`, it requires an idle builder.
+
 ### Union vectors
 
 For a field such as `items:[Item]`, the generated table module exposes
