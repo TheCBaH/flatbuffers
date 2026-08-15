@@ -13,6 +13,12 @@ Includes an ocaml version of the cpp encode/decode benchmark (see `fb_bench.cpp`
 
     dune exec --profile=release --display=quiet test/bench/fb_bench.exe
 
+The struct-vector microbenchmark covers indexed traversal, iteration, and
+array/list conversion for both `vector` and `vector64` on Bytes and
+Bigstringaf buffers:
+
+    dune exec --profile=release --display=quiet test/bench/struct_vector_bench.exe
+
 Read performance appears to be close to Java (openjdk 11) using the baseline
 compiler and close to 2x faster with flambda.
 

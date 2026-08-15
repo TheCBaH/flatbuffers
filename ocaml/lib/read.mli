@@ -41,6 +41,15 @@ val to_array_vec : 'a tag -> 'b Primitives.t -> 'b -> int -> 'a array
 val to_seq_vec : 'a tag -> 'b Primitives.t -> 'b -> int -> 'a Seq.t
 val iter_vec : 'a tag -> 'b Primitives.t -> 'b -> ('a -> unit) -> int -> unit
 
+(** Struct-vector operations specialize the inline-address calculation by
+    element size, avoiding the generic tag dispatch in each element. *)
+val get_vec_struct : 'b Primitives.t -> 'b -> int -> int -> int -> offset
+
+val to_list_vec_struct : 'b Primitives.t -> 'b -> int -> int -> offset list
+val to_array_vec_struct : 'b Primitives.t -> 'b -> int -> int -> offset array
+val to_seq_vec_struct : 'b Primitives.t -> 'b -> int -> int -> offset Seq.t
+val iter_vec_struct : 'b Primitives.t -> 'b -> (offset -> unit) -> int -> int -> unit
+
 (** Vector64 ops *)
 val length_vec64 : 'a Primitives.t -> 'a -> int -> int
 
@@ -49,6 +58,11 @@ val to_list_vec64 : 'a tag -> 'b Primitives.t -> 'b -> int -> 'a list
 val to_array_vec64 : 'a tag -> 'b Primitives.t -> 'b -> int -> 'a array
 val to_seq_vec64 : 'a tag -> 'b Primitives.t -> 'b -> int -> 'a Seq.t
 val iter_vec64 : 'a tag -> 'b Primitives.t -> 'b -> ('a -> unit) -> int -> unit
+val get_vec64_struct : 'b Primitives.t -> 'b -> int -> int -> int -> offset
+val to_list_vec64_struct : 'b Primitives.t -> 'b -> int -> int -> offset list
+val to_array_vec64_struct : 'b Primitives.t -> 'b -> int -> int -> offset array
+val to_seq_vec64_struct : 'b Primitives.t -> 'b -> int -> int -> offset Seq.t
+val iter_vec64_struct : 'b Primitives.t -> 'b -> (offset -> unit) -> int -> int -> unit
 
 (** Other *)
 val get_string : 'b Primitives.t -> 'b -> offset -> string

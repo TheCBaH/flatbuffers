@@ -103,6 +103,43 @@ let[@inline] iter_vec t p b f i =
   done
 ;;
 
+(* Struct vectors only need their element size: an element is the inline
+   address itself. Keeping that fact out of the generic tag removes a tag
+   match from every element in bulk traversals. *)
+let[@inline] unsafe_get_vec_struct ~prefix_size ~element_size i j =
+  i + prefix_size + (element_size * j)
+;;
+
+let[@inline] get_vec_struct p b i element_size j =
+  if j < length_vec p b i
+  then unsafe_get_vec_struct ~prefix_size:4 ~element_size i j
+  else invalid_arg "index out of bounds"
+;;
+
+let[@inline] to_list_vec_struct p b i element_size =
+  List.init (length_vec p b i) (unsafe_get_vec_struct ~prefix_size:4 ~element_size i)
+;;
+
+let[@inline] to_array_vec_struct p b i element_size =
+  Array.init (length_vec p b i) (unsafe_get_vec_struct ~prefix_size:4 ~element_size i)
+;;
+
+let[@inline] to_seq_vec_struct p b i element_size =
+  let len = length_vec p b i in
+  let rec aux j () =
+    if j < len
+    then Seq.Cons (unsafe_get_vec_struct ~prefix_size:4 ~element_size i j, aux (j + 1))
+    else Seq.Nil
+  in
+  aux 0
+;;
+
+let[@inline] iter_vec_struct p b f i element_size =
+  for j = 0 to length_vec p b i - 1 do
+    f (unsafe_get_vec_struct ~prefix_size:4 ~element_size i j)
+  done
+;;
+
 (* 64-bit ref: vtable lookup is the same, but field data is 8-byte offset *)
 let[@inline] read_table_ref64 p b i n =
   let i' = get_indirect p b i n in
@@ -147,6 +184,36 @@ let[@inline] to_seq_vec64 t p b i =
 let[@inline] iter_vec64 t p b f i =
   for j = 0 to length_vec64 p b i - 1 do
     f (unsafe_get_vec64 t p b i j)
+  done
+;;
+
+let[@inline] get_vec64_struct p b i element_size j =
+  if j < length_vec64 p b i
+  then unsafe_get_vec_struct ~prefix_size:8 ~element_size i j
+  else invalid_arg "index out of bounds"
+;;
+
+let[@inline] to_list_vec64_struct p b i element_size =
+  List.init (length_vec64 p b i) (unsafe_get_vec_struct ~prefix_size:8 ~element_size i)
+;;
+
+let[@inline] to_array_vec64_struct p b i element_size =
+  Array.init (length_vec64 p b i) (unsafe_get_vec_struct ~prefix_size:8 ~element_size i)
+;;
+
+let[@inline] to_seq_vec64_struct p b i element_size =
+  let len = length_vec64 p b i in
+  let rec aux j () =
+    if j < len
+    then Seq.Cons (unsafe_get_vec_struct ~prefix_size:8 ~element_size i j, aux (j + 1))
+    else Seq.Nil
+  in
+  aux 0
+;;
+
+let[@inline] iter_vec64_struct p b f i element_size =
+  for j = 0 to length_vec64 p b i - 1 do
+    f (unsafe_get_vec_struct ~prefix_size:8 ~element_size i j)
   done
 ;;
 

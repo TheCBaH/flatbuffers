@@ -48,6 +48,26 @@ let check_offset64_roundtrip () =
   Alcotest.(check (float 0.01)) "far_struct[0].b" 3.14 (LeafStruct.b buf s0);
   let s1 = LeafStruct.Vector.get buf fsv 1 in
   Alcotest.(check int32) "far_struct[1].a" 99l (LeafStruct.a buf s1);
+  let far_values = [| 42l; 99l |] in
+  let far_a value = LeafStruct.a buf value in
+  Alcotest.(check (array int32))
+    "far_struct_vector to_array"
+    far_values
+    (LeafStruct.Vector.to_array buf fsv |> Array.map far_a);
+  Alcotest.(check (array int32))
+    "far_struct_vector to_list"
+    far_values
+    (LeafStruct.Vector.to_list buf fsv |> List.map far_a |> Array.of_list);
+  Alcotest.(check (array int32))
+    "far_struct_vector to_seq"
+    far_values
+    (LeafStruct.Vector.to_seq buf fsv |> Seq.map far_a |> Array.of_seq);
+  let iterated = ref [] in
+  LeafStruct.Vector.iter buf (fun value -> iterated := far_a value :: !iterated) fsv;
+  Alcotest.(check (array int32))
+    "far_struct_vector iter"
+    far_values
+    (List.rev !iterated |> Array.of_list);
   (* check vector64 struct vector (8-byte length, 8-byte offset) *)
   let bsv = Rt.Option.get (RootTable.big_struct_vector buf tbl) in
   Alcotest.(check int) "big_struct_vector length" 3 (LeafStruct.Vector64.length buf bsv);
@@ -55,7 +75,27 @@ let check_offset64_roundtrip () =
   Alcotest.(check int32) "big_struct[0].a" 10l (LeafStruct.a buf bs0);
   let bs2 = LeafStruct.Vector64.get buf bsv 2 in
   Alcotest.(check int32) "big_struct[2].a" 30l (LeafStruct.a buf bs2);
-  Alcotest.(check (float 0.01)) "big_struct[2].b" 3.0 (LeafStruct.b buf bs2)
+  Alcotest.(check (float 0.01)) "big_struct[2].b" 3.0 (LeafStruct.b buf bs2);
+  let big_values = [| 10l; 20l; 30l |] in
+  let big_a value = LeafStruct.a buf value in
+  Alcotest.(check (array int32))
+    "big_struct_vector to_array"
+    big_values
+    (LeafStruct.Vector64.to_array buf bsv |> Array.map big_a);
+  Alcotest.(check (array int32))
+    "big_struct_vector to_list"
+    big_values
+    (LeafStruct.Vector64.to_list buf bsv |> List.map big_a |> Array.of_list);
+  Alcotest.(check (array int32))
+    "big_struct_vector to_seq"
+    big_values
+    (LeafStruct.Vector64.to_seq buf bsv |> Seq.map big_a |> Array.of_seq);
+  let iterated = ref [] in
+  LeafStruct.Vector64.iter buf (fun value -> iterated := big_a value :: !iterated) bsv;
+  Alcotest.(check (array int32))
+    "big_struct_vector iter"
+    big_values
+    (List.rev !iterated |> Array.of_list)
 ;;
 
 let check_absent_fields () =

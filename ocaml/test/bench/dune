@@ -19,3 +19,9 @@
  (modules verify_bench)
  (libraries benchmark memtrace generated)
  (modes exe))
+
+(executable
+ (name struct_vector_bench)
+ (modules struct_vector_bench)
+ (libraries benchmark generated)
+ (modes exe))

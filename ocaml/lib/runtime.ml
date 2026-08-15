@@ -51,16 +51,24 @@ type 'b vt =
   ; read_table_opt_struct : 'b -> Read.offset -> int -> Read.offset
   (* generic ops *)
   ; get_vec : 'a. 'a Read.tag -> 'b -> int -> int -> 'a
-  ; to_list_vec : 'a. 'a Read.tag -> 'b -> int -> 'a list
-  ; to_array_vec : 'a. 'a Read.tag -> 'b -> int -> 'a array
-  ; to_seq_vec : 'a. 'a Read.tag -> 'b -> int -> 'a Seq.t
-  ; iter_vec : 'a. 'a Read.tag -> 'b -> ('a -> unit) -> int -> unit
+  (* struct vector ops *)
+  ; get_vec_struct : 'b -> int -> int -> int -> Read.offset
+  ; to_list_vec_struct : 'b -> int -> int -> Read.offset list
+  ; to_array_vec_struct : 'b -> int -> int -> Read.offset array
+  ; to_seq_vec_struct : 'b -> int -> int -> Read.offset Seq.t
+  ; iter_vec_struct : 'b -> (Read.offset -> unit) -> int -> int -> unit
   (* generic 64-bit vector ops *)
   ; get_vec64 : 'a. 'a Read.tag -> 'b -> int -> int -> 'a
   ; to_list_vec64 : 'a. 'a Read.tag -> 'b -> int -> 'a list
   ; to_array_vec64 : 'a. 'a Read.tag -> 'b -> int -> 'a array
   ; to_seq_vec64 : 'a. 'a Read.tag -> 'b -> int -> 'a Seq.t
   ; iter_vec64 : 'a. 'a Read.tag -> 'b -> ('a -> unit) -> int -> unit
+  (* struct vector64 ops *)
+  ; get_vec64_struct : 'b -> int -> int -> int -> Read.offset
+  ; to_list_vec64_struct : 'b -> int -> int -> Read.offset list
+  ; to_array_vec64_struct : 'b -> int -> int -> Read.offset array
+  ; to_seq_vec64_struct : 'b -> int -> int -> Read.offset Seq.t
+  ; iter_vec64_struct : 'b -> (Read.offset -> unit) -> int -> int -> unit
   }
 
 type 'b buf = Buf : 'a vt * 'a -> 'b buf
@@ -131,16 +139,24 @@ end
   ; read_table_opt_struct = (fun b i n -> Read.read_table_opt_struct prim_ b i n) \
   (* generic ops *) \
   ; get_vec = (fun t b i j -> Read.get_vec t prim_ b i j)[@inline] \
-  ; to_list_vec = (fun t b i -> Read.to_list_vec t prim_ b i)[@inline] \
-  ; to_array_vec = (fun t b i -> Read.to_array_vec t prim_ b i)[@inline] \
-  ; to_seq_vec = (fun t b i -> Read.to_seq_vec t prim_ b i)[@inline] \
-  ; iter_vec = (fun t b f i -> Read.iter_vec t prim_ b f i)[@inline] \
+  (* struct vector ops *) \
+  ; get_vec_struct = (fun b i sz j -> Read.get_vec_struct prim_ b i sz j)[@inline] \
+  ; to_list_vec_struct = (fun b i sz -> Read.to_list_vec_struct prim_ b i sz)[@inline] \
+  ; to_array_vec_struct = (fun b i sz -> Read.to_array_vec_struct prim_ b i sz)[@inline] \
+  ; to_seq_vec_struct = (fun b i sz -> Read.to_seq_vec_struct prim_ b i sz)[@inline] \
+  ; iter_vec_struct = (fun b f i sz -> Read.iter_vec_struct prim_ b f i sz)[@inline] \
   (* generic 64-bit vector ops *) \
   ; get_vec64 = (fun t b i j -> Read.get_vec64 t prim_ b i j)[@inline] \
   ; to_list_vec64 = (fun t b i -> Read.to_list_vec64 t prim_ b i)[@inline] \
   ; to_array_vec64 = (fun t b i -> Read.to_array_vec64 t prim_ b i)[@inline] \
   ; to_seq_vec64 = (fun t b i -> Read.to_seq_vec64 t prim_ b i)[@inline] \
   ; iter_vec64 = (fun t b f i -> Read.iter_vec64 t prim_ b f i)[@inline] \
+  (* struct vector64 ops *) \
+  ; get_vec64_struct = (fun b i sz j -> Read.get_vec64_struct prim_ b i sz j)[@inline] \
+  ; to_list_vec64_struct = (fun b i sz -> Read.to_list_vec64_struct prim_ b i sz)[@inline] \
+  ; to_array_vec64_struct = (fun b i sz -> Read.to_array_vec64_struct prim_ b i sz)[@inline] \
+  ; to_seq_vec64_struct = (fun b i sz -> Read.to_seq_vec64_struct prim_ b i sz)[@inline] \
+  ; iter_vec64_struct = (fun b f i sz -> Read.iter_vec64_struct prim_ b f i sz)[@inline] \
   }
 
 let vt_bytes = VT(Primitives.Bytes)
@@ -224,25 +240,16 @@ module Struct = struct
     type builder_elt
 
     val size : int
-    val minalign : int
     val set : Builder.t -> int -> builder_elt -> unit
   end) =
   struct
-    (* TODO: this doesn't quite work:
-       Want a specialized version of the vector ops that just takes an element
-       size parameter (and folds branches for primitives, refs). Baseline
-       compiler can't do that when TStruct is a block.
-       No way to do it with codegen either, since buffer-specialized functions
-       are indirected through the vtable.
-     *)
     type t
-    let tag = Read.TStruct { sz = T.size; align = T.minalign }
     let[@inline] length (Buf (vt, b)) i = vt.length_vec b i
-    let[@inline] get (Buf (vt, b)) i j = vt.get_vec tag b i j
-    let[@inline] to_list (Buf (vt, b)) i = vt.to_list_vec tag b i
-    let[@inline] to_array (Buf (vt, b)) i = vt.to_array_vec tag b i
-    let[@inline] to_seq (Buf (vt, b)) i = vt.to_seq_vec tag b i
-    let[@inline] iter (Buf (vt, b)) f i = vt.iter_vec tag b f i
+    let[@inline] get (Buf (vt, b)) i j = vt.get_vec_struct b i T.size j
+    let[@inline] to_list (Buf (vt, b)) i = vt.to_list_vec_struct b i T.size
+    let[@inline] to_array (Buf (vt, b)) i = vt.to_array_vec_struct b i T.size
+    let[@inline] to_seq (Buf (vt, b)) i = vt.to_seq_vec_struct b i T.size
+    let[@inline] iter (Buf (vt, b)) f i = vt.iter_vec_struct b f i T.size
     let[@inline] create b a = Builder.create_vector_struct T.set ~size:T.size b a
   end
 
@@ -250,18 +257,16 @@ module Struct = struct
     type builder_elt
 
     val size : int
-    val minalign : int
     val set : Builder.t -> int -> builder_elt -> unit
   end) =
   struct
     type t
-    let tag = Read.TStruct { sz = T.size; align = T.minalign }
     let[@inline] length (Buf (vt, b)) i = vt.length_vec64 b i
-    let[@inline] get (Buf (vt, b)) i j = vt.get_vec64 tag b i j
-    let[@inline] to_list (Buf (vt, b)) i = vt.to_list_vec64 tag b i
-    let[@inline] to_array (Buf (vt, b)) i = vt.to_array_vec64 tag b i
-    let[@inline] to_seq (Buf (vt, b)) i = vt.to_seq_vec64 tag b i
-    let[@inline] iter (Buf (vt, b)) f i = vt.iter_vec64 tag b f i
+    let[@inline] get (Buf (vt, b)) i j = vt.get_vec64_struct b i T.size j
+    let[@inline] to_list (Buf (vt, b)) i = vt.to_list_vec64_struct b i T.size
+    let[@inline] to_array (Buf (vt, b)) i = vt.to_array_vec64_struct b i T.size
+    let[@inline] to_seq (Buf (vt, b)) i = vt.to_seq_vec64_struct b i T.size
+    let[@inline] iter (Buf (vt, b)) f i = vt.iter_vec64_struct b f i T.size
     let[@inline] create b a = Builder.create_vector64_struct T.set ~size:T.size b a
   end
 
