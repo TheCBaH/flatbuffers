@@ -561,6 +561,17 @@ let create_vector_struct set ~size b a =
   end_vector b
 ;;
 
+let create_struct set ~size ~align b value =
+  require_idle "create_struct" b;
+  if size <= 0 then invalid_size "create_struct" "size must be positive";
+  if align <= 0 then invalid_size "create_struct" "alignment must be positive";
+  if align land (align - 1) <> 0
+  then invalid_size "create_struct" "alignment must be a power of two";
+  prep ~align ~bytes:size b;
+  set b 0 value;
+  completed_offset b b.length
+;;
+
 let create_string b s =
   require_idle "create_string" b;
   (* ensure null terminator; there may be more padding inserted *)

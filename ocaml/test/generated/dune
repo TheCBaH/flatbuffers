@@ -45,7 +45,12 @@
 
 (rule
  (alias gen-union-vector)
- (deps (:schema union_vector.fbs))
- (targets union_vector.ml union_vector.mli)
+ (deps
+  (:schema union_vector.fbs)
+  (:json union_vector.json))
+ (targets union_vector.ml union_vector.mli union_vector.bin)
  (mode promote)
- (action (run flatc.ocaml --ocaml --bfbs-filenames . %{schema})))
+ (action
+  (progn
+   (run flatc.ocaml --ocaml --bfbs-filenames . %{schema})
+   (run flatc.ocaml -b %{schema} %{json}))))

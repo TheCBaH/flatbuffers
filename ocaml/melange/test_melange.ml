@@ -1230,8 +1230,10 @@ let test_union_vector () =
          ; `Sword { Sword.damage = 7l }
          ; `Spell { Spell.name = Some "fire" }
          ; `Label "potion"
+         ; `Point { Point.x = 11l; y = -2l }
         |]
     ; required_items = [| `Label "required" |]
+    ; featured = `Point { Point.x = 3l; y = 5l }
     }
   in
   let builder = Rt.Builder.create () in
@@ -1249,13 +1251,15 @@ let test_union_vector () =
           let name = Spell.name buf spell |> Rt.Option.get |> Rt.String.to_string buf in
           "spell:" ^ name)
         ~label:(fun label -> "label:" ^ Rt.String.to_string buf label)
+        ~point:(fun point ->
+          Printf.sprintf "point:%ld,%ld" (Point.x buf point) (Point.y buf point))
         ~default:(fun tag -> "unknown:" ^ Item.to_string tag)
         buf
         inventory
     in
     check_eq
       "union vector values"
-      ~expected:[| "none"; "sword:7"; "spell:fire"; "label:potion" |]
+      ~expected:[| "none"; "sword:7"; "spell:fire"; "label:potion"; "point:11,-2" |]
       items;
     check_eq "union vector object" ~expected:original (Inventory.unpack buf inventory)
   in

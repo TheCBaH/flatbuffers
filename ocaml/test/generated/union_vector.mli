@@ -7,8 +7,30 @@
 module Rt : Flatbuffers.Runtime.Intf
 
 module rec UnionVector : sig
+  (* Struct UnionVector.Point (//union_vector.fbs) *)
+  module rec Point : sig
+    type t = (Rt.Int.t * Rt.Int.t)
+
+    module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+    val create : Rt.Builder.t -> t -> t Rt.wip
+
+    val x : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+    val y : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+
+    type obj = {
+      x : Rt.Int.t;
+      y : Rt.Int.t;
+    }
+
+    val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+    val pack : obj -> t
+  end
+
   (* Table UnionVector.Spell (//union_vector.fbs) *)
-  module rec Spell : sig
+  and Spell : sig
     type t
 
     module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
@@ -67,6 +89,7 @@ module rec UnionVector : sig
     val sword : t
     val spell : t
     val label : t
+    val point : t
 
     val of_underlying : Rt.UType.t -> t
     val to_string : t -> string
@@ -76,6 +99,7 @@ module rec UnionVector : sig
       | `Sword of Sword.obj
       | `Spell of Spell.obj
       | `Label of string
+      | `Point of Point.obj
     ]
 
     type wip = [
@@ -83,6 +107,7 @@ module rec UnionVector : sig
       | `Sword of Sword.t Rt.wip
       | `Spell of Spell.t Rt.wip
       | `Label of Rt.String.t Rt.wip
+      | `Point of Point.t Rt.wip
     ]
   end
 
@@ -102,15 +127,17 @@ module rec UnionVector : sig
     val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
     val items_length : 'b Rt.buf -> ('b, t) Rt.fb -> int
-    val items : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> int -> 'a
-    val items_iter : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> ('a -> unit) -> unit
-    val items_to_list : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a list
-    val items_to_array : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a array
+    val items : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> int -> 'a
+    val items_iter : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> ('a -> unit) -> unit
+    val items_to_list : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a list
+    val items_to_array : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a array
     val required_items_length : 'b Rt.buf -> ('b, t) Rt.fb -> int
-    val required_items : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> int -> 'a
-    val required_items_iter : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> ('a -> unit) -> unit
-    val required_items_to_list : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a list
-    val required_items_to_array : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a array
+    val required_items : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> int -> 'a
+    val required_items_iter : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> ('a -> unit) -> unit
+    val required_items_to_list : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a list
+    val required_items_to_array : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a array
+    val featured_type : 'b Rt.buf -> ('b, t) Rt.fb -> Item.t
+    val featured : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a
 
     module Builder : sig
       type t
@@ -123,11 +150,16 @@ module rec UnionVector : sig
       type required_items_prepared
       val create_required_items : Rt.Builder.t -> Item.wip array -> required_items_prepared
       val add_required_items : required_items_prepared -> t -> t
+      val add_featured_sword : Sword.t Rt.wip -> t -> t
+      val add_featured_spell : Spell.t Rt.wip -> t -> t
+      val add_featured_label : Rt.String.t Rt.wip -> t -> t
+      val add_featured_point : Point.t Rt.wip -> t -> t
     end
 
     type obj = {
       items : Item.obj array;
       required_items : Item.obj array;
+      featured : Item.obj;
     }
 
     val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj

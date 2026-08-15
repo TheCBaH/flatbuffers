@@ -9,7 +9,8 @@
  (modules :standard \ fixtures wire_data_test)
  (deps
   (file monsterdata_test.mon)
-  (file monsterdata_python_wire.mon))
+  (file monsterdata_python_wire.mon)
+  (file generated/union_vector.bin))
  (libraries generated fixtures alcotest)
  (modes byte))
 

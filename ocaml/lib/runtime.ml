@@ -215,6 +215,7 @@ module Struct = struct
   let[@inline] read_offset _ i off = i + off
   let[@inline] read_table (Buf (vt, b)) i n = vt.read_table_struct b i n
   let[@inline] read_table_opt (Buf (vt, b)) i n = vt.read_table_opt_struct b i n
+  let[@inline] read_union (Buf (vt, b)) i n = vt.read_table_ref b i n
   let push_slot = Builder.push_slot_struct
 
   module Vector (T : sig

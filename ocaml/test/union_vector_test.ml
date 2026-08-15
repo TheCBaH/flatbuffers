@@ -29,6 +29,8 @@ let render_item buf inventory i =
       let name = Spell.name buf spell |> Rt.Option.get |> Rt.String.to_string buf in
       "spell:" ^ name)
     ~label:(fun label -> "label:" ^ Rt.String.to_string buf label)
+    ~point:(fun point ->
+      Printf.sprintf "point:%ld,%ld" (Point.x buf point) (Point.y buf point))
     ~default:(fun tag -> "unknown:" ^ Item.to_string tag)
     buf
     inventory
@@ -41,15 +43,20 @@ let create_inventory () =
   let spell_name = Rt.String.create b "fire" in
   let spell = Spell.Builder.(start b |> add_name spell_name |> finish) in
   let label = Rt.String.create b "potion" in
+  let point = Point.create b (11l, -2l) in
   let items =
     Inventory.Builder.create_items
       b
-      [| `None_; `Sword sword; `Spell spell; `Label label |]
+      [| `None_; `Sword sword; `Spell spell; `Label label; `Point point |]
   in
   let required_items = Inventory.Builder.create_required_items b [||] in
   let inventory =
     Inventory.Builder.(
-      start b |> add_items items |> add_required_items required_items |> finish)
+      start b
+      |> add_items items
+      |> add_required_items required_items
+      |> add_featured_point point
+      |> finish)
   in
   Inventory.finish_buf P.Bytes b inventory
 ;;
@@ -62,12 +69,21 @@ let check_zero_copy_roundtrip () =
     | Ok root -> root
     | Error e -> Alcotest.fail (Flatbuffers.Verifier.error_to_string e)
   in
-  Alcotest.(check int) "length" 4 (Inventory.items_length buf inventory);
-  let expected = [| "none"; "sword:7"; "spell:fire"; "label:potion" |] in
+  Alcotest.(check int) "length" 5 (Inventory.items_length buf inventory);
+  let expected = [| "none"; "sword:7"; "spell:fire"; "label:potion"; "point:11,-2" |] in
   Alcotest.(check (array string))
     "indexed"
     expected
-    (Array.init 4 (render_item buf inventory));
+    (Array.init 5 (render_item buf inventory));
+  Alcotest.(check string)
+    "scalar struct union"
+    "point:11,-2"
+    (Inventory.featured
+       ~point:(fun point ->
+         Printf.sprintf "point:%ld,%ld" (Point.x buf point) (Point.y buf point))
+       ~default:(fun tag -> "unexpected:" ^ Item.to_string tag)
+       buf
+       inventory);
   Alcotest.(check (list string))
     "list"
     (Array.to_list expected)
@@ -78,6 +94,8 @@ let check_zero_copy_roundtrip () =
          let name = Spell.name buf spell |> Rt.Option.get |> Rt.String.to_string buf in
          "spell:" ^ name)
        ~label:(fun label -> "label:" ^ Rt.String.to_string buf label)
+       ~point:(fun point ->
+         Printf.sprintf "point:%ld,%ld" (Point.x buf point) (Point.y buf point))
        ~default:(fun tag -> "unknown:" ^ Item.to_string tag)
        buf
        inventory);
@@ -91,6 +109,8 @@ let check_zero_copy_roundtrip () =
          let name = Spell.name buf spell |> Rt.Option.get |> Rt.String.to_string buf in
          "spell:" ^ name)
        ~label:(fun label -> "label:" ^ Rt.String.to_string buf label)
+       ~point:(fun point ->
+         Printf.sprintf "point:%ld,%ld" (Point.x buf point) (Point.y buf point))
        ~default:(fun tag -> "unknown:" ^ Item.to_string tag)
        buf
        inventory);
@@ -100,13 +120,14 @@ let check_zero_copy_roundtrip () =
     ~sword:(fun sword -> Printf.sprintf "sword:%ld" (Sword.damage buf sword))
     ~spell:(fun _ -> "spell")
     ~label:(fun _ -> "label")
+    ~point:(fun _ -> "point")
     ~default:(fun _ -> "unknown")
     buf
     inventory
     (fun item -> iterated := item :: !iterated);
   Alcotest.(check (list string))
     "iteration order"
-    [ "none"; "sword:7"; "spell"; "label" ]
+    [ "none"; "sword:7"; "spell"; "label"; "point" ]
     (List.rev !iterated)
 ;;
 
@@ -144,8 +165,10 @@ let check_object_api_roundtrip () =
          ; `Sword { Sword.damage = 42l }
          ; `Spell { Spell.name = Some "ice" }
          ; `Label "scroll"
+         ; `Point { Point.x = 9l; y = -4l }
         |]
     ; required_items = [| `Label "required" |]
+    ; featured = `Point { Point.x = 3l; y = 5l }
     }
   in
   let b = Rt.Builder.create () in
@@ -206,6 +229,63 @@ let check_unknown_and_inconsistent_tags () =
   | Error _ -> ()
 ;;
 
+let check_struct_payload_corruption () =
+  let bytes =
+    let b = Rt.Builder.create () in
+    let point = Point.create b (11l, -2l) in
+    let required_items = Inventory.Builder.create_required_items b [||] in
+    Inventory.Builder.(
+      start b |> add_required_items required_items |> add_featured_point point |> finish)
+    |> Inventory.finish_buf P.Bytes b
+  in
+  let payload = root_field bytes 14 in
+  let zero = Bytes.copy bytes in
+  Bytes.set_int32_le zero payload 0l;
+  (match Inventory.verify P.Bytes zero with
+   | Ok () -> Alcotest.fail "accepted a zero struct-union payload offset"
+   | Error _ -> ());
+  let misaligned = Bytes.copy bytes in
+  Bytes.set_int32_le misaligned payload (Int32.succ (Bytes.get_int32_le bytes payload));
+  (match Inventory.verify P.Bytes misaligned with
+   | Ok () -> Alcotest.fail "accepted a misaligned struct-union payload"
+   | Error _ -> ());
+  let out_of_range = Bytes.copy bytes in
+  Bytes.set_int32_le out_of_range payload Int32.max_int;
+  (match Inventory.verify P.Bytes out_of_range with
+   | Ok () -> Alcotest.fail "accepted an out-of-range struct-union payload"
+   | Error _ -> ());
+  let truncated = Bytes.sub bytes 0 (Bytes.length bytes - 1) in
+  match Inventory.verify P.Bytes truncated with
+  | Ok () -> Alcotest.fail "accepted a truncated struct-union payload"
+  | Error _ -> ()
+;;
+
+let check_flatc_wire_fixture () =
+  let bytes = Fixtures.bytes_of_file "generated/union_vector.bin" in
+  check_ok "flatc binary fixture" (Inventory.verify P.Bytes bytes);
+  let (Rt.Root (buf, inventory)) = Inventory.root P.Bytes bytes in
+  Alcotest.(check string)
+    "flatc scalar struct"
+    "point:77,88"
+    (Inventory.featured
+       ~point:(fun point ->
+         Printf.sprintf "point:%ld,%ld" (Point.x buf point) (Point.y buf point))
+       ~default:(fun tag -> "unexpected:" ^ Item.to_string tag)
+       buf
+       inventory);
+  Alcotest.(check (list string))
+    "flatc vector variants"
+    [ "point:100,-9"; "sword:12"; "label:wire" ]
+    (Inventory.items_to_list
+       ~sword:(fun sword -> Printf.sprintf "sword:%ld" (Sword.damage buf sword))
+       ~label:(fun label -> "label:" ^ Rt.String.to_string buf label)
+       ~point:(fun point ->
+         Printf.sprintf "point:%ld,%ld" (Point.x buf point) (Point.y buf point))
+       ~default:(fun tag -> "unexpected:" ^ Item.to_string tag)
+       buf
+       inventory)
+;;
+
 let test_cases =
   Alcotest.
     [ test_case "Zero-copy roundtrip" `Quick check_zero_copy_roundtrip
@@ -213,5 +293,7 @@ let test_cases =
     ; test_case "Object API roundtrip" `Quick check_object_api_roundtrip
     ; test_case "Builder mismatch is atomic" `Quick check_mismatch_is_atomic
     ; test_case "Unknown and inconsistent tags" `Quick check_unknown_and_inconsistent_tags
+    ; test_case "Struct payload corruption" `Quick check_struct_payload_corruption
+    ; test_case "flatc wire fixture" `Quick check_flatc_wire_fixture
     ]
 ;;

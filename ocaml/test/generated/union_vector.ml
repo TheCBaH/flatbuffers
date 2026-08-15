@@ -8,22 +8,32 @@
 
 module Rt = Flatbuffers.Runtime
 
+module Struct = struct
+
+  let set_point__0 b i (x_, y_) =
+    Rt.Builder.Unsafe.set_scalar TInt b (i + 0) x_;
+    Rt.Builder.Unsafe.set_scalar TInt b (i + 4) y_;
+    ()
+end
+
 module Union = struct
-  let read_table_item__0 ?none ?sword ?spell ?label ~default b i t o =
+  let read_table_item__1 ?none ?sword ?spell ?label ?point ~default b i t o =
     match Rt.UType.to_default t with
     | 0L when Option.is_some none -> Option.get none
     | 1L when Option.is_some sword -> Option.get sword (Rt.Ref.read_table b o i)
     | 2L when Option.is_some spell -> Option.get spell (Rt.Ref.read_table b o i)
     | 3L when Option.is_some label -> Option.get label (Rt.Ref.read_table b o i)
+    | 4L when Option.is_some point -> Option.get point (Rt.Struct.read_union b o i)
     | _ -> default t
 
-  let read_vector_item__1 ?none ?sword ?spell ?label ~default b tags values i =
+  let read_vector_item__2 ?none ?sword ?spell ?label ?point ~default b tags values i =
     let t = Rt.UType.Vector.get b tags i in
     match Rt.UType.to_default t with
     | 0L when Option.is_some none -> Option.get none
     | 1L when Option.is_some sword -> Option.get sword (Rt.Ref.Vector.get b values i)
     | 2L when Option.is_some spell -> Option.get spell (Rt.Ref.Vector.get b values i)
     | 3L when Option.is_some label -> Option.get label (Rt.Ref.Vector.get b values i)
+    | 4L when Option.is_some point -> Option.get point (Rt.Ref.Vector.get b values i)
     | _ -> default t
 end
 
@@ -35,6 +45,7 @@ module Verify = struct
     && V.exit_table v
          (  V.field_union_vector v ~name:"items" ~type_voff:4 ~voff:6 ~required:false ~tag_size:1 union_item__3
          && V.field_union_vector v ~name:"required_items" ~type_voff:8 ~voff:10 ~required:true ~tag_size:1 union_item__3
+         && V.field_union v ~name:"featured" ~type_voff:12 ~voff:14 ~required:false ~tag_size:1 union_item__3
          )
   and table_spell__1 v pos =
     V.enter_table v pos
@@ -52,12 +63,35 @@ module Verify = struct
     | 1L -> V.union_table v slot ~variant:"sword" table_sword__2
     | 2L -> V.union_table v slot ~variant:"spell" table_spell__1
     | 3L -> V.union_string v slot ~variant:"label"
+    | 4L -> V.union_struct v slot ~variant:"point" ~size:8 ~align:4
     | _ -> V.union_unknown v tag slot
 end
 
 module rec UnionVector : sig
+  (* Struct UnionVector.Point (//union_vector.fbs) *)
+  module rec Point : sig
+    type t = (Rt.Int.t * Rt.Int.t)
+
+    module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+    val create : Rt.Builder.t -> t -> t Rt.wip
+
+    val x : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+    val y : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+
+    type obj = {
+      x : Rt.Int.t;
+      y : Rt.Int.t;
+    }
+
+    val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+    val pack : obj -> t
+  end
+
   (* Table UnionVector.Spell (//union_vector.fbs) *)
-  module rec Spell : sig
+  and Spell : sig
     type t
 
     module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
@@ -116,6 +150,7 @@ module rec UnionVector : sig
     val sword : t
     val spell : t
     val label : t
+    val point : t
 
     val of_underlying : Rt.UType.t -> t
     val to_string : t -> string
@@ -125,6 +160,7 @@ module rec UnionVector : sig
       | `Sword of Sword.obj
       | `Spell of Spell.obj
       | `Label of string
+      | `Point of Point.obj
     ]
 
     type wip = [
@@ -132,6 +168,7 @@ module rec UnionVector : sig
       | `Sword of Sword.t Rt.wip
       | `Spell of Spell.t Rt.wip
       | `Label of Rt.String.t Rt.wip
+      | `Point of Point.t Rt.wip
     ]
   end
 
@@ -151,15 +188,17 @@ module rec UnionVector : sig
     val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
     val items_length : 'b Rt.buf -> ('b, t) Rt.fb -> int
-    val items : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> int -> 'a
-    val items_iter : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> ('a -> unit) -> unit
-    val items_to_list : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a list
-    val items_to_array : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a array
+    val items : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> int -> 'a
+    val items_iter : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> ('a -> unit) -> unit
+    val items_to_list : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a list
+    val items_to_array : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a array
     val required_items_length : 'b Rt.buf -> ('b, t) Rt.fb -> int
-    val required_items : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> int -> 'a
-    val required_items_iter : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> ('a -> unit) -> unit
-    val required_items_to_list : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a list
-    val required_items_to_array : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a array
+    val required_items : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> int -> 'a
+    val required_items_iter : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> ('a -> unit) -> unit
+    val required_items_to_list : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a list
+    val required_items_to_array : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a array
+    val featured_type : 'b Rt.buf -> ('b, t) Rt.fb -> Item.t
+    val featured : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a
 
     module Builder : sig
       type t
@@ -172,19 +211,69 @@ module rec UnionVector : sig
       type required_items_prepared
       val create_required_items : Rt.Builder.t -> Item.wip array -> required_items_prepared
       val add_required_items : required_items_prepared -> t -> t
+      val add_featured_sword : Sword.t Rt.wip -> t -> t
+      val add_featured_spell : Spell.t Rt.wip -> t -> t
+      val add_featured_label : Rt.String.t Rt.wip -> t -> t
+      val add_featured_point : Point.t Rt.wip -> t -> t
     end
 
     type obj = {
       items : Item.obj array;
       required_items : Item.obj array;
+      featured : Item.obj;
     }
 
     val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
     val pack : Rt.Builder.t -> obj -> t Rt.wip
   end
 end = struct
+  (* Struct UnionVector.Point (//union_vector.fbs) *)
+  module rec Point : sig
+    type t = (Rt.Int.t * Rt.Int.t)
+
+    module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+    module Vector64 : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t
+
+    val create : Rt.Builder.t -> t -> t Rt.wip
+
+    val x : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+    val y : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Int.t
+
+    type obj = {
+      x : Rt.Int.t;
+      y : Rt.Int.t;
+    }
+
+    val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
+    val pack : obj -> t
+  end = struct
+    type t = (Rt.Int.t * Rt.Int.t)
+
+    module Vector = Rt.Struct.Vector (struct type builder_elt = t let size = 8 let minalign = 4 let set = Struct.set_point__0 end)
+
+    module Vector64 = Rt.Struct.Vector64 (struct type builder_elt = t let size = 8 let minalign = 4 let set = Struct.set_point__0 end)
+
+    let create b value = Rt.Builder.create_struct Struct.set_point__0 ~size:8 ~align:4 b value
+
+    let[@inline] x b s = Rt.Int.read_offset b s 0
+    let[@inline] y b s = Rt.Int.read_offset b s 4
+
+    type obj = {
+      x : Rt.Int.t;
+      y : Rt.Int.t;
+    }
+
+    let unpack b__ s__ : obj = {
+      x = x b__ s__;
+      y = y b__ s__;
+    }
+
+    let pack (obj : obj) = (obj.x, obj.y)
+  end
+
   (* Table UnionVector.Spell (//union_vector.fbs) *)
-  module rec Spell : sig
+  and Spell : sig
     type t
 
     module Vector : Rt.VectorS with type 'b elt := ('b, t) Rt.fb and type builder_elt := t Rt.wip
@@ -302,6 +391,7 @@ end = struct
     val sword : t
     val spell : t
     val label : t
+    val point : t
 
     val of_underlying : Rt.UType.t -> t
     val to_string : t -> string
@@ -311,6 +401,7 @@ end = struct
       | `Sword of Sword.obj
       | `Spell of Spell.obj
       | `Label of string
+      | `Point of Point.obj
     ]
 
     type wip = [
@@ -318,6 +409,7 @@ end = struct
       | `Sword of Sword.t Rt.wip
       | `Spell of Spell.t Rt.wip
       | `Label of Rt.String.t Rt.wip
+      | `Point of Point.t Rt.wip
     ]
   end = struct
     type t = Rt.UType.t
@@ -326,6 +418,7 @@ end = struct
     let sword = Rt.UType.of_default 1L
     let spell = Rt.UType.of_default 2L
     let label = Rt.UType.of_default 3L
+    let point = Rt.UType.of_default 4L
 
     let of_underlying x = x
 
@@ -335,6 +428,7 @@ end = struct
       | 1L -> "sword"
       | 2L -> "spell"
       | 3L -> "label"
+      | 4L -> "point"
       | x -> "<UnionVector.Item: " ^ (Int64.to_string x) ^ ">"
 
     type obj = [
@@ -342,6 +436,7 @@ end = struct
       | `Sword of Sword.obj
       | `Spell of Spell.obj
       | `Label of string
+      | `Point of Point.obj
     ]
 
     type wip = [
@@ -349,6 +444,7 @@ end = struct
       | `Sword of Sword.t Rt.wip
       | `Spell of Spell.t Rt.wip
       | `Label of Rt.String.t Rt.wip
+      | `Point of Point.t Rt.wip
     ]
   end
 
@@ -368,15 +464,17 @@ end = struct
     val finish_buf : ?size_prefixed:bool -> 'a Flatbuffers.Primitives.t -> Rt.Builder.t -> t Rt.wip -> 'a
 
     val items_length : 'b Rt.buf -> ('b, t) Rt.fb -> int
-    val items : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> int -> 'a
-    val items_iter : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> ('a -> unit) -> unit
-    val items_to_list : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a list
-    val items_to_array : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a array
+    val items : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> int -> 'a
+    val items_iter : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> ('a -> unit) -> unit
+    val items_to_list : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a list
+    val items_to_array : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a array
     val required_items_length : 'b Rt.buf -> ('b, t) Rt.fb -> int
-    val required_items : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> int -> 'a
-    val required_items_iter : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> ('a -> unit) -> unit
-    val required_items_to_list : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a list
-    val required_items_to_array : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a array
+    val required_items : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> int -> 'a
+    val required_items_iter : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> ('a -> unit) -> unit
+    val required_items_to_list : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a list
+    val required_items_to_array : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a array
+    val featured_type : 'b Rt.buf -> ('b, t) Rt.fb -> Item.t
+    val featured : ?none:'a -> ?sword:(('b, Sword.t) Rt.fb -> 'a) -> ?spell:(('b, Spell.t) Rt.fb -> 'a) -> ?label:(('b, Rt.String.t) Rt.fb -> 'a) -> ?point:(('b, Point.t) Rt.fb -> 'a) -> default:(Item.t -> 'a) -> 'b Rt.buf -> ('b, t) Rt.fb -> 'a
 
     module Builder : sig
       type t
@@ -389,11 +487,16 @@ end = struct
       type required_items_prepared
       val create_required_items : Rt.Builder.t -> Item.wip array -> required_items_prepared
       val add_required_items : required_items_prepared -> t -> t
+      val add_featured_sword : Sword.t Rt.wip -> t -> t
+      val add_featured_spell : Spell.t Rt.wip -> t -> t
+      val add_featured_label : Rt.String.t Rt.wip -> t -> t
+      val add_featured_point : Point.t Rt.wip -> t -> t
     end
 
     type obj = {
       items : Item.obj array;
       required_items : Item.obj array;
+      featured : Item.obj;
     }
 
     val unpack : 'b Rt.buf -> ('b, t) Rt.fb -> obj
@@ -418,33 +521,35 @@ end = struct
 
     let[@inline] items_length b o =
       Rt.Option.fold ~none:0 ~some:(Rt.Ref.Vector.length b) (Rt.Ref.read_table_opt b o 4)
-    let[@inline] items ?none ?sword ?spell ?label ~default b o i =
-      Union.read_vector_item__1 ?none ?sword ?spell ?label ~default b (Rt.Ref.read_table b o 4) (Rt.Ref.read_table b o 6) i
-    let items_iter ?none ?sword ?spell ?label ~default b o f =
+    let[@inline] items ?none ?sword ?spell ?label ?point ~default b o i =
+      Union.read_vector_item__2 ?none ?sword ?spell ?label ?point ~default b (Rt.Ref.read_table b o 4) (Rt.Ref.read_table b o 6) i
+    let items_iter ?none ?sword ?spell ?label ?point ~default b o f =
       for i = 0 to items_length b o - 1 do
-        f (items ?none ?sword ?spell ?label ~default b o i)
+        f (items ?none ?sword ?spell ?label ?point ~default b o i)
       done
-    let items_to_list ?none ?sword ?spell ?label ~default b o =
-      List.init (items_length b o) (items ?none ?sword ?spell ?label ~default b o)
-    let items_to_array ?none ?sword ?spell ?label ~default b o =
-      Array.init (items_length b o) (items ?none ?sword ?spell ?label ~default b o)
+    let items_to_list ?none ?sword ?spell ?label ?point ~default b o =
+      List.init (items_length b o) (items ?none ?sword ?spell ?label ?point ~default b o)
+    let items_to_array ?none ?sword ?spell ?label ?point ~default b o =
+      Array.init (items_length b o) (items ?none ?sword ?spell ?label ?point ~default b o)
     let[@inline] required_items_length b o =
       Rt.Ref.Vector.length b (Rt.Ref.read_table b o 8)
-    let[@inline] required_items ?none ?sword ?spell ?label ~default b o i =
-      Union.read_vector_item__1 ?none ?sword ?spell ?label ~default b (Rt.Ref.read_table b o 8) (Rt.Ref.read_table b o 10) i
-    let required_items_iter ?none ?sword ?spell ?label ~default b o f =
+    let[@inline] required_items ?none ?sword ?spell ?label ?point ~default b o i =
+      Union.read_vector_item__2 ?none ?sword ?spell ?label ?point ~default b (Rt.Ref.read_table b o 8) (Rt.Ref.read_table b o 10) i
+    let required_items_iter ?none ?sword ?spell ?label ?point ~default b o f =
       for i = 0 to required_items_length b o - 1 do
-        f (required_items ?none ?sword ?spell ?label ~default b o i)
+        f (required_items ?none ?sword ?spell ?label ?point ~default b o i)
       done
-    let required_items_to_list ?none ?sword ?spell ?label ~default b o =
-      List.init (required_items_length b o) (required_items ?none ?sword ?spell ?label ~default b o)
-    let required_items_to_array ?none ?sword ?spell ?label ~default b o =
-      Array.init (required_items_length b o) (required_items ?none ?sword ?spell ?label ~default b o)
+    let required_items_to_list ?none ?sword ?spell ?label ?point ~default b o =
+      List.init (required_items_length b o) (required_items ?none ?sword ?spell ?label ?point ~default b o)
+    let required_items_to_array ?none ?sword ?spell ?label ?point ~default b o =
+      Array.init (required_items_length b o) (required_items ?none ?sword ?spell ?label ?point ~default b o)
+    let[@inline] featured_type b o = Rt.UType.(read_table_default b o 12 ~default:(of_default 0L))
+    let[@inline] featured ?none ?sword ?spell ?label ?point ~default b o = Union.read_table_item__1 b 14 (featured_type b o) ?none ?sword ?spell ?label ?point ~default o
 
     module Builder = struct
       type t = Rt.Builder.t
 
-      let start b = Rt.Builder.start_table b ~n_fields:4
+      let start b = Rt.Builder.start_table b ~n_fields:6
       let finish b = Rt.Builder.end_table b
       type items_prepared = Rt.Builder.offset * Rt.Builder.offset
       let create_items b values =
@@ -453,12 +558,14 @@ end = struct
           | `Sword _ -> Item.sword
           | `Spell _ -> Item.spell
           | `Label _ -> Item.label
+          | `Point _ -> Item.point
         ) values in
         let offsets = Array.map (function
           | `None_ -> None
           | `Sword offset -> Some offset
           | `Spell offset -> Some offset
           | `Label offset -> Some offset
+          | `Point offset -> Some offset
         ) values in
         Rt.Builder.create_union_vector Flatbuffers.Primitives.TUByte b tags offsets
       let add_items (tags, values) t =
@@ -471,27 +578,35 @@ end = struct
           | `Sword _ -> Item.sword
           | `Spell _ -> Item.spell
           | `Label _ -> Item.label
+          | `Point _ -> Item.point
         ) values in
         let offsets = Array.map (function
           | `None_ -> None
           | `Sword offset -> Some offset
           | `Spell offset -> Some offset
           | `Label offset -> Some offset
+          | `Point offset -> Some offset
         ) values in
         Rt.Builder.create_union_vector Flatbuffers.Primitives.TUByte b tags offsets
       let add_required_items (tags, values) t =
         let t = Rt.Ref.push_slot 2 tags t in
         Rt.Ref.push_slot 3 values t
+      let add_featured_sword = Rt.Ref.push_union 4 5 Item.sword
+      let add_featured_spell = Rt.Ref.push_union 4 5 Item.spell
+      let add_featured_label = Rt.Ref.push_union 4 5 Item.label
+      let add_featured_point = Rt.Ref.push_union 4 5 Item.point
     end
 
     type obj = {
       items : Item.obj array;
       required_items : Item.obj array;
+      featured : Item.obj;
     }
 
     let unpack b__ o__ : obj = {
-      items = Array.init (items_length b__ o__) (fun i -> items ~none:`None_ ~sword:(fun x -> `Sword (Sword.unpack b__ x)) ~spell:(fun x -> `Spell (Spell.unpack b__ x)) ~label:(fun x -> `Label (Rt.String.to_string b__ x)) ~default:(fun _ -> `None_) b__ o__ i);
-      required_items = Array.init (required_items_length b__ o__) (fun i -> required_items ~none:`None_ ~sword:(fun x -> `Sword (Sword.unpack b__ x)) ~spell:(fun x -> `Spell (Spell.unpack b__ x)) ~label:(fun x -> `Label (Rt.String.to_string b__ x)) ~default:(fun _ -> `None_) b__ o__ i);
+      items = Array.init (items_length b__ o__) (fun i -> items ~none:`None_ ~sword:(fun x -> `Sword (Sword.unpack b__ x)) ~spell:(fun x -> `Spell (Spell.unpack b__ x)) ~label:(fun x -> `Label (Rt.String.to_string b__ x)) ~point:(fun x -> `Point (Point.unpack b__ x)) ~default:(fun _ -> `None_) b__ o__ i);
+      required_items = Array.init (required_items_length b__ o__) (fun i -> required_items ~none:`None_ ~sword:(fun x -> `Sword (Sword.unpack b__ x)) ~spell:(fun x -> `Spell (Spell.unpack b__ x)) ~label:(fun x -> `Label (Rt.String.to_string b__ x)) ~point:(fun x -> `Point (Point.unpack b__ x)) ~default:(fun _ -> `None_) b__ o__ i);
+      featured = featured ~none:`None_ ~sword:(fun x -> `Sword (Sword.unpack b__ x)) ~spell:(fun x -> `Spell (Spell.unpack b__ x)) ~label:(fun x -> `Label (Rt.String.to_string b__ x)) ~point:(fun x -> `Point (Point.unpack b__ x)) ~default:(fun _ -> `None_) b__ o__;
     }
 
     let pack b__ (obj : obj) =
@@ -500,16 +615,32 @@ end = struct
         | `Sword x -> `Sword (Sword.pack b__ x)
         | `Spell x -> `Spell (Spell.pack b__ x)
         | `Label x -> `Label (Rt.String.create b__ x)
+        | `Point x -> `Point (Point.create b__ (Point.pack x))
       ) obj.items) in
       let required_items' = Builder.create_required_items b__ (Array.map (function
         | `None_ -> `None_
         | `Sword x -> `Sword (Sword.pack b__ x)
         | `Spell x -> `Spell (Spell.pack b__ x)
         | `Label x -> `Label (Rt.String.create b__ x)
+        | `Point x -> `Point (Point.create b__ (Point.pack x))
       ) obj.required_items) in
+      let featured' = match obj.featured with
+        | `None_ -> None
+        | `Sword x -> Some (`Sword, Sword.pack b__ x)
+        | `Spell x -> Some (`Spell, Spell.pack b__ x)
+        | `Label x -> Some (`Label, Rt.String.create b__ x)
+        | `Point x -> Some (`Point, Point.create b__ (Point.pack x))
+      in
       let t = Builder.start b__ in
       let t = Builder.add_items items' t in
       let t = Builder.add_required_items required_items' t in
+      let t = match featured' with
+        | None -> t
+        | Some (`Sword, off) -> Builder.add_featured_sword off t
+        | Some (`Spell, off) -> Builder.add_featured_spell off t
+        | Some (`Label, off) -> Builder.add_featured_label off t
+        | Some (`Point, off) -> Builder.add_featured_point off t
+      in
       Builder.finish t
   end
 end (* UnionVector *)

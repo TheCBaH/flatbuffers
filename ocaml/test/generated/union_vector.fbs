@@ -8,11 +8,17 @@ table Spell {
   name:string;
 }
 
-union Item { Sword, Spell, Label:string }
+struct Point {
+  x:int;
+  y:int;
+}
+
+union Item { Sword, Spell, Label:string, Point }
 
 table Inventory {
   items:[Item];
   required_items:[Item] (required);
+  featured:Item;
 }
 
 root_type Inventory;

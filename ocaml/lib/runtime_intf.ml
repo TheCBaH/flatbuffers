@@ -170,6 +170,7 @@ module type Intf_impl = sig
     val read_offset : 'b buf -> Read.offset -> int -> Read.offset
     val read_table : 'b buf -> Read.offset -> int -> Read.offset
     val read_table_opt : 'b buf -> Read.offset -> int -> Read.offset
+    val read_union : 'b buf -> Read.offset -> int -> Read.offset
 
     val push_slot
       :  (Builder.t -> int -> 'a -> unit)

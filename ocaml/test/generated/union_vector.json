@@ -1,0 +1,12 @@
+{
+  items_type: [ "Point", "Sword", "Label" ],
+  items: [
+    { x: 100, y: -9 },
+    { damage: 12 },
+    "wire"
+  ],
+  required_items_type: [],
+  required_items: [],
+  featured_type: "Point",
+  featured: { x: 77, y: 88 }
+}

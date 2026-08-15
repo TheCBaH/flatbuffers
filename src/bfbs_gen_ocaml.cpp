@@ -302,6 +302,9 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
         impl += "Option.get " + arg;
         if (e->union_type()->base_type() == r::None) {
           impl += "\n";
+        } else if (e->union_type()->base_type() == r::Obj &&
+                   GetObject(e->union_type())->is_struct()) {
+          impl += " (Rt.Struct.read_union b o i)\n";
         } else {
           impl +=
               " (" + GenerateImplNs(e->union_type()) + ".read_table b o i)\n";
@@ -483,6 +486,20 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
       ForAllFields(object, /*reverse=*/false, [&](const r::Field *field) {
         if (IsUnionVectorField(field) &&
             GetEnum(field->type(), /*element_type=*/true) == enum_def) {
+          found = true;
+        }
+      });
+    });
+    return found;
+  }
+
+  bool IsUnionStructObject(const r::Object *object) {
+    bool found = false;
+    ForAllEnums(schema_->enums(), [&](const r::Enum *enum_def) {
+      if (!enum_def->is_union()) return;
+      ForAllEnumValues(enum_def, [&](const r::EnumVal *value) {
+        if (value->union_type()->base_type() == r::Obj &&
+            GetObject(value->union_type()) == object) {
           found = true;
         }
       });
@@ -756,7 +773,8 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
             wip_def += indent + "  | `" + variant + "\n";
           } else {
             wip_def += indent + "  | `" + variant + " of " +
-                       GenerateBuilderType(e->union_type(), enum_name) + "\n";
+                       GenerateUnionBuilderType(e->union_type(), enum_name) +
+                       "\n";
           }
         });
         wip_def += indent + "]\n";
@@ -800,6 +818,14 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
               RuntimeNS + ".fb and type builder_elt := t\n\n";
       impl += indent + "module Vector64 = " + RuntimeNS +
               ".Struct.Vector64" + struct_functor_arg + "\n\n";
+      if (IsUnionStructObject(object)) {
+        intf += indent + "val create : Rt.Builder.t -> t -> t Rt.wip\n\n";
+        impl += indent +
+                "let create b value = Rt.Builder.create_struct Struct." +
+                StructSetIdent(object) + " ~size:" +
+                NumToString(object->bytesize()) + " ~align:" +
+                NumToString(object->minalign()) + " b value\n\n";
+      }
     } else {
       intf += indent +
               "module Vector : Rt.VectorS with type 'b elt := ('b, t) " +
@@ -1209,7 +1235,7 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
                     "\n";
             intf += indent2 + "val add_" + namer_.Function(field_name) + "_" +
                     variant_name + " : " +
-                    GenerateBuilderType(e->union_type(), obj_ns) +
+                    GenerateUnionBuilderType(e->union_type(), obj_ns) +
                     " -> t -> t\n";
           });
         } else {
@@ -1730,8 +1756,13 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
           } else if (e->union_type()->base_type() == r::Obj) {
             auto obj = GetObject(e->union_type());
             auto rel = NamespaceRelComponents(obj->name()->str(), in_ns);
-            impl += " x -> `" + variant + " (" + NsRef(rel, "pack") +
-                    " b__ x)\n";
+            if (obj->is_struct()) {
+              impl += " x -> `" + variant + " (" + NsRef(rel, "create") +
+                      " b__ (" + NsRef(rel, "pack") + " x))\n";
+            } else {
+              impl += " x -> `" + variant + " (" + NsRef(rel, "pack") +
+                      " b__ x)\n";
+            }
           } else if (e->union_type()->base_type() == r::String) {
             impl += " x -> `" + variant + " (" + RuntimeNS +
                     ".String.create b__ x)\n";
@@ -1781,8 +1812,14 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
           auto obj = GetObject(e->union_type());
           auto rel = NamespaceRelComponents(obj->name()->str(), in_ns);
           std::string pf = NsRef(rel, "pack");
-          impl += ind + "  | `" + variant +
-                  " x -> Some (`" + variant + ", " + pf + " b__ x)\n";
+          if (obj->is_struct()) {
+            impl += ind + "  | `" + variant + " x -> Some (`" + variant +
+                    ", " + NsRef(rel, "create") + " b__ (" + pf +
+                    " x))\n";
+          } else {
+            impl += ind + "  | `" + variant +
+                    " x -> Some (`" + variant + ", " + pf + " b__ x)\n";
+          }
         } else if (e->union_type()->base_type() == r::String) {
           impl += ind + "  | `" + variant +
                   " x -> Some (`" + variant + ", " + RuntimeNS +
@@ -2038,6 +2075,15 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
       return type_name;
     else
       return type_name + " " + RuntimeNS + ".wip";
+  }
+
+  // Union payloads are always referenced by an offset, including structs,
+  // which are inline only when used as ordinary table fields or vectors.
+  std::string GenerateUnionBuilderType(const r::Type *type,
+                                       const std::string &in_ns) {
+    auto type_name = GenerateType(type, in_ns);
+    if (type->base_type() == r::None) return type_name;
+    return type_name + " " + RuntimeNS + ".wip";
   }
 
   // need 3 forms:

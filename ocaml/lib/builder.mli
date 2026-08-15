@@ -83,6 +83,12 @@ val create_vector64_struct
   -> offset
 
 val create_vector_struct : (t -> int -> 'a -> unit) -> size:int -> t -> 'a array -> offset
+
+(** Serialize one standalone struct so it can be referenced by a union. The
+    writer receives a reserved [size]-byte region at setter position zero.
+    [size] must be positive and [align] must be a positive power of two. *)
+val create_struct : (t -> int -> 'a -> unit) -> size:int -> align:int -> t -> 'a -> offset
+
 val create_string : t -> string -> offset
 val create_shared_string : t -> string -> offset
 val create_nested_vector : t -> bytes -> offset

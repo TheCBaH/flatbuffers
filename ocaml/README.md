@@ -80,6 +80,12 @@ variants and packs or unpacks both vectors together. FlatBuffers rejects the
 `vector64` attribute on union vectors, so this paired API intentionally uses
 the format's 32-bit union-value offsets and vector lengths.
 
+Struct union variants are standalone referenced payloads, unlike ordinary
+struct fields that are written inline in a table. Generated struct modules
+therefore expose `create`; call it before starting the containing table or
+union vector, then pass the returned offset to the generated union builder.
+The object API handles that distinction automatically.
+
 ## Verification
 
 ### Trust model
@@ -229,10 +235,6 @@ reference. This implementation differs in a few places on purpose:
   `[ubyte]` vector it is: its internal encoding is not traversed. Semantic
   FlexBuffer verification needs a FlexBuffer runtime, which OCaml does not have
   yet.
-* **Structs inside unions** are verified as an inline struct range at the
-  payload offset, but the reader generator does not yet support them, so there
-  is no end-to-end coverage.
-
 ### Cost
 
 Verification is a single traversal that touches every reachable byte range
