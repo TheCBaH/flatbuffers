@@ -100,6 +100,12 @@ therefore expose `create`; call it before starting the containing table or
 union vector, then pass the returned offset to the generated union builder.
 The object API handles that distinction automatically.
 
+Union callback labels follow the schema's union member names. An unaliased
+qualified member therefore keeps its namespace in the label (for example,
+`MyGame.Example2.Monster` becomes `~my_game_example2_monster`), which avoids a
+collision with another `Monster` member. Give members explicit FlatBuffers
+aliases when a shorter public OCaml label is preferred.
+
 ### Key-sorted vectors
 
 For a table or struct with a `key` field, the generated module exposes

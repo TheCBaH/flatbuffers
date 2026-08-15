@@ -763,6 +763,45 @@ let check_extension_ident () =
   Alcotest.(check (option string)) "identifier" (Some "MONS") Monster.identifier
 ;;
 
+let check_union_callback_names () =
+  let open Fixtures.Monster_test in
+  let module E = MyGame.Example in
+  let module E2 = MyGame.Example2 in
+  let b = Rt.Builder.create () in
+  let child = E.Monster.Builder.(start b |> finish) in
+  let other = E2.Monster.Builder.(start b |> finish) in
+  let root =
+    E.Monster.Builder.(
+      start b
+      |> add_test_my_game_example2_monster other
+      |> add_any_unique_m2 other
+      |> add_any_ambiguous_m3 child
+      |> finish)
+    |> E.Monster.finish_buf Flatbuffers.Primitives.Bytes b
+  in
+  let (Rt.Root (buf, monster)) = E.Monster.root Flatbuffers.Primitives.Bytes root in
+  Alcotest.(check string)
+    "qualified member"
+    "qualified"
+    (E.Monster.test
+       ~my_game_example2_monster:(fun _ -> "qualified")
+       ~default:(fun _ -> "default")
+       buf
+       monster);
+  Alcotest.(check string)
+    "explicit unique alias"
+    "m2"
+    (E.Monster.any_unique ~m2:(fun _ -> "m2") ~default:(fun _ -> "default") buf monster);
+  Alcotest.(check string)
+    "explicit collision alias"
+    "m3"
+    (E.Monster.any_ambiguous
+       ~m3:(fun _ -> "m3")
+       ~default:(fun _ -> "default")
+       buf
+       monster)
+;;
+
 let gold_monsterdata = "monsterdata_test.mon"
 let python_monsterdata = "monsterdata_python_wire.mon"
 
@@ -795,6 +834,7 @@ let test_cases =
     ; test_case "Nested with builder reset" `Quick check_nested_builder_reset
     ; test_case "Nested default values" `Quick check_nested_defaults
     ; test_case "Union absent defaults to None" `Quick check_union_default_tag
+    ; test_case "Qualified union callback names" `Quick check_union_callback_names
     ; test_case "Key lookup on sorted table vector" `Quick check_key_lookup_stat
     ; test_case "Key lookup not found" `Quick check_key_lookup_not_found
     ; test_case "Key lookup on sorted struct vector" `Quick check_key_lookup_struct

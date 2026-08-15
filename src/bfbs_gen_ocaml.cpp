@@ -2244,8 +2244,9 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
     return args;
   }
 
-  // TODO(dmitrig): this uses the literal name, which may include long
-  // namespaces. Check what other generators do
+  // Keep the reflected enum value name: explicit schema aliases stay concise,
+  // while unaliased qualified names remain collision-free when two union
+  // members share the same short object name.
   std::string GenerateUnionArgs(const r::Type *type,
                                 bool element_type = false) {
     std::string args = "";
