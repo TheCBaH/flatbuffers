@@ -575,12 +575,12 @@ let test_key_lookup_stat () =
   let open MyGame.Example in
   let b = Rt.Builder.create () in
   let stats =
-    [| 10, 100L; 20, 200L; 30, 300L |]
+    [| 30, 300L; 10, 100L; 20, 200L |]
     |> Array.map (fun (count, value) ->
       let id = Rt.String.create b (Printf.sprintf "stat_%d" count) in
       Stat.Builder.(start b |> add_id id |> add_count count |> add_val_ value |> finish))
   in
-  let stats_vec = Stat.Vector.create b stats in
+  let stats_vec = Stat.create_sorted_vector b stats in
   let name = Rt.String.create b "KeyLookup" in
   let wip =
     Monster.Builder.(
@@ -605,12 +605,12 @@ let test_key_lookup_not_found () =
   let open MyGame.Example in
   let b = Rt.Builder.create () in
   let stats =
-    [| 10; 20; 30 |]
+    [| 30; 10; 20 |]
     |> Array.map (fun count ->
       let id = Rt.String.create b "x" in
       Stat.Builder.(start b |> add_id id |> add_count count |> finish))
   in
-  let stats_vec = Stat.Vector.create b stats in
+  let stats_vec = Stat.create_sorted_vector b stats in
   let name = Rt.String.create b "NotFound" in
   let wip =
     Monster.Builder.(
@@ -628,7 +628,11 @@ let test_key_lookup_struct () =
   let open Monster_test in
   let open MyGame.Example in
   let b = Rt.Builder.create () in
-  let abilities = Ability.Vector.create b [| 1l, 10l; 3l, 30l; 5l, 50l |] in
+  let abilities =
+    Ability.create_sorted_vector
+      b
+      [| Int32.minus_one, 99l; Int32.min_int, 80l; 5l, 50l; 3l, 30l; 1l, 10l |]
+  in
   let name = Rt.String.create b "AbilityLookup" in
   let wip =
     Monster.Builder.(
@@ -643,6 +647,12 @@ let test_key_lookup_struct () =
     check_eq "distance=30" ~expected:30l (Ability.distance buf found);
     check "found 1" (Rt.Option.is_some (Ability.lookup_by_key buf vec 1l));
     check "found 5" (Rt.Option.is_some (Ability.lookup_by_key buf vec 5l));
+    check
+      "found unsigned high bit"
+      (Rt.Option.is_some (Ability.lookup_by_key buf vec Int32.min_int));
+    check
+      "found unsigned maximum"
+      (Rt.Option.is_some (Ability.lookup_by_key buf vec Int32.minus_one));
     check "not found 2" (Rt.Option.is_none (Ability.lookup_by_key buf vec 2l));
     check "not found 0" (Rt.Option.is_none (Ability.lookup_by_key buf vec 0l))
   in
@@ -660,7 +670,7 @@ let test_key_lookup_single () =
          start b |> add_id id |> add_count 42 |> finish)
     |]
   in
-  let stats_vec = Stat.Vector.create b stats in
+  let stats_vec = Stat.create_sorted_vector b stats in
   let name = Rt.String.create b "Single" in
   let wip =
     Monster.Builder.(

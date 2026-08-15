@@ -508,6 +508,63 @@ let create_vector_ref64 b a =
     a
 ;;
 
+let create_sorted_vector_ref b ~compare a =
+  require_idle "create_sorted_vector_ref" b;
+  let payload_end =
+    projected_vector_payload_end
+      "create_sorted_vector_ref"
+      b
+      ~prefix_size:vector_len_size
+      ~n_elts:(Array.length a)
+      ~elt_size:vector_len_size
+  in
+  validate_vector_offsets
+    "create_sorted_vector_ref"
+    b
+    ~width:vector_len_size
+    ~payload_end
+    ~offset_of:(fun offset -> Some offset)
+    a;
+  let sorted = Array.copy a in
+  Array.sort compare sorted;
+  create_vector_ref b sorted
+;;
+
+let table_field_position b offset voff =
+  validate_offset "table_key" b offset;
+  let bytes = !(b.buf) in
+  let table = Bytes.length bytes - offset.index in
+  let vtable = table - Primitives.get_soffset Primitives.Bytes bytes table in
+  let vtable_size = Primitives.get_voffset Primitives.Bytes bytes vtable in
+  if voff >= vtable_size
+  then -1
+  else (
+    let field = Primitives.get_voffset Primitives.Bytes bytes (vtable + voff) in
+    if field = 0 then -1 else table + field)
+;;
+
+let compare_table_scalar_key ty ~voff ~default b left right =
+  let read offset =
+    let position = table_field_position b offset voff in
+    if position < 0
+    then default
+    else Primitives.get_scalar ty Primitives.Bytes !(b.buf) position
+  in
+  Primitives.compare_scalar ty (read left) (read right)
+;;
+
+let compare_table_string_key ~voff b left right =
+  let read offset =
+    let field = table_field_position b offset voff in
+    if field < 0 then invalid_arg "Builder.compare_table_string_key: key is absent";
+    let bytes = !(b.buf) in
+    let position = field + Primitives.get_uoffset Primitives.Bytes bytes field in
+    let length = Primitives.get_uoffset Primitives.Bytes bytes position in
+    Primitives.get_string Primitives.Bytes bytes ~off:(position + 4) ~len:length
+  in
+  String.compare (read left) (read right)
+;;
+
 let create_union_vector tag_type b tags values =
   require_idle "create_union_vector" b;
   let length = Array.length tags in

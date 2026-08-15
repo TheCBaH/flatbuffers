@@ -51,6 +51,7 @@ type _ ty =
   | TDouble : T.double ty
 
 val size_scalar : 'a ty -> int
+val compare_scalar : 'a ty -> 'a -> 'a -> int
 val get_scalar : 'a ty -> 'b t -> 'b -> int -> 'a
 val set_scalar : 'a ty -> bytes -> int -> 'a -> unit
 

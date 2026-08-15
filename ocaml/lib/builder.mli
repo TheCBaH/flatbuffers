@@ -62,6 +62,25 @@ val create_vector : 'a Primitives.ty -> t -> 'a array -> offset
 val create_vector_ref : t -> offset array -> offset
 val create_vector_ref64 : t -> offset array -> offset
 
+(** Copy and sort completed table offsets before building a reference vector.
+    Generated keyed-table modules supply a schema-aware comparator. *)
+val create_sorted_vector_ref
+  :  t
+  -> compare:(offset -> offset -> int)
+  -> offset array
+  -> offset
+
+val compare_table_scalar_key
+  :  'a Primitives.ty
+  -> voff:int
+  -> default:'a
+  -> t
+  -> offset
+  -> offset
+  -> int
+
+val compare_table_string_key : voff:int -> t -> offset -> offset -> int
+
 (** [create_union_vector tag_type b tags values] creates the parallel tag and
     value vectors required by a vector of unions and returns them in that
     order. [None] is the internal null payload for a [NONE] tag. Tag/value

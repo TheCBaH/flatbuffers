@@ -329,6 +329,7 @@ module rec MyGame : sig
       val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
       val distance : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
       val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.UInt.t -> ('b, t) Rt.fbopt
+      val create_sorted_vector : Rt.Builder.t -> t array -> Vector.t Rt.wip
 
       type obj = {
         id : Rt.UInt.t;
@@ -349,6 +350,7 @@ module rec MyGame : sig
 
       val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
       val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.ULong.t -> ('b, t) Rt.fbopt
+      val create_sorted_vector : Rt.Builder.t -> t Rt.wip array -> Vector.t Rt.wip
 
       module Builder : sig
         type t
@@ -378,6 +380,7 @@ module rec MyGame : sig
       val val_ : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Long.t
       val count : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UShort.t
       val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.UShort.t -> ('b, t) Rt.fbopt
+      val create_sorted_vector : Rt.Builder.t -> t Rt.wip array -> Vector.t Rt.wip
 
       module Builder : sig
         type t
@@ -775,6 +778,7 @@ module rec MyGame : sig
       val negative_infinity_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
       val double_inf_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
       val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> string -> ('b, t) Rt.fbopt
+      val create_sorted_vector : Rt.Builder.t -> t Rt.wip array -> Vector.t Rt.wip
 
       module Builder : sig
         type t
@@ -1213,6 +1217,7 @@ end = struct
       val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
       val distance : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
       val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.UInt.t -> ('b, t) Rt.fbopt
+      val create_sorted_vector : Rt.Builder.t -> t array -> Vector.t Rt.wip
 
       type obj = {
         id : Rt.UInt.t;
@@ -1233,6 +1238,7 @@ end = struct
 
       val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
       val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.ULong.t -> ('b, t) Rt.fbopt
+      val create_sorted_vector : Rt.Builder.t -> t Rt.wip array -> Vector.t Rt.wip
 
       module Builder : sig
         type t
@@ -1262,6 +1268,7 @@ end = struct
       val val_ : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Long.t
       val count : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UShort.t
       val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.UShort.t -> ('b, t) Rt.fbopt
+      val create_sorted_vector : Rt.Builder.t -> t Rt.wip array -> Vector.t Rt.wip
 
       module Builder : sig
         type t
@@ -1659,6 +1666,7 @@ end = struct
       val negative_infinity_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
       val double_inf_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
       val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> string -> ('b, t) Rt.fbopt
+      val create_sorted_vector : Rt.Builder.t -> t Rt.wip array -> Vector.t Rt.wip
 
       module Builder : sig
         type t
@@ -1807,6 +1815,7 @@ end = struct
       val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
       val distance : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
       val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.UInt.t -> ('b, t) Rt.fbopt
+      val create_sorted_vector : Rt.Builder.t -> t array -> Vector.t Rt.wip
 
       type obj = {
         id : Rt.UInt.t;
@@ -1824,7 +1833,11 @@ end = struct
 
       let[@inline] id b s = Rt.UInt.read_offset b s 0
       let[@inline] distance b s = Rt.UInt.read_offset b s 4
-      let[@inline] lookup_by_key buf vec_off key = Rt.lookup_by_key_struct ~size:8 ~minalign:4 buf vec_off (fun elt -> compare (id buf elt) key)
+      let[@inline] lookup_by_key buf vec_off key = Rt.lookup_by_key_struct ~size:8 ~minalign:4 buf vec_off (fun elt -> Flatbuffers.Primitives.compare_scalar Flatbuffers.Primitives.TUInt (id buf elt) key)
+      let create_sorted_vector b values =
+        let sorted = Array.copy values in
+        Array.sort (fun (id_left, _) (id_right, _) -> Flatbuffers.Primitives.compare_scalar Flatbuffers.Primitives.TUInt id_left id_right) sorted;
+        Vector.create b sorted
 
       type obj = {
         id : Rt.UInt.t;
@@ -1849,6 +1862,7 @@ end = struct
 
       val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
       val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.ULong.t -> ('b, t) Rt.fbopt
+      val create_sorted_vector : Rt.Builder.t -> t Rt.wip array -> Vector.t Rt.wip
 
       module Builder : sig
         type t
@@ -1872,7 +1886,9 @@ end = struct
       module Vector64 = Rt.Ref64.Vector
 
       let[@inline] id b o = Rt.ULong.(read_table_default b o 4 ~default:(of_default 0L))
-      let[@inline] lookup_by_key buf vec_off key = Rt.lookup_by_key_ref buf vec_off (fun elt -> compare (id buf elt) key)
+      let[@inline] lookup_by_key buf vec_off key = Rt.lookup_by_key_ref buf vec_off (fun elt -> Flatbuffers.Primitives.compare_scalar Flatbuffers.Primitives.TULong (id buf elt) key)
+      let create_sorted_vector b values =
+        Rt.Builder.create_sorted_vector_ref b ~compare:(Rt.Builder.compare_table_scalar_key Flatbuffers.Primitives.TULong ~voff:4 ~default:(Rt.ULong.of_default 0L) b) values
 
       module Builder = struct
         type t = Rt.Builder.t
@@ -1908,6 +1924,7 @@ end = struct
       val val_ : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Long.t
       val count : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UShort.t
       val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.UShort.t -> ('b, t) Rt.fbopt
+      val create_sorted_vector : Rt.Builder.t -> t Rt.wip array -> Vector.t Rt.wip
 
       module Builder : sig
         type t
@@ -1937,7 +1954,9 @@ end = struct
       let[@inline] id b o = Rt.Ref.read_table_opt b o 4
       let[@inline] val_ b o = Rt.Long.(read_table_default b o 6 ~default:(of_default 0L))
       let[@inline] count b o = Rt.UShort.(read_table_default b o 8 ~default:(of_default 0L))
-      let[@inline] lookup_by_key buf vec_off key = Rt.lookup_by_key_ref buf vec_off (fun elt -> compare (count buf elt) key)
+      let[@inline] lookup_by_key buf vec_off key = Rt.lookup_by_key_ref buf vec_off (fun elt -> Flatbuffers.Primitives.compare_scalar Flatbuffers.Primitives.TUShort (count buf elt) key)
+      let create_sorted_vector b values =
+        Rt.Builder.create_sorted_vector_ref b ~compare:(Rt.Builder.compare_table_scalar_key Flatbuffers.Primitives.TUShort ~voff:8 ~default:(Rt.UShort.of_default 0L) b) values
 
       module Builder = struct
         type t = Rt.Builder.t
@@ -2685,6 +2704,7 @@ end = struct
       val negative_infinity_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
       val double_inf_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
       val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> string -> ('b, t) Rt.fbopt
+      val create_sorted_vector : Rt.Builder.t -> t Rt.wip array -> Vector.t Rt.wip
 
       module Builder : sig
         type t
@@ -2903,6 +2923,8 @@ end = struct
       let[@inline] negative_infinity_default b o = Rt.Float.(read_table_default b o 124 ~default:(of_default neg_infinity))
       let[@inline] double_inf_default b o = Rt.Double.(read_table_default b o 126 ~default:(of_default infinity))
       let[@inline] lookup_by_key buf vec_off key = Rt.lookup_by_key_ref buf vec_off (fun elt -> String.compare (Rt.String.to_string buf (name buf elt)) key)
+      let create_sorted_vector b values =
+        Rt.Builder.create_sorted_vector_ref b ~compare:(Rt.Builder.compare_table_string_key ~voff:10 b) values
 
       module Builder = struct
         type t = Rt.Builder.t
@@ -3108,21 +3130,21 @@ end = struct
         in
         let test4' = Test.Vector.create b__ (Array.map Test.pack obj.test4) in
         let testarrayofstring' = Rt.String.Vector.create b__ (Array.map (fun s -> Rt.String.create b__ s) obj.testarrayofstring) in
-        let testarrayoftables' = Vector.create b__ (Array.map (fun x -> pack b__ x) obj.testarrayoftables) in
+        let testarrayoftables' = create_sorted_vector b__ (Array.map (fun x -> pack b__ x) obj.testarrayoftables) in
         let enemy' = Option.map (fun x -> pack b__ x) obj.enemy in
         let testnestedflatbuffer' = Rt.UByte.Vector.create b__ obj.testnestedflatbuffer in
         let testempty' = Option.map (fun x -> Stat.pack b__ x) obj.testempty in
         let testarrayofbools' = Rt.Bool.Vector.create b__ obj.testarrayofbools in
         let testarrayofstring2' = Rt.String.Vector.create b__ (Array.map (fun s -> Rt.String.create b__ s) obj.testarrayofstring2) in
-        let testarrayofsortedstruct' = Ability.Vector.create b__ (Array.map Ability.pack obj.testarrayofsortedstruct) in
+        let testarrayofsortedstruct' = Ability.create_sorted_vector b__ (Array.map Ability.pack obj.testarrayofsortedstruct) in
         let flex' = Rt.UByte.Vector.create b__ obj.flex in
         let test5' = Test.Vector.create b__ (Array.map Test.pack obj.test5) in
         let vector_of_longs' = Rt.Long.Vector.create b__ obj.vector_of_longs in
         let vector_of_doubles' = Rt.Double.Vector.create b__ obj.vector_of_doubles in
         let parent_namespace_test' = Option.map (fun x -> InParentNamespace.pack b__ x) obj.parent_namespace_test in
-        let vector_of_referrables' = Referrable.Vector.create b__ (Array.map (fun x -> Referrable.pack b__ x) obj.vector_of_referrables) in
+        let vector_of_referrables' = Referrable.create_sorted_vector b__ (Array.map (fun x -> Referrable.pack b__ x) obj.vector_of_referrables) in
         let vector_of_weak_references' = Rt.ULong.Vector.create b__ obj.vector_of_weak_references in
-        let vector_of_strong_referrables' = Referrable.Vector.create b__ (Array.map (fun x -> Referrable.pack b__ x) obj.vector_of_strong_referrables) in
+        let vector_of_strong_referrables' = Referrable.create_sorted_vector b__ (Array.map (fun x -> Referrable.pack b__ x) obj.vector_of_strong_referrables) in
         let vector_of_co_owning_references' = Rt.ULong.Vector.create b__ obj.vector_of_co_owning_references in
         let vector_of_non_owning_references' = Rt.ULong.Vector.create b__ obj.vector_of_non_owning_references in
         let any_unique' = match obj.any_unique with
@@ -3139,7 +3161,7 @@ end = struct
         in
         let vector_of_enums' = Color.Vector.create b__ obj.vector_of_enums in
         let testrequirednestedflatbuffer' = Rt.UByte.Vector.create b__ obj.testrequirednestedflatbuffer in
-        let scalar_key_sorted_tables' = Stat.Vector.create b__ (Array.map (fun x -> Stat.pack b__ x) obj.scalar_key_sorted_tables) in
+        let scalar_key_sorted_tables' = Stat.create_sorted_vector b__ (Array.map (fun x -> Stat.pack b__ x) obj.scalar_key_sorted_tables) in
         let t = Builder.start b__ in
         let t = match obj.pos with None -> t | Some s -> Builder.add_pos (Vec3.pack s) t in
         let t = Builder.add_mana obj.mana t in

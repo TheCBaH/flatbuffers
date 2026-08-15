@@ -536,14 +536,16 @@ let check_key_lookup_stat () =
   let open Fixtures.Monster_test in
   let open MyGame.Example in
   let b = Rt.Builder.create () in
-  (* Build 3 Stat tables with sorted counts: 10, 20, 30 *)
+  (* Build Stat tables in deliberately unsorted key order. *)
   let stats =
-    [| 10, 100L; 20, 200L; 30, 300L |]
+    [| 30, 300L; 10, 100L; 20, 200L |]
     |> Array.map (fun (count, value) ->
       let id = Rt.String.create b (Printf.sprintf "stat_%d" count) in
       Stat.Builder.(start b |> add_id id |> add_count count |> add_val_ value |> finish))
   in
-  let stats_vec = Stat.Vector.create b stats in
+  let first_input = stats.(0) in
+  let stats_vec = Stat.create_sorted_vector b stats in
+  Alcotest.(check bool) "input array unchanged" true (stats.(0) == first_input);
   let name = Rt.String.create b "KeyLookup" in
   let wip =
     Monster.Builder.(
@@ -573,12 +575,12 @@ let check_key_lookup_not_found () =
   let open MyGame.Example in
   let b = Rt.Builder.create () in
   let stats =
-    [| 10; 20; 30 |]
+    [| 30; 10; 20 |]
     |> Array.map (fun count ->
       let id = Rt.String.create b "x" in
       Stat.Builder.(start b |> add_id id |> add_count count |> finish))
   in
-  let stats_vec = Stat.Vector.create b stats in
+  let stats_vec = Stat.create_sorted_vector b stats in
   let name = Rt.String.create b "NotFound" in
   let wip =
     Monster.Builder.(
@@ -606,8 +608,12 @@ let check_key_lookup_struct () =
   let open Fixtures.Monster_test in
   let open MyGame.Example in
   let b = Rt.Builder.create () in
-  (* Ability struct: (id:uint, distance:uint), sorted by id *)
-  let abilities = Ability.Vector.create b [| 1l, 10l; 3l, 30l; 5l, 50l |] in
+  (* Ability struct: (id:uint, distance:uint), supplied in reverse order. *)
+  let abilities =
+    Ability.create_sorted_vector
+      b
+      [| Int32.minus_one, 99l; Int32.min_int, 80l; 5l, 50l; 3l, 30l; 1l, 10l |]
+  in
   let name = Rt.String.create b "AbilityLookup" in
   let wip =
     Monster.Builder.(
@@ -631,6 +637,14 @@ let check_key_lookup_struct () =
     "found id=5"
     true
     (Rt.Option.is_some (Ability.lookup_by_key buf vec 5l));
+  Alcotest.(check bool)
+    "found unsigned high bit"
+    true
+    (Rt.Option.is_some (Ability.lookup_by_key buf vec Int32.min_int));
+  Alcotest.(check bool)
+    "found unsigned maximum"
+    true
+    (Rt.Option.is_some (Ability.lookup_by_key buf vec Int32.minus_one));
   (* Not found *)
   Alcotest.(check bool)
     "not found id=2"
@@ -640,6 +654,37 @@ let check_key_lookup_struct () =
     "not found id=0"
     true
     (Rt.Option.is_none (Ability.lookup_by_key buf vec 0l))
+;;
+
+let check_key_lookup_string () =
+  let open Fixtures.Monster_test in
+  let open MyGame.Example in
+  let b = Rt.Builder.create () in
+  let children =
+    [| "zulu"; "alpha"; "middle" |]
+    |> Array.map (fun value ->
+      let name = Rt.String.create b value in
+      Monster.Builder.(start b |> add_name name |> finish))
+  in
+  let children = Monster.create_sorted_vector b children in
+  let name = Rt.String.create b "parent" in
+  let root =
+    Monster.Builder.(start b |> add_name name |> add_testarrayoftables children |> finish)
+    |> Monster.finish_buf Flatbuffers.Primitives.Bytes b
+  in
+  let (Rt.Root (buf, monster)) = Monster.root Flatbuffers.Primitives.Bytes root in
+  let children = Monster.testarrayoftables buf monster |> Rt.Option.get in
+  List.iter
+    (fun key ->
+       Alcotest.(check bool)
+         ("found " ^ key)
+         true
+         (Rt.Option.is_some (Monster.lookup_by_key buf children key)))
+    [ "alpha"; "middle"; "zulu" ];
+  Alcotest.(check bool)
+    "missing string key"
+    true
+    (Rt.Option.is_none (Monster.lookup_by_key buf children "nope"))
 ;;
 
 let check_key_lookup_single_element () =
@@ -652,7 +697,7 @@ let check_key_lookup_single_element () =
          start b |> add_id id |> add_count 42 |> finish)
     |]
   in
-  let stats_vec = Stat.Vector.create b stats in
+  let stats_vec = Stat.create_sorted_vector b stats in
   let name = Rt.String.create b "Single" in
   let wip =
     Monster.Builder.(
@@ -669,6 +714,46 @@ let check_key_lookup_single_element () =
     "not found other"
     true
     (Rt.Option.is_none (Stat.lookup_by_key buf vec 41))
+;;
+
+let check_key_sorted_edges () =
+  let open Fixtures.Monster_test in
+  let open MyGame.Example in
+  let build counts =
+    let b = Rt.Builder.create () in
+    let stats =
+      Array.map
+        (fun count ->
+           let id = Rt.String.create b (string_of_int count) in
+           Stat.Builder.(start b |> add_id id |> add_count count |> finish))
+        counts
+    in
+    let stats = Stat.create_sorted_vector b stats in
+    let name = Rt.String.create b "edges" in
+    Monster.Builder.(
+      start b |> add_name name |> add_scalar_key_sorted_tables stats |> finish)
+    |> Monster.finish_buf Flatbuffers.Primitives.Bytes b
+  in
+  let empty = build [||] in
+  let (Rt.Root (empty_buf, empty_monster)) =
+    Monster.root Flatbuffers.Primitives.Bytes empty
+  in
+  let empty_stats =
+    Monster.scalar_key_sorted_tables empty_buf empty_monster |> Rt.Option.get
+  in
+  Alcotest.(check bool)
+    "empty"
+    true
+    (Rt.Option.is_none (Stat.lookup_by_key empty_buf empty_stats 1));
+  let duplicates = build [| 20; 10; 20 |] in
+  let (Rt.Root (dup_buf, dup_monster)) =
+    Monster.root Flatbuffers.Primitives.Bytes duplicates
+  in
+  let dup_stats = Monster.scalar_key_sorted_tables dup_buf dup_monster |> Rt.Option.get in
+  Alcotest.(check bool)
+    "duplicate key remains searchable"
+    true
+    (Rt.Option.is_some (Stat.lookup_by_key dup_buf dup_stats 20))
 ;;
 
 let check_extension_ident () =
@@ -713,6 +798,8 @@ let test_cases =
     ; test_case "Key lookup on sorted table vector" `Quick check_key_lookup_stat
     ; test_case "Key lookup not found" `Quick check_key_lookup_not_found
     ; test_case "Key lookup on sorted struct vector" `Quick check_key_lookup_struct
+    ; test_case "Key lookup on sorted string vector" `Quick check_key_lookup_string
     ; test_case "Key lookup single element" `Quick check_key_lookup_single_element
+    ; test_case "Key-sorted vector edges" `Quick check_key_sorted_edges
     ]
 ;;

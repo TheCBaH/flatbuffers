@@ -459,6 +459,14 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
     return found;
   }
 
+  const r::Field *FindKeyField(const r::Object *object) {
+    const r::Field *found = nullptr;
+    ForAllFields(object, /*reverse=*/false, [&](const r::Field *field) {
+      if (field->key()) found = field;
+    });
+    return found;
+  }
+
   // True for the implicit discriminator field of a union or union vector; it
   // is verified together with the value field it belongs to.
   static bool IsUnionTypeField(const r::Field *field) {
@@ -1101,10 +1109,7 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
 
     // generate lookup_by_key if object has a key field
     {
-      const r::Field *key_field = nullptr;
-      ForAllFields(object, /*reverse=*/false, [&](const r::Field *field) {
-        if (field->key()) key_field = field;
-      });
+      const r::Field *key_field = FindKeyField(object);
 
       if (key_field) {
         const std::string key_name = namer_.Field(*key_field);
@@ -1131,8 +1136,9 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
                      ".String.to_string buf (" + namer_.Function(key_name) +
                      " buf elt)) key";
         } else {
-          cmp_expr = "compare (" + namer_.Function(key_name) +
-                     " buf elt) key";
+          cmp_expr = "Flatbuffers.Primitives.compare_scalar " +
+                     ScalarTypeConstructor(key_field->type()) + " (" +
+                     namer_.Function(key_name) + " buf elt) key";
         }
 
         if (object->is_struct()) {
@@ -1146,6 +1152,57 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
           impl += indent + "let[@inline] lookup_by_key buf vec_off key = " +
                   RuntimeNS + ".lookup_by_key_ref buf vec_off " +
                   "(fun elt -> " + cmp_expr + ")\n";
+        }
+
+        const std::string builder_elt =
+            object->is_struct() ? "t" : "t " + RuntimeNS + ".wip";
+        intf += indent + "val create_sorted_vector : Rt.Builder.t -> " +
+                builder_elt + " array -> Vector.t Rt.wip\n";
+        if (object->is_struct()) {
+          std::string left_pattern = "(";
+          std::string right_pattern = "(";
+          std::string left_key;
+          std::string right_key;
+          bool first = true;
+          ForAllFields(object, /*reverse=*/false, [&](const r::Field *field) {
+            const std::string arg = namer_.Variable(field->name()->str());
+            if (!first) {
+              left_pattern += ", ";
+              right_pattern += ", ";
+            }
+            if (field == key_field) {
+              left_pattern += arg + "_left";
+              right_pattern += arg + "_right";
+              left_key = arg + "_left";
+              right_key = arg + "_right";
+            } else {
+              left_pattern += "_";
+              right_pattern += "_";
+            }
+            first = false;
+          });
+          left_pattern += ")";
+          right_pattern += ")";
+          impl += indent + "let create_sorted_vector b values =\n";
+          impl += indent + "  let sorted = Array.copy values in\n";
+          impl += indent + "  Array.sort (fun " + left_pattern + " " +
+                  right_pattern + " -> Flatbuffers.Primitives.compare_scalar " +
+                  ScalarTypeConstructor(key_field->type()) + " " + left_key +
+                  " " + right_key + ") sorted;\n";
+          impl += indent + "  Vector.create b sorted\n";
+        } else {
+          impl += indent + "let create_sorted_vector b values =\n";
+          impl += indent + "  Rt.Builder.create_sorted_vector_ref b";
+          if (is_string_key) {
+            impl += " ~compare:(Rt.Builder.compare_table_string_key ~voff:" +
+                    NumToString(key_field->offset()) + " b) values\n";
+          } else {
+            impl += " ~compare:(Rt.Builder.compare_table_scalar_key " +
+                    ScalarTypeConstructor(key_field->type()) + " ~voff:" +
+                    NumToString(key_field->offset()) + " ~default:(" +
+                    GenerateImplNs(key_field->type()) + "." +
+                    GenerateDefault(key_field) + ") b) values\n";
+          }
         }
       }
     }
@@ -1786,13 +1843,15 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
         auto rel = NamespaceRelComponents(obj->name()->str(), in_ns);
         std::string pack_fn = NsRef(rel, "pack");
         std::string vec_mod = NsRef(rel, "Vector" + vs);
+        const bool sorted = !is_v64 && FindKeyField(obj) != nullptr;
+        const std::string create_fn =
+            sorted ? NsRef(rel, "create_sorted_vector") : vec_mod + ".create";
         if (obj->is_struct()) {
-          impl += ind + "let " + fname + "' = " + vec_mod +
-                  ".create b__ (Array.map " + pack_fn + " obj." + fname +
-                  ") in\n";
+          impl += ind + "let " + fname + "' = " + create_fn +
+                  " b__ (Array.map " + pack_fn + " obj." + fname + ") in\n";
         } else {
-          impl += ind + "let " + fname + "' = " + vec_mod +
-                  ".create b__ (Array.map (fun x -> " + pack_fn +
+          impl += ind + "let " + fname + "' = " + create_fn +
+                  " b__ (Array.map (fun x -> " + pack_fn +
                   " b__ x) obj." + fname + ") in\n";
         }
       }
@@ -1955,6 +2014,11 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
     else
       // should be unreachable
       return "{{ ERROR GenerateDefault }}";
+  }
+
+  std::string ScalarTypeConstructor(const r::Type *type) const {
+    return "Flatbuffers.Primitives.T" +
+           std::string(r::EnumNameBaseType(type->base_type()));
   }
 
   // Get the nested_flatbuffer attribute value from a field, or empty string

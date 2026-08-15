@@ -255,6 +255,21 @@ let[@inline] size_scalar (type a) : a ty -> int = function
   | TLong | TULong | TDouble -> 8
 ;;
 
+let[@inline] compare_scalar (type a) (t : a ty) (x : a) (y : a) =
+  match t with
+  | TBool -> Bool.compare x y
+  | TByte -> Int.compare x y
+  | TUByte -> Char.compare x y
+  | TShort -> Int.compare x y
+  | TUShort -> Int.compare x y
+  | TInt -> Int32.compare x y
+  | TUInt -> Int32.unsigned_compare x y
+  | TLong -> Int64.compare x y
+  | TULong -> Int64.unsigned_compare x y
+  | TFloat -> Float.compare x y
+  | TDouble -> Float.compare x y
+;;
+
 let[@inline] get_scalar (type a b) (t : a ty) (prim : b t) (b : b) (i : int) : a =
   match t, prim with
   | TBool, Bytes -> Bytes.get b i == '\001'

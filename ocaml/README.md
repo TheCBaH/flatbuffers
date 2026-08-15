@@ -86,6 +86,22 @@ therefore expose `create`; call it before starting the containing table or
 union vector, then pass the returned offset to the generated union builder.
 The object API handles that distinction automatically.
 
+### Key-sorted vectors
+
+For a table or struct with a `key` field, the generated module exposes
+`create_sorted_vector` alongside the order-preserving `Vector.create`:
+
+```ocaml
+let stats = Stat.create_sorted_vector builder unsorted_stat_offsets
+let abilities = Ability.create_sorted_vector builder unsorted_ability_values
+```
+
+The input array is copied, so sorting does not mutate caller-owned data.
+Table keys are read from the already-built objects without exposing the
+builder's backing buffer; struct values are sorted before serialization.
+Signed, unsigned, and string keys use their FlatBuffers ordering. Generated
+object `pack` calls the sorted constructor automatically for keyed vectors.
+
 ## Verification
 
 ### Trust model
@@ -274,7 +290,3 @@ or lengths it could not address anyway.
 
 ## TODO
 * FlexBuffer runtime and verifier
-* builder support for key-sorted vectors — `lookup_by_key` is generated and
-  binary-searches the vector, but nothing sorts on the way in. There is no
-  equivalent of the C++ `CreateVectorOfSortedTables`, so callers have to sort
-  the array themselves before `Vector.create` or the lookup silently misses.

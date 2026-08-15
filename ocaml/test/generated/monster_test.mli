@@ -124,6 +124,7 @@ module rec MyGame : sig
       val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
       val distance : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UInt.t
       val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.UInt.t -> ('b, t) Rt.fbopt
+      val create_sorted_vector : Rt.Builder.t -> t array -> Vector.t Rt.wip
 
       type obj = {
         id : Rt.UInt.t;
@@ -144,6 +145,7 @@ module rec MyGame : sig
 
       val id : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.ULong.t
       val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.ULong.t -> ('b, t) Rt.fbopt
+      val create_sorted_vector : Rt.Builder.t -> t Rt.wip array -> Vector.t Rt.wip
 
       module Builder : sig
         type t
@@ -173,6 +175,7 @@ module rec MyGame : sig
       val val_ : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Long.t
       val count : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.UShort.t
       val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> Rt.UShort.t -> ('b, t) Rt.fbopt
+      val create_sorted_vector : Rt.Builder.t -> t Rt.wip array -> Vector.t Rt.wip
 
       module Builder : sig
         type t
@@ -570,6 +573,7 @@ module rec MyGame : sig
       val negative_infinity_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Float.t
       val double_inf_default : 'b Rt.buf -> ('b, t) Rt.fb -> Rt.Double.t
       val lookup_by_key : 'b Rt.buf -> ('b, Vector.t) Rt.fb -> string -> ('b, t) Rt.fbopt
+      val create_sorted_vector : Rt.Builder.t -> t Rt.wip array -> Vector.t Rt.wip
 
       module Builder : sig
         type t
