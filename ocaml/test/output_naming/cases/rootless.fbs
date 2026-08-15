@@ -1,0 +1,10 @@
+namespace OutputNaming.Rootless;
+
+enum Choice: byte {
+  A,
+  B,
+}
+
+table Value {
+  choice: Choice;
+}

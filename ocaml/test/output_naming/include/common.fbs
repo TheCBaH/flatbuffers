@@ -1,0 +1,5 @@
+namespace OutputNaming.Include;
+
+table Dependency {
+  value: int;
+}

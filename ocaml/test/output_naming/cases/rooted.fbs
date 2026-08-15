@@ -1,0 +1,9 @@
+include "common.fbs";
+
+namespace OutputNaming.Rooted;
+
+table Root {
+  dependency: OutputNaming.Include.Dependency;
+}
+
+root_type Root;

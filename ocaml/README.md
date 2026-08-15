@@ -28,7 +28,14 @@ Run flatc with the `--ocaml` flag.
     ./flatc --ocaml ./samples/monster.fbs
 
 This will output `monster.ml` and `monster.mli` in the working directory. No
-additional flags are currently supported.
+additional OCaml-specific flags are currently supported.
+
+Generated files deliberately have no `_generated` suffix: their basename is
+the basename of the schema that declares the root table, converted to OCaml's
+filename casing. `-o` selects the output directory. Includes and
+`--bfbs-filenames` only affect schema resolution and reflected declaration
+paths; they do not change the output basename. A schema without a root table
+uses the stable fallback names `flatc_output.ml` and `flatc_output.mli`.
 
 The generated code covers tables, structs, enums, unions, fixed-size arrays,
 `offset64`/`vector64` fields, and `nested_flatbuffer` fields (which get an

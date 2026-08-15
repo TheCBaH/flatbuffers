@@ -9,7 +9,7 @@ OCAMLFORMAT := opam exec -- ocamlformat
 OCAMLFORMAT_EXCLUDE := ^ocaml/test/generated/|^ocaml/lib/(primitives\.ml|primitives\.mli|runtime\.ml|util\.ml|verifier\.ml)$$
 OCAMLFORMAT_FILES := $(shell git ls-files 'ocaml/*.ml' 'ocaml/*.mli' 'ocaml/**/*.ml' 'ocaml/**/*.mli' | grep -Ev '$(OCAMLFORMAT_EXCLUDE)')
 
-.PHONY: all patch flatc deps test test-jsoo test-melange generate generate-check format format-check bench clean clean-flatc rebuild-patch update-opam check-opam
+.PHONY: all patch flatc deps test test-generator-output test-jsoo test-melange generate generate-check format format-check bench clean clean-flatc rebuild-patch update-opam check-opam
 
 all: flatc test
 
@@ -52,6 +52,10 @@ deps:
 
 test: flatc
 	opam exec -- dune test --root . --ignore-promoted-rules
+	./ocaml/test/output_naming/test.sh ./$(FLATC)
+
+test-generator-output: flatc
+	./ocaml/test/output_naming/test.sh ./$(FLATC)
 
 generate: flatc
 	opam exec -- dune build --root . --force @gen-sample @gen-string-union @gen-more-defaults @gen-casing-test @gen-union-vector

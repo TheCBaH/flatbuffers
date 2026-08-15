@@ -2558,8 +2558,11 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
   }
 
   void WriteFiles(const std::string &intf, const std::string &impl) {
-    // TODO(dmitrig): manually naming output based on root here. Should suffix
-    // _generated?
+    // Preserve the established OCaml module name: the basename of the schema
+    // declaring the root table, without a language-specific suffix. BFBS
+    // generation does not carry flatc's parser-side filename options, and an
+    // added `_generated` suffix would break existing module and build names.
+    // Schemas without a root table use the historical stable fallback.
     auto root_table = schema_->root_table();
     std::string root_file =
         root_table ? root_table->declaration_file()->str() : "flatc_output";
