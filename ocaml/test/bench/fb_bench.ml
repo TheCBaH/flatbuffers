@@ -70,9 +70,9 @@ let allocated_since_last =
 
 let print_allocated ~repeat iter =
   let allocated = allocated_since_last () in
-  Printf.printf "Allocated bytes: %#d\n" (Float.to_int allocated);
+  Printf.printf "Allocated bytes: %Ld\n" (Int64.of_float allocated);
   let n = Int64.(to_float (mul (of_int repeat) iter)) in
-  Printf.printf "Per iteration: %#d\n" (Float.to_int (allocated /. n))
+  Printf.printf "Per iteration: %Ld\n" (Int64.of_float (allocated /. n))
 ;;
 
 let repeat = 3
@@ -88,7 +88,7 @@ let () =
   Printf.printf "Buffer size: %d\n" (String.length buf);
   (* check sum *)
   let (Rt.Root (buf, fbc)) = FooBarContainer.root Flatbuffers.Primitives.String buf in
-  assert (use buf fbc = 218812692406581874);
+  assert (use buf fbc = Int64.to_int 218812692406581874L);
   (* benchmark read *)
   ignore (allocated_since_last ());
   let res =

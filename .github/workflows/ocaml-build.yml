@@ -106,9 +106,6 @@ jobs:
       run: |
         ${{ env.EXEC }} make test-melange
     - name: benchmark
-      # The benchmark checksum uses OCaml int values that cannot represent the
-      # 64-bit fixture ID on 32-bit targets.
-      if: matrix.platform != 'linux/i386' && matrix.platform != 'linux/arm/v7'
       run: |
         ${{ env.EXEC }} make bench
     - name: generate-check

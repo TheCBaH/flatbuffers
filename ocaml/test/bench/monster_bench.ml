@@ -68,9 +68,9 @@ let allocated_since_last =
 
 let print_allocated ~repeat iter =
   let allocated = allocated_since_last () in
-  Printf.printf "Allocated bytes: %#d\n" (Float.to_int allocated);
+  Printf.printf "Allocated bytes: %Ld\n" (Int64.of_float allocated);
   let n = Int64.(to_float (mul (of_int repeat) iter)) in
-  Printf.printf "Per iteration: %#d\n" (Float.to_int (allocated /. n))
+  Printf.printf "Per iteration: %Ld\n" (Int64.of_float (allocated /. n))
 ;;
 
 let repeat = 3

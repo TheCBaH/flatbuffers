@@ -206,9 +206,9 @@ code paths as before.
 
 32-bit targets are supported and covered by CI: `linux/i386` and `linux/arm/v7`
 run `make flatc`, `make test`, `make test-jsoo` and `make generate-check` on
-OCaml 4.14. Two steps are skipped there — Melange does not support 32-bit
-architectures, and the benchmark checksum uses a 64-bit fixture ID that an
-OCaml `int` cannot hold when it is 31 bits wide.
+OCaml 4.14. They also run the native benchmark suite; checksum expectations and
+allocation totals stay in `int64` where a 31-bit OCaml `int` cannot hold the
+value. Melange remains skipped because it does not support 32-bit architectures.
 
 Code that has to care about the width of an `int` should branch on
 `Sys.int_size` rather than assume 63 bits, and must not write integer literals
