@@ -51,9 +51,9 @@ let check_exact_capacity_structs () =
   let expected = [| 1, 2; 3, 4; 5, 6; 7, 8 |] in
   let b = B.create ~init_capacity:16 () in
   let set b i (a, b') =
-    B.set_scalar P.TShort b i a;
-    B.set_scalar P.TByte b (i + 2) b';
-    B.set_padding b (i + 3) 1
+    B.Unsafe.set_scalar P.TShort b i a;
+    B.Unsafe.set_scalar P.TByte b (i + 2) b';
+    B.Unsafe.set_padding b (i + 3) 1
   in
   let vector = B.create_vector_struct set ~size:4 b expected in
   let buf = finish_root b vector in
@@ -94,15 +94,15 @@ let check_invalid_vector_sizes () =
   Alcotest.check_raises
     "negative count"
     (Invalid_argument "Builder.start_vector: element count must be non-negative")
-    (fun () -> B.start_vector b ~n_elts:(-1) ~elt_size:1);
+    (fun () -> B.Unsafe.start_vector b ~n_elts:(-1) ~elt_size:1);
   Alcotest.check_raises
     "zero element size"
     (Invalid_argument "Builder.start_vector: element size must be positive")
-    (fun () -> B.start_vector b ~n_elts:1 ~elt_size:0);
+    (fun () -> B.Unsafe.start_vector b ~n_elts:1 ~elt_size:0);
   Alcotest.check_raises
     "payload overflow"
     (Invalid_argument "Builder.start_vector: size overflow")
-    (fun () -> B.start_vector b ~n_elts:max_int ~elt_size:2);
+    (fun () -> B.Unsafe.start_vector b ~n_elts:max_int ~elt_size:2);
   let expected = [| 'x' |] in
   let vector = Rt.UByte.Vector.create b expected in
   let buf = finish_root b vector in
@@ -122,12 +122,12 @@ let check_reusable label b =
 ;;
 
 let finish_table b = ignore (finish_root b (B.end_table b))
-let finish_vector b = ignore (finish_root b (B.end_vector b))
+let finish_vector b = ignore (finish_root b (B.Unsafe.end_vector b))
 
 let check_nested_starts () =
   let b = B.create ~init_capacity:16 () in
   ignore (B.start_table b ~n_fields:0);
-  let before = B.current_offset b in
+  let before = B.Unsafe.current_offset b in
   Alcotest.check_raises
     "table in table"
     (Invalid_argument
@@ -137,17 +137,17 @@ let check_nested_starts () =
     "vector in table"
     (Invalid_argument
        "Builder.start_vector: expected an idle builder, but builder is building a table")
-    (fun () -> B.start_vector b ~n_elts:1 ~elt_size:1);
+    (fun () -> B.Unsafe.start_vector b ~n_elts:1 ~elt_size:1);
   Alcotest.check_raises
     "string in table"
     (Invalid_argument
        "Builder.create_string: expected an idle builder, but builder is building a table")
     (fun () -> ignore (Rt.String.create b "x"));
-  Alcotest.(check bool) "table unchanged" true (before = B.current_offset b);
+  Alcotest.(check bool) "table unchanged" true (before = B.Unsafe.current_offset b);
   finish_table b;
   check_reusable "after nested table errors" b;
-  B.start_vector b ~n_elts:1 ~elt_size:1;
-  let before = B.current_offset b in
+  B.Unsafe.start_vector b ~n_elts:1 ~elt_size:1;
+  let before = B.Unsafe.current_offset b in
   Alcotest.check_raises
     "table in vector"
     (Invalid_argument
@@ -159,8 +159,8 @@ let check_nested_starts () =
     (Invalid_argument
        "Builder.start_vector: expected an idle builder, but builder is building a 32-bit \
         vector")
-    (fun () -> B.start_vector b ~n_elts:1 ~elt_size:1);
-  Alcotest.(check bool) "vector unchanged" true (before = B.current_offset b);
+    (fun () -> B.Unsafe.start_vector b ~n_elts:1 ~elt_size:1);
+  Alcotest.(check bool) "vector unchanged" true (before = B.Unsafe.current_offset b);
   finish_vector b;
   check_reusable "after nested vector errors" b
 ;;
@@ -173,10 +173,10 @@ let check_mismatched_ends () =
     (Invalid_argument
        "Builder.end_vector: expected an open 32-bit vector, but builder is building a \
         table")
-    (fun () -> ignore (B.end_vector b));
+    (fun () -> ignore (B.Unsafe.end_vector b));
   finish_table b;
   check_reusable "after table end mismatch" b;
-  B.start_vector b ~n_elts:1 ~elt_size:1;
+  B.Unsafe.start_vector b ~n_elts:1 ~elt_size:1;
   Alcotest.check_raises
     "table end for vector"
     (Invalid_argument
@@ -193,7 +193,7 @@ let check_mismatched_ends () =
     "vector end while idle"
     (Invalid_argument
        "Builder.end_vector: expected an open 32-bit vector, but builder is idle")
-    (fun () -> ignore (B.end_vector b));
+    (fun () -> ignore (B.Unsafe.end_vector b));
   check_reusable "after idle end errors" b
 ;;
 
@@ -204,7 +204,7 @@ let check_finish_and_reset_while_nested () =
     "finish while nested"
     (Invalid_argument
        "Builder.finish: expected an idle builder, but builder is building a table")
-    (fun () -> ignore (finish_root b (B.current_offset b)));
+    (fun () -> ignore (finish_root b (B.Unsafe.current_offset b)));
   Alcotest.check_raises
     "reset while nested"
     (Invalid_argument
@@ -222,15 +222,15 @@ let check_invalid_table_fields () =
     (fun () -> ignore (B.start_table b ~n_fields:(-1)));
   check_reusable "after negative field count" b;
   ignore (B.start_table b ~n_fields:2);
-  let before = B.current_offset b in
+  let before = B.Unsafe.current_offset b in
   Alcotest.check_raises
     "negative field ID"
-    (Invalid_argument "Builder.save_slot: field ID must be non-negative")
-    (fun () -> B.save_slot ~id:(-1) b);
+    (Invalid_argument "Builder.push_slot_scalar: field ID must be non-negative")
+    (fun () -> ignore (B.push_slot_scalar P.TByte (-1) 1 b));
   Alcotest.check_raises
     "field ID beyond declared count"
-    (Invalid_argument "Builder.save_slot: field ID 2 is outside table field count 2")
-    (fun () -> B.save_slot ~id:2 b);
+    (Invalid_argument "Builder.push_slot_ref: field ID 2 is outside table field count 2")
+    (fun () -> ignore (B.push_slot_ref 2 (B.Unsafe.current_offset b) b));
   Alcotest.check_raises
     "push beyond declared count"
     (Invalid_argument
@@ -244,7 +244,7 @@ let check_invalid_table_fields () =
   Alcotest.(check bool)
     "invalid fields do not move builder"
     true
-    (before = B.current_offset b);
+    (before = B.Unsafe.current_offset b);
   ignore (B.push_slot_scalar P.TByte 1 7 b);
   finish_table b;
   check_reusable "after invalid field errors" b
@@ -252,15 +252,15 @@ let check_invalid_table_fields () =
 
 let check_vector_movement_rejected () =
   let b = B.create ~init_capacity:16 () in
-  B.start_vector b ~n_elts:1 ~elt_size:1;
-  let before = B.current_offset b in
+  B.Unsafe.start_vector b ~n_elts:1 ~elt_size:1;
+  let before = B.Unsafe.current_offset b in
   Alcotest.check_raises
     "prep while vector is open"
     (Invalid_argument
        "Builder.prep: expected an idle builder or an open table, but builder is building \
         a 32-bit vector")
-    (fun () -> B.prep ~align:1 ~bytes:1 b);
-  Alcotest.(check bool) "rejected movement" true (before = B.current_offset b);
+    (fun () -> ignore (B.Unsafe.reserve ~align:1 ~bytes:1 b));
+  Alcotest.(check bool) "rejected movement" true (before = B.Unsafe.current_offset b);
   finish_vector b;
   check_reusable "after vector movement error" b
 ;;

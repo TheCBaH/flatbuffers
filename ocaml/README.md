@@ -31,6 +31,32 @@ the zero-copy accessors it emits a builder, an allocating object API
 (`unpack`/`pack`), `lookup_by_key` for tables and structs carrying a `key`
 field, and the verification entry points described below.
 
+### Custom builders
+
+`Flatbuffers.Builder` exposes complete constructors for tables, vectors, and
+strings. Build referenced objects before the table or vector that contains
+them, and use every returned offset only with the same builder before its next
+`finish` or `reset`.
+
+Custom inline-struct writers can use the explicitly low-level
+`Builder.Unsafe` setters. The callback receives the start of a region already
+reserved by `create_vector_struct` or `push_slot_struct`; it must stay within
+that region and must not otherwise advance the builder:
+
+```ocaml
+let set_pair b i (x, y) =
+  Flatbuffers.Builder.Unsafe.set_scalar Flatbuffers.Primitives.TInt b i x;
+  Flatbuffers.Builder.Unsafe.set_scalar Flatbuffers.Primitives.TInt b (i + 4) y
+
+let pairs =
+  Flatbuffers.Builder.create_vector_struct set_pair ~size:8 builder values
+```
+
+`Builder.Unsafe.reserve` and its manual vector operations are available for
+specialized generators. They expose the backwards-growing buffer model and
+can corrupt output if indices escape the reserved region, so application code
+should prefer the complete constructors.
+
 ## Verification
 
 ### Trust model

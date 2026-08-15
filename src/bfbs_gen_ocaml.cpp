@@ -344,7 +344,7 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
           uint32_t elem_size = field->type()->element_size();
           std::string set_fn;
           if (IsScalar(elem_type)) {
-            set_fn = RuntimeNS + ".Builder.set_scalar T" +
+            set_fn = RuntimeNS + ".Builder.Unsafe.set_scalar T" +
                      r::EnumNameBaseType(elem_type);
           } else if (elem_type == r::Obj) {
             auto obj = GetObject(field->type(), true);
@@ -371,7 +371,7 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
             pad_offset += field->type()->base_size();
           }
           set_body +=
-              indent + "  Rt.Builder.set_padding b (i + " +
+              indent + "  Rt.Builder.Unsafe.set_padding b (i + " +
               NumToString(pad_offset) + ") " +
               NumToString(field->padding()) + ";\n";
         }
@@ -1848,7 +1848,7 @@ class OCamlBfbsGenerator : public BaseBfbsGenerator {
   std::string StructSetFn(const r::Type *type) {
     const r::BaseType base_type = type->base_type();
     if (IsScalar(base_type)) {
-      return RuntimeNS + ".Builder.set_scalar T" +
+      return RuntimeNS + ".Builder.Unsafe.set_scalar T" +
              r::EnumNameBaseType(base_type);
     } else if (base_type == r::Obj) {
       auto object = GetObject(type);

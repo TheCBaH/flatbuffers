@@ -11,9 +11,9 @@ module Rt = Flatbuffers.Runtime
 module Struct = struct
 
   let set_leaf_struct__16 b i (a_, b_) =
-    Rt.Builder.set_scalar TInt b (i + 0) a_;
-    Rt.Builder.set_padding b (i + 4) 4;
-    Rt.Builder.set_scalar TDouble b (i + 8) b_;
+    Rt.Builder.Unsafe.set_scalar TInt b (i + 0) a_;
+    Rt.Builder.Unsafe.set_padding b (i + 4) 4;
+    Rt.Builder.Unsafe.set_scalar TDouble b (i + 8) b_;
     ()
 end
 

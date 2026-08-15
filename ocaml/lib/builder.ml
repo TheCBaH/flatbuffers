@@ -188,7 +188,6 @@ let prealign b ?(additional_bytes = 0) ?(reserve_bytes = 0) align =
     Bytes.fill !(b.buf) (current b) pad_bytes '\x00')
 ;;
 
-(* TODO: probably more useful api than prealign, replace? *)
 let prep ~align ~bytes b =
   (match b.state with
    | Vector _ as state -> invalid_state "prep" "an idle builder or an open table" state
@@ -534,3 +533,21 @@ let finish ?identifier ?(size_prefixed = false) prim b o =
   reset_unchecked b;
   res
 ;;
+
+module Unsafe = struct
+  let reserve ~align ~bytes b =
+    prep ~align ~bytes b;
+    0
+  ;;
+
+  let start_vector = start_vector
+  let end_vector = end_vector
+  let start_vector64 = start_vector64
+  let end_vector64 = end_vector64
+  let current_offset = current_offset
+  let set_scalar = set_scalar
+  let set_uoffset = set_uoffset
+  let set_uoffset64 = set_uoffset64
+  let set_string = set_string
+  let set_padding = set_padding
+end

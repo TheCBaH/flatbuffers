@@ -11,14 +11,14 @@ module Rt = Flatbuffers.Runtime
 module Struct = struct
 
   let set_ability__4 b i (id_, distance_) =
-    Rt.Builder.set_scalar TUInt b (i + 0) id_;
-    Rt.Builder.set_scalar TUInt b (i + 4) distance_;
+    Rt.Builder.Unsafe.set_scalar TUInt b (i + 0) id_;
+    Rt.Builder.Unsafe.set_scalar TUInt b (i + 4) distance_;
     ()
 
   let set_test__5 b i (a_, b_) =
-    Rt.Builder.set_scalar TShort b (i + 0) a_;
-    Rt.Builder.set_scalar TByte b (i + 2) b_;
-    Rt.Builder.set_padding b (i + 3) 1;
+    Rt.Builder.Unsafe.set_scalar TShort b (i + 0) a_;
+    Rt.Builder.Unsafe.set_scalar TByte b (i + 2) b_;
+    Rt.Builder.Unsafe.set_padding b (i + 3) 1;
     ()
 
   let set_struct_of_structs__6 b i (a_, b_, c_) =
@@ -32,19 +32,19 @@ module Struct = struct
     ()
 
   let set_vec3__8 b i (x_, y_, z_, test1_, test2_, test3_) =
-    Rt.Builder.set_scalar TFloat b (i + 0) x_;
-    Rt.Builder.set_scalar TFloat b (i + 4) y_;
-    Rt.Builder.set_scalar TFloat b (i + 8) z_;
-    Rt.Builder.set_padding b (i + 12) 4;
-    Rt.Builder.set_scalar TDouble b (i + 16) test1_;
-    Rt.Builder.set_scalar TUByte b (i + 24) test2_;
-    Rt.Builder.set_padding b (i + 25) 1;
+    Rt.Builder.Unsafe.set_scalar TFloat b (i + 0) x_;
+    Rt.Builder.Unsafe.set_scalar TFloat b (i + 4) y_;
+    Rt.Builder.Unsafe.set_scalar TFloat b (i + 8) z_;
+    Rt.Builder.Unsafe.set_padding b (i + 12) 4;
+    Rt.Builder.Unsafe.set_scalar TDouble b (i + 16) test1_;
+    Rt.Builder.Unsafe.set_scalar TUByte b (i + 24) test2_;
+    Rt.Builder.Unsafe.set_padding b (i + 25) 1;
     set_test__5 b (i + 26) test3_;
-    Rt.Builder.set_padding b (i + 30) 2;
+    Rt.Builder.Unsafe.set_padding b (i + 30) 2;
     ()
 
   let set_unused__9 b i (a_) =
-    Rt.Builder.set_scalar TInt b (i + 0) a_;
+    Rt.Builder.Unsafe.set_scalar TInt b (i + 0) a_;
     ()
 end
 
