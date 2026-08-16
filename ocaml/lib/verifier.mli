@@ -18,22 +18,20 @@
 (** {1 Options} *)
 
 type options =
-  { max_depth : int
-        (** Maximum nesting of tables/vectors. Upstream default: 64. *)
-  ; max_tables : int
-        (** Maximum number of table visits. Upstream default: 1_000_000. *)
+  { max_depth : int (** Maximum nesting of tables/vectors. Upstream default: 64. *)
+  ; max_tables : int (** Maximum number of table visits. Upstream default: 1_000_000. *)
   ; max_apparent_size : int
-        (** Maximum total number of bytes {e apparently} visited. Shared
+    (** Maximum total number of bytes {e apparently} visited. Shared
             sub-objects in a DAG are counted once per visit, so this bounds
             expansion attacks that [max_tables] alone does not. *)
-  ; check_alignment : bool  (** Verify natural alignment of every read. *)
+  ; check_alignment : bool (** Verify natural alignment of every read. *)
   ; check_string_terminator : bool
-        (** Verify the NUL byte that follows string contents. *)
+    (** Verify the NUL byte that follows string contents. *)
   ; check_nested_flatbuffers : bool
-        (** Recurse into fields annotated [nested_flatbuffer]. When false, only
+    (** Recurse into fields annotated [nested_flatbuffer]. When false, only
             the containing byte vector is checked. *)
   ; reject_unknown_union_tags : bool
-        (** When false (default, matching upstream), a union discriminator that
+    (** When false (default, matching upstream), a union discriminator that
             is not known to this schema is accepted after structural checks;
             its payload is not traversed. When true, it is rejected with
             {!Unknown_union_tag}. *)
@@ -73,8 +71,8 @@ type error_kind =
 
 type error = private
   { kind : error_kind
-  ; offset : int  (** absolute byte offset in the supplied buffer *)
-  ; path : path_element list  (** root-to-leaf schema path *)
+  ; offset : int (** absolute byte offset in the supplied buffer *)
+  ; path : path_element list (** root-to-leaf schema path *)
   }
 
 val pp_error : Format.formatter -> error -> unit

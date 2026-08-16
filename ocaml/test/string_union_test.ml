@@ -6,12 +6,18 @@ let check_greeting_roundtrip () =
   let wip = Envelope.Builder.(start b |> add_content_greeting greeting |> finish) in
   let buf = Envelope.finish_buf Flatbuffers.Primitives.Bytes b wip in
   let (Rt.Root (buf, e)) = Envelope.root Flatbuffers.Primitives.Bytes buf in
-  Alcotest.(check char) "content_type is greeting"
-    (Content.greeting :> char) (Envelope.content_type buf e :> char);
+  Alcotest.(check char)
+    "content_type is greeting"
+    (Content.greeting :> char)
+    (Envelope.content_type buf e :> char);
   let msg_out =
-    Envelope.content buf e
+    Envelope.content
+      buf
+      e
       ~greeting:(fun g ->
-        Rt.Option.fold ~none:"" ~some:(fun s -> Rt.String.to_string buf s)
+        Rt.Option.fold
+          ~none:""
+          ~some:(fun s -> Rt.String.to_string buf s)
           (Greeting.message buf g))
       ~default:(fun _ -> failwith "unexpected union type")
   in
@@ -25,10 +31,14 @@ let check_string_member_roundtrip () =
   let wip = Envelope.Builder.(start b |> add_content_name s |> finish) in
   let buf = Envelope.finish_buf Flatbuffers.Primitives.Bytes b wip in
   let (Rt.Root (buf, e)) = Envelope.root Flatbuffers.Primitives.Bytes buf in
-  Alcotest.(check char) "content_type is name"
-    (Content.name :> char) (Envelope.content_type buf e :> char);
+  Alcotest.(check char)
+    "content_type is name"
+    (Content.name :> char)
+    (Envelope.content_type buf e :> char);
   let s_out =
-    Envelope.content buf e
+    Envelope.content
+      buf
+      e
       ~name:(fun s -> Rt.String.to_string buf s)
       ~default:(fun _ -> failwith "unexpected union type")
   in
@@ -39,9 +49,7 @@ let check_obj_api_roundtrip () =
   let open Fixtures.String_union in
   (* Pack with greeting variant *)
   let b = Rt.Builder.create () in
-  let obj1 : Envelope.obj = {
-    content = `Greeting { Greeting.message = Some "hi" };
-  } in
+  let obj1 : Envelope.obj = { content = `Greeting { Greeting.message = Some "hi" } } in
   let wip = Envelope.pack b obj1 in
   let buf = Envelope.finish_buf Flatbuffers.Primitives.Bytes b wip in
   let (Rt.Root (buf, e)) = Envelope.root Flatbuffers.Primitives.Bytes buf in
@@ -67,9 +75,9 @@ let check_obj_api_roundtrip () =
   let buf3 = Envelope.finish_buf Flatbuffers.Primitives.Bytes b3 wip3 in
   let (Rt.Root (buf3, e3)) = Envelope.root Flatbuffers.Primitives.Bytes buf3 in
   let unpacked3 = Envelope.unpack buf3 e3 in
-  (match unpacked3.content with
-   | `None_ -> ()
-   | _ -> Alcotest.fail "expected None variant")
+  match unpacked3.content with
+  | `None_ -> ()
+  | _ -> Alcotest.fail "expected None variant"
 ;;
 
 let test_cases =

@@ -14,8 +14,9 @@
         },
         "./features/ocaml": {
             "version": "${localEnv:OCAML_VERSION}",
+            "base-packages": "dune ocaml-lsp-server",
             "packages": "alcotest benchmark bigstringaf cppo js_of_ocaml js_of_ocaml-compiler js_of_ocaml-ppx memtrace",
-            "optional-packages": "melange"
+            "optional-packages": "ocamlformat.0.29.0 ocamlformat-rpc melange"
         },
         "./features/gh": {}
     },

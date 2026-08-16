@@ -41,7 +41,14 @@ val create_vector : 'a Primitives.ty -> t -> 'a array -> offset
 val create_vector_ref : t -> offset array -> offset
 val create_vector_ref64 : t -> offset array -> offset
 val create_vector64 : 'a Primitives.ty -> t -> 'a array -> offset
-val create_vector64_struct : (t -> int -> 'a -> unit) -> size:int -> t -> 'a array -> offset
+
+val create_vector64_struct
+  :  (t -> int -> 'a -> unit)
+  -> size:int
+  -> t
+  -> 'a array
+  -> offset
+
 val create_vector_struct : (t -> int -> 'a -> unit) -> size:int -> t -> 'a array -> offset
 val create_string : t -> string -> offset
 val create_shared_string : t -> string -> offset

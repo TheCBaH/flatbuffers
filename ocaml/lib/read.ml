@@ -117,6 +117,7 @@ let[@inline] read_table_opt_ref64 p b i n =
 (* Vector64: 8-byte length prefix *)
 let[@inline] length_vec64 p b i = Primitives.get_uoffset64 p b i
 let[@inline] unsafe_get_vec64 t p b i j = get_val t p b (i + 8 + (sz_val t * j))
+
 let[@inline] get_vec64 t p b i j =
   if j < length_vec64 p b i
   then unsafe_get_vec64 t p b i j

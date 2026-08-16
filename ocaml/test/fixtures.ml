@@ -68,7 +68,8 @@ let string_of_file fbfile =
     let contents = really_input_string ic (in_channel_length ic) in
     close_in ic;
     contents
-  with exn ->
+  with
+  | exn ->
     close_in_noerr ic;
     raise exn
 ;;
@@ -79,4 +80,3 @@ let bigstring_of_file fbfile =
 ;;
 
 let bytes_of_file fbfile = Bytes.of_string (string_of_file fbfile)
-;;

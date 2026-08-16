@@ -6,18 +6,19 @@ let check_offset64_roundtrip () =
   let far_str = Rt.String.create b "hello64" in
   let big_vec = Rt.UByte.Vector64.create b [| '\xAA'; '\xBB' |] in
   let near_str = Rt.String.create b "near" in
-  let far_structs = LeafStruct.Vector.create b [| (42l, 3.14); (99l, 2.71) |] in
-  let big_structs = LeafStruct.Vector64.create b [| (10l, 1.0); (20l, 2.0); (30l, 3.0) |] in
-  let wip = RootTable.Builder.(
-    start b
-    |> add_far_vector far_vec
-    |> add_a 123l
-    |> add_far_string far_str
-    |> add_big_vector big_vec
-    |> add_near_string near_str
-    |> add_far_struct_vector far_structs
-    |> add_big_struct_vector big_structs
-    |> finish)
+  let far_structs = LeafStruct.Vector.create b [| 42l, 3.14; 99l, 2.71 |] in
+  let big_structs = LeafStruct.Vector64.create b [| 10l, 1.0; 20l, 2.0; 30l, 3.0 |] in
+  let wip =
+    RootTable.Builder.(
+      start b
+      |> add_far_vector far_vec
+      |> add_a 123l
+      |> add_far_string far_str
+      |> add_big_vector big_vec
+      |> add_near_string near_str
+      |> add_far_struct_vector far_structs
+      |> add_big_struct_vector big_structs
+      |> finish)
   in
   let buf = RootTable.finish_buf Flatbuffers.Primitives.Bytes b wip in
   let (Rt.Root (buf, tbl)) = RootTable.root Flatbuffers.Primitives.Bytes buf in
@@ -63,10 +64,22 @@ let check_absent_fields () =
   let wip = RootTable.Builder.(start b |> finish) in
   let buf = RootTable.finish_buf Flatbuffers.Primitives.Bytes b wip in
   let (Rt.Root (buf, tbl)) = RootTable.root Flatbuffers.Primitives.Bytes buf in
-  Alcotest.(check bool) "far_vector absent" true (Rt.Option.is_none (RootTable.far_vector buf tbl));
-  Alcotest.(check bool) "far_string absent" true (Rt.Option.is_none (RootTable.far_string buf tbl));
-  Alcotest.(check bool) "big_vector absent" true (Rt.Option.is_none (RootTable.big_vector buf tbl));
-  Alcotest.(check bool) "near_string absent" true (Rt.Option.is_none (RootTable.near_string buf tbl));
+  Alcotest.(check bool)
+    "far_vector absent"
+    true
+    (Rt.Option.is_none (RootTable.far_vector buf tbl));
+  Alcotest.(check bool)
+    "far_string absent"
+    true
+    (Rt.Option.is_none (RootTable.far_string buf tbl));
+  Alcotest.(check bool)
+    "big_vector absent"
+    true
+    (Rt.Option.is_none (RootTable.big_vector buf tbl));
+  Alcotest.(check bool)
+    "near_string absent"
+    true
+    (Rt.Option.is_none (RootTable.near_string buf tbl));
   Alcotest.(check int32) "a default" 0l (RootTable.a buf tbl)
 ;;
 

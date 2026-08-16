@@ -3,7 +3,13 @@ PATCH := patches/ocaml-integration.patch
 FLATC := flatc.ocaml
 FLATBUFFERS_ARCHIVE := flatbuffers.tar.gz
 
-.PHONY: all patch flatc deps test test-jsoo test-melange generate generate-check bench clean clean-flatc rebuild-patch update-opam check-opam
+OCAMLFORMAT := opam exec -- ocamlformat
+# Generated fixtures retain the generator's formatting. The other exclusions
+# contain cppo directives and are formatted after preprocessing by the build.
+OCAMLFORMAT_EXCLUDE := ^ocaml/test/generated/|^ocaml/lib/(primitives\.ml|primitives\.mli|runtime\.ml|util\.ml|verifier\.ml)$$
+OCAMLFORMAT_FILES := $(shell git ls-files 'ocaml/*.ml' 'ocaml/*.mli' 'ocaml/**/*.ml' 'ocaml/**/*.mli' | grep -Ev '$(OCAMLFORMAT_EXCLUDE)')
+
+.PHONY: all patch flatc deps test test-jsoo test-melange generate generate-check format format-check bench clean clean-flatc rebuild-patch update-opam check-opam
 
 all: flatc test
 
@@ -57,6 +63,12 @@ generate-check: generate check-opam
 		exit 1; \
 	fi
 	@echo "Generated files are up to date"
+
+format:
+	$(OCAMLFORMAT) -i $(OCAMLFORMAT_FILES)
+
+format-check:
+	$(OCAMLFORMAT) --check $(OCAMLFORMAT_FILES)
 
 check-opam:
 	@set -eu; \

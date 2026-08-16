@@ -3,15 +3,17 @@ let check_nested_struct_roundtrip () =
   let open MyGame.Example in
   let b = Rt.Builder.create () in
   let nested : NestedStruct.t =
-    ([| 10l; 20l |], TestEnum.a, [| TestEnum.b; TestEnum.c |], [| 100L; 200L |])
+    [| 10l; 20l |], TestEnum.a, [| TestEnum.b; TestEnum.c |], [| 100L; 200L |]
   in
   let arr_struct : ArrayStruct.t =
-    ( 3.14,
-      Array.init 15 (fun i -> Int32.of_int (i + 1)),
-      0x42,
-      [| nested; ([| 30l; 40l |], TestEnum.c, [| TestEnum.a; TestEnum.b |], [| 300L; 400L |]) |],
-      99l,
-      [| 1000L; 2000L |] )
+    ( 3.14
+    , Array.init 15 (fun i -> Int32.of_int (i + 1))
+    , 0x42
+    , [| nested
+       ; [| 30l; 40l |], TestEnum.c, [| TestEnum.a; TestEnum.b |], [| 300L; 400L |]
+      |]
+    , 99l
+    , [| 1000L; 2000L |] )
   in
   let wip = ArrayTable.Builder.(start b |> add_a arr_struct |> finish) in
   let buf = ArrayTable.finish_buf Flatbuffers.Primitives.Bytes b wip in

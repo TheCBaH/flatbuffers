@@ -35,10 +35,31 @@ jobs:
         echo 'EXEC=${{ steps.devcontainer.outputs.exec }}' >> $GITHUB_ENV
     - name: info
       run: |
-        ${{ env.EXEC }} sh -c 'uname -m && opam exec -- ocaml --version'
+        ${{ env.EXEC }} sh -c '
+          uname -m
+          dpkg --print-architecture
+          getconf LONG_BIT
+          opam exec -- ocamlc -config | grep "^architecture:"
+          opam exec -- ocaml --version
+        '
+    - name: verify s390x target
+      if: ${{ matrix.platform == 'linux/s390x' }}
+      run: |
+        ${{ env.EXEC }} sh -ceu '
+          test "$(dpkg --print-architecture)" = s390x
+          test "$(getconf LONG_BIT)" = 64
+          opam exec -- ocamlc -config | grep -q "^architecture: s390x$"
+        '
+    - name: check OCaml formatting
+      if: ${{ matrix.ocaml_version == '5.4.1' && matrix.platform == 'linux/amd64' }}
+      run: |
+        ${{ env.EXEC }} make format-check
     - name: build flatc
       run: |
         ${{ env.EXEC }} make flatc
+        if [ "${{ matrix.platform }}" = linux/s390x ]; then
+          file flatc.ocaml | grep -E 'IBM S/390|s390'
+        fi
     - name: install ocaml deps
       run: |
         ${{ env.EXEC }} bash -c '. /etc/bash.bashrc && sudo OPAMROOT=$OPAMROOT make deps'

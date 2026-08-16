@@ -14,13 +14,17 @@ let build_and_read () =
     Conv2Doptions.Builder.(
       start b |> add_stride_w 1l |> add_stride_h 2l |> add_padding 0l |> finish)
   in
-  let svdf =
-    Svdfparams.Builder.(start b |> add_rank 2l |> add_activation 1l |> finish)
-  in
+  let svdf = Svdfparams.Builder.(start b |> add_rank 2l |> add_activation 1l |> finish) in
   let root =
     SimpleTable.Builder.(
-      start b |> add_value 42l |> add_lstm lstm |> add_rnn rnn |> add_topk topk
-      |> add_conv conv |> add_svdf svdf |> finish)
+      start b
+      |> add_value 42l
+      |> add_lstm lstm
+      |> add_rnn rnn
+      |> add_topk topk
+      |> add_conv conv
+      |> add_svdf svdf
+      |> finish)
   in
   let buf = SimpleTable.finish_buf Flatbuffers.Primitives.String b root in
   let (Rt.Root (buf, tbl)) = SimpleTable.root Flatbuffers.Primitives.String buf in
@@ -40,5 +44,6 @@ let build_and_read () =
   let svdf = Rt.Option.get (SimpleTable.svdf buf tbl) in
   Alcotest.(check int32) "svdf.rank" 2l (Svdfparams.rank buf svdf);
   Alcotest.(check int32) "svdf.activation" 1l (Svdfparams.activation buf svdf)
+;;
 
 let test_cases = [ Alcotest.test_case "casing round-trip" `Quick build_and_read ]

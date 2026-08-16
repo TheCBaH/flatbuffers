@@ -135,8 +135,9 @@ let check_valid_all_backends () =
   check_ok "string" (Monster.verify P.String (Bytes.to_string buf));
   check_ok
     "bigstring"
-    (Monster.verify P.Bigstring (Bigstringaf.of_string ~off:0 ~len:(Bytes.length buf)
-                                   (Bytes.to_string buf)))
+    (Monster.verify
+       P.Bigstring
+       (Bigstringaf.of_string ~off:0 ~len:(Bytes.length buf) (Bytes.to_string buf)))
 ;;
 
 let check_valid_size_prefixed () =
@@ -211,7 +212,8 @@ let check_offset64_valid () =
     | Ok () ->
       let (Rt.Root (b, r)) = RootTable.root P.Bytes t in
       (try ignore (RootTable.unpack b r) with
-       | exn -> Alcotest.failf "%s: accepted but unreadable (%s)" what (Printexc.to_string exn))
+       | exn ->
+         Alcotest.failf "%s: accepted but unreadable (%s)" what (Printexc.to_string exn))
   in
   for i = 0 to Bytes.length buf - 1 do
     oracle (Printf.sprintf "truncation %d" i) (Bytes.sub buf 0 i)
@@ -276,13 +278,14 @@ let check_size_prefix () =
   let buf = example_monster ~size_prefixed:true () in
   let big = copy buf in
   set_u32 big 0 (Bytes.length buf);
-  check_kind "prefix too large" V.Invalid_size_prefix (Monster.verify ~size_prefixed:true P.Bytes big);
+  check_kind
+    "prefix too large"
+    V.Invalid_size_prefix
+    (Monster.verify ~size_prefixed:true P.Bytes big);
   let small = copy buf in
   set_u32 small 0 8;
   check_error "prefix too small" (Monster.verify ~size_prefixed:true P.Bytes small);
-  check_error
-    "size-prefixed read as plain"
-    (Monster.verify P.Bytes buf);
+  check_error "size-prefixed read as plain" (Monster.verify P.Bytes buf);
   check_error
     "plain read as size-prefixed"
     (Monster.verify ~size_prefixed:true P.Bytes (example_monster ()))
@@ -331,10 +334,7 @@ let check_missing_required () =
   in
   let r = Monster.verify P.Bytes buf in
   check_kind "missing name" V.Missing_required_field r;
-  Alcotest.(check bool)
-    "path names the field"
-    true
-    (path_of r = [ V.Field "name" ])
+  Alcotest.(check bool) "path names the field" true (path_of r = [ V.Field "name" ])
 ;;
 
 let check_field_out_of_range () =
@@ -356,10 +356,7 @@ let check_string_terminator () =
   let str = f + u32 buf f in
   let len = u32 buf str in
   Bytes.set buf (str + 4 + len) '\x41';
-  check_kind
-    "missing terminator"
-    V.Missing_string_terminator
-    (Monster.verify P.Bytes buf);
+  check_kind "missing terminator" V.Missing_string_terminator (Monster.verify P.Bytes buf);
   check_ok
     "terminator check disabled"
     (Monster.verify
@@ -413,15 +410,15 @@ let check_high_bit_u32 () =
   let vec = f + u32 base f in
   List.iter
     (fun w ->
-      let t = copy base in
-      set_i32 t vec w;
-      check_error (Printf.sprintf "length %lx" w) (Monster.verify P.Bytes t))
+       let t = copy base in
+       set_i32 t vec w;
+       check_error (Printf.sprintf "length %lx" w) (Monster.verify P.Bytes t))
     [ 0x80000000l; 0xC0000000l; 0xFFFFFFFFl ];
   List.iter
     (fun w ->
-      let t = copy base in
-      set_i32 t f w;
-      check_error (Printf.sprintf "offset %lx" w) (Monster.verify P.Bytes t))
+       let t = copy base in
+       set_i32 t f w;
+       check_error (Printf.sprintf "offset %lx" w) (Monster.verify P.Bytes t))
     [ 0x80000000l; 0xC0000000l; 0xFFFFFFFFl ]
 ;;
 
@@ -521,15 +518,15 @@ let check_string_union () =
   check_ok "NONE variant" (Envelope.verify P.Bytes empty);
   List.iter
     (fun buf ->
-      for i = 0 to Bytes.length buf - 1 do
-        let t = copy buf in
-        Bytes.set t i (Char.chr (Char.code (Bytes.get t i) lxor 0xFF));
-        match
-          try Envelope.verify P.Bytes t with
-          | exn -> Alcotest.failf "mutation %d raised %s" i (Printexc.to_string exn)
-        with
-        | Ok () | Error _ -> ()
-      done)
+       for i = 0 to Bytes.length buf - 1 do
+         let t = copy buf in
+         Bytes.set t i (Char.chr (Char.code (Bytes.get t i) lxor 0xFF));
+         match
+           try Envelope.verify P.Bytes t with
+           | exn -> Alcotest.failf "mutation %d raised %s" i (Printexc.to_string exn)
+         with
+         | Ok () | Error _ -> ()
+       done)
     [ with_name; with_table; empty ]
 ;;
 
@@ -574,9 +571,7 @@ let union_vector_buf ?tags ?values () =
       values
   in
   let tagv =
-    Option.map
-      (fun ts -> Bld.create_vector P.TUByte b (Array.map Char.chr ts))
-      tags
+    Option.map (fun ts -> Bld.create_vector P.TUByte b (Array.map Char.chr ts)) tags
   in
   let t = Bld.start_table b ~n_fields:2 in
   let t = Option.fold ~none:t ~some:(fun o -> Bld.push_slot_ref 0 o t) tagv in
@@ -601,7 +596,9 @@ let check_union_vector () =
   check_kind
     "unknown tag rejected in strict mode"
     (V.Unknown_union_tag 9L)
-    (verify_uv ~options:{ V.default_options with reject_unknown_union_tags = true } unknown)
+    (verify_uv
+       ~options:{ V.default_options with reject_unknown_union_tags = true }
+       unknown)
 ;;
 
 let check_union_vector_inconsistent () =
@@ -639,7 +636,8 @@ let check_union_vector_bad_element () =
     Bytes.set t i (Char.chr (Char.code (Bytes.get t i) lxor 0xFF));
     match
       try verify_uv t with
-      | exn -> Alcotest.failf "union vector mutation %d raised %s" i (Printexc.to_string exn)
+      | exn ->
+        Alcotest.failf "union vector mutation %d raised %s" i (Printexc.to_string exn)
     with
     | Ok () | Error _ -> ()
   done
@@ -734,7 +732,8 @@ let backends buf =
   let s = Bytes.to_string buf in
   [ "bytes", Monster.verify P.Bytes buf
   ; "string", Monster.verify P.String s
-  ; "bigstring", Monster.verify P.Bigstring (Bigstringaf.of_string ~off:0 ~len:(String.length s) s)
+  ; ( "bigstring"
+    , Monster.verify P.Bigstring (Bigstringaf.of_string ~off:0 ~len:(String.length s) s) )
   ]
 ;;
 
@@ -744,18 +743,18 @@ let check_backends_agree buf what =
   | (_, r0) :: rest ->
     List.iter
       (fun (name, r) ->
-        if kind_of r <> kind_of r0
-        then
-          Alcotest.failf
-            "%s: %s disagrees (%s vs %s)"
-            what
-            name
-            (match r with
-             | Ok () -> "Ok"
-             | Error e -> V.error_to_string e)
-            (match r0 with
-             | Ok () -> "Ok"
-             | Error e -> V.error_to_string e))
+         if kind_of r <> kind_of r0
+         then
+           Alcotest.failf
+             "%s: %s disagrees (%s vs %s)"
+             what
+             name
+             (match r with
+              | Ok () -> "Ok"
+              | Error e -> V.error_to_string e)
+             (match r0 with
+              | Ok () -> "Ok"
+              | Error e -> V.error_to_string e))
       rest
   | [] -> ()
 ;;
@@ -772,7 +771,8 @@ let oracle what t =
     incr oracle_accepted;
     let (Rt.Root (b, m)) = Monster.root P.Bytes t in
     (try ignore (Monster.unpack b m) with
-     | exn -> Alcotest.failf "%s: accepted but unreadable (%s)" what (Printexc.to_string exn))
+     | exn ->
+       Alcotest.failf "%s: accepted but unreadable (%s)" what (Printexc.to_string exn))
 ;;
 
 let check_truncation_sweep () =
@@ -806,9 +806,9 @@ let check_mutation_sweep () =
   for i = 0 to (n / 4) - 1 do
     List.iter
       (fun w ->
-        let t = copy base in
-        set_i32 t (i * 4) w;
-        oracle (Printf.sprintf "word %d := %lx" i w) t)
+         let t = copy base in
+         set_i32 t (i * 4) w;
+         oracle (Printf.sprintf "word %d := %lx" i w) t)
       words
   done
 ;;
@@ -834,8 +834,9 @@ let check_arbitrary_bytes () =
       let t = Bytes.init len (fun _ -> Char.chr (Random.State.int st 256)) in
       ignore (verify_exn_safe "arbitrary" t : (unit, V.error) result);
       ignore
-        (try Monster.verify ~size_prefixed:true P.Bytes t with
-         | exn -> Alcotest.failf "arbitrary size-prefixed raised %s" (Printexc.to_string exn)
+        ((try Monster.verify ~size_prefixed:true P.Bytes t with
+          | exn ->
+            Alcotest.failf "arbitrary size-prefixed raised %s" (Printexc.to_string exn))
          : (unit, V.error) result)
     done
   done

@@ -228,10 +228,7 @@ let check_nested_flatbuffer_roundtrip () =
   (* Build an outer monster with the inner as nested flatbuffer *)
   let outer_wip =
     Monster.Builder.(
-      start b
-      |> add_name outer_name
-      |> add_testnestedflatbuffer nested_vec
-      |> finish)
+      start b |> add_name outer_name |> add_testnestedflatbuffer nested_vec |> finish)
   in
   let outer_buf = Monster.finish_buf Flatbuffers.Primitives.Bytes b outer_wip in
   (* Read back outer monster *)
@@ -269,9 +266,7 @@ let check_nested_flatbuffer_raw_access () =
   let b = Rt.Builder.create () in
   (* Build inner monster *)
   let inner_name = Rt.String.create b "RawNested" in
-  let inner_wip =
-    Monster.Builder.(start b |> add_name inner_name |> finish)
-  in
+  let inner_wip = Monster.Builder.(start b |> add_name inner_name |> finish) in
   let inner_buf = Monster.finish_buf Flatbuffers.Primitives.Bytes b inner_wip in
   (* Prepare vectors/strings before starting the outer table *)
   let outer_name = Rt.String.create b "OuterRaw" in
@@ -279,10 +274,7 @@ let check_nested_flatbuffer_raw_access () =
   (* Build outer with nested *)
   let outer_wip =
     Monster.Builder.(
-      start b
-      |> add_name outer_name
-      |> add_testnestedflatbuffer nested_vec
-      |> finish)
+      start b |> add_name outer_name |> add_testnestedflatbuffer nested_vec |> finish)
   in
   let outer_buf = Monster.finish_buf Flatbuffers.Primitives.Bytes b outer_wip in
   let (Rt.Root (buf, m)) = Monster.root Flatbuffers.Primitives.Bytes outer_buf in
@@ -301,7 +293,8 @@ let build_nested_monster_buf b ~name ~hp ~mana =
   let n = Rt.String.create b name in
   let inv = Rt.UByte.Vector.create b [| '\x01'; '\x02'; '\x03' |] in
   let wip =
-    Monster.Builder.(start b |> add_name n |> add_hp hp |> add_mana mana |> add_inventory inv |> finish)
+    Monster.Builder.(
+      start b |> add_name n |> add_hp hp |> add_mana mana |> add_inventory inv |> finish)
   in
   Monster.finish_buf Flatbuffers.Primitives.Bytes b wip
 ;;
@@ -331,7 +324,10 @@ let check_nested_string_buffer () =
   let nested = Monster.testnestedflatbuffer_as_monster buf m in
   Alcotest.(check bool) "nested is Some" true (Option.is_some nested);
   let (Rt.Root (nbuf, nm)) = Option.get nested in
-  Alcotest.(check string) "name" "StringNested" (Monster.name nbuf nm |> Rt.String.to_string nbuf);
+  Alcotest.(check string)
+    "name"
+    "StringNested"
+    (Monster.name nbuf nm |> Rt.String.to_string nbuf);
   Alcotest.(check int) "hp" 99 (Monster.hp nbuf nm);
   Alcotest.(check int) "mana" 200 (Monster.mana nbuf nm)
 ;;
@@ -350,7 +346,10 @@ let check_nested_bigstring_buffer () =
   let nested = Monster.testnestedflatbuffer_as_monster buf m in
   Alcotest.(check bool) "nested is Some" true (Option.is_some nested);
   let (Rt.Root (nbuf, nm)) = Option.get nested in
-  Alcotest.(check string) "name" "BigstringNested" (Monster.name nbuf nm |> Rt.String.to_string nbuf);
+  Alcotest.(check string)
+    "name"
+    "BigstringNested"
+    (Monster.name nbuf nm |> Rt.String.to_string nbuf);
   Alcotest.(check int) "hp" 77 (Monster.hp nbuf nm);
   Alcotest.(check int) "mana" 300 (Monster.mana nbuf nm)
 ;;
@@ -362,10 +361,9 @@ let check_nested_rich_inner () =
   (* Build a rich inner monster with pos, inventory, test4, strings *)
   let inner_name = Rt.String.create b "RichInner" in
   let inner_inv = Rt.UByte.Vector.create b [| '\x0a'; '\x0b'; '\x0c'; '\x0d' |] in
-  let inner_test4 = Test.Vector.create b [| (10, 20); (30, 40) |] in
+  let inner_test4 = Test.Vector.create b [| 10, 20; 30, 40 |] in
   let inner_strings =
-    Array.map (Rt.String.create b) [| "hello"; "world" |]
-    |> Rt.String.Vector.create b
+    Array.map (Rt.String.create b) [| "hello"; "world" |] |> Rt.String.Vector.create b
   in
   let inner_wip =
     Monster.Builder.(
@@ -383,19 +381,26 @@ let check_nested_rich_inner () =
   let (Rt.Root (buf, m)) = Monster.root Flatbuffers.Primitives.Bytes outer_buf in
   let (Rt.Root (nbuf, nm)) = Option.get (Monster.testnestedflatbuffer_as_monster buf m) in
   (* Verify all inner fields *)
-  Alcotest.(check string) "name" "RichInner" (Monster.name nbuf nm |> Rt.String.to_string nbuf);
+  Alcotest.(check string)
+    "name"
+    "RichInner"
+    (Monster.name nbuf nm |> Rt.String.to_string nbuf);
   Alcotest.(check int) "hp" 55 (Monster.hp nbuf nm);
   let pos = Rt.Option.get (Monster.pos nbuf nm) in
   Alcotest.(check (float 0.)) "pos.x" 1.5 (Vec3.x nbuf pos);
   Alcotest.(check (float 0.)) "pos.y" 2.5 (Vec3.y nbuf pos);
   Alcotest.(check (float 0.)) "pos.z" 3.5 (Vec3.z nbuf pos);
   let inv = Rt.Option.get (Monster.inventory nbuf nm) in
-  Alcotest.(check (array char)) "inventory" [| '\x0a'; '\x0b'; '\x0c'; '\x0d' |]
+  Alcotest.(check (array char))
+    "inventory"
+    [| '\x0a'; '\x0b'; '\x0c'; '\x0d' |]
     (Rt.UByte.Vector.to_array nbuf inv);
   let t4 = Rt.Option.get (Monster.test4 nbuf nm) in
   Alcotest.(check int) "test4 length" 2 (Test.Vector.length nbuf t4);
   let aos = Rt.Option.get (Monster.testarrayofstring nbuf nm) in
-  Alcotest.(check (list string)) "strings" [ "hello"; "world" ]
+  Alcotest.(check (list string))
+    "strings"
+    [ "hello"; "world" ]
     (Rt.String.Vector.to_list nbuf aos |> List.map (Rt.String.to_string nbuf))
 ;;
 
@@ -414,13 +419,18 @@ let check_nested_testrequired () =
   let outer_buf = Monster.finish_buf Flatbuffers.Primitives.Bytes b wip in
   let (Rt.Root (buf, m)) = Monster.root Flatbuffers.Primitives.Bytes outer_buf in
   (* testnestedflatbuffer (optional) should be absent *)
-  Alcotest.(check bool) "optional nested absent" true
+  Alcotest.(check bool)
+    "optional nested absent"
+    true
     (Option.is_none (Monster.testnestedflatbuffer_as_monster buf m));
   (* testrequirednestedflatbuffer should be present *)
   let nested = Monster.testrequirednestedflatbuffer_as_monster buf m in
   Alcotest.(check bool) "required nested present" true (Option.is_some nested);
   let (Rt.Root (nbuf, nm)) = Option.get nested in
-  Alcotest.(check string) "name" "Required" (Monster.name nbuf nm |> Rt.String.to_string nbuf);
+  Alcotest.(check string)
+    "name"
+    "Required"
+    (Monster.name nbuf nm |> Rt.String.to_string nbuf);
   Alcotest.(check int) "hp" 33 (Monster.hp nbuf nm)
 ;;
 
@@ -442,17 +452,25 @@ let check_nested_builder_reset () =
   (* Verify first *)
   let (Rt.Root (b1, m1)) = Monster.root Flatbuffers.Primitives.Bytes buf1 in
   let (Rt.Root (nb1, nm1)) = Option.get (Monster.testnestedflatbuffer_as_monster b1 m1) in
-  Alcotest.(check string) "first outer" "Outer1"
+  Alcotest.(check string)
+    "first outer"
+    "Outer1"
     (Monster.name b1 m1 |> Rt.String.to_string b1);
-  Alcotest.(check string) "first inner" "First"
+  Alcotest.(check string)
+    "first inner"
+    "First"
     (Monster.name nb1 nm1 |> Rt.String.to_string nb1);
   Alcotest.(check int) "first hp" 1 (Monster.hp nb1 nm1);
   (* Verify second *)
   let (Rt.Root (b2, m2)) = Monster.root Flatbuffers.Primitives.Bytes buf2 in
   let (Rt.Root (nb2, nm2)) = Option.get (Monster.testnestedflatbuffer_as_monster b2 m2) in
-  Alcotest.(check string) "second outer" "Outer2"
+  Alcotest.(check string)
+    "second outer"
+    "Outer2"
     (Monster.name b2 m2 |> Rt.String.to_string b2);
-  Alcotest.(check string) "second inner" "Second"
+  Alcotest.(check string)
+    "second inner"
+    "Second"
     (Monster.name nb2 nm2 |> Rt.String.to_string nb2);
   Alcotest.(check int) "second hp" 3 (Monster.hp nb2 nm2)
 ;;
@@ -472,7 +490,10 @@ let check_nested_defaults () =
   Alcotest.(check int) "default hp" 100 (Monster.hp nbuf nm);
   Alcotest.(check int) "default mana" 150 (Monster.mana nbuf nm);
   Alcotest.(check bool) "pos absent" true (Rt.Option.is_none (Monster.pos nbuf nm));
-  Alcotest.(check bool) "inventory absent" true (Rt.Option.is_none (Monster.inventory nbuf nm))
+  Alcotest.(check bool)
+    "inventory absent"
+    true
+    (Rt.Option.is_none (Monster.inventory nbuf nm))
 ;;
 
 let check_union_default_tag () =
@@ -484,11 +505,15 @@ let check_union_default_tag () =
   let buf = Monster.finish_buf Flatbuffers.Primitives.Bytes b wip in
   let (Rt.Root (buf, m)) = Monster.root Flatbuffers.Primitives.Bytes buf in
   (* tag defaults to None (0) when vtable slot is absent *)
-  Alcotest.(check char) "test_type absent defaults to None"
-    (Any.none :> char) (Monster.test_type buf m :> char);
+  Alcotest.(check char)
+    "test_type absent defaults to None"
+    (Any.none :> char)
+    (Monster.test_type buf m :> char);
   (* union reader with absent tag falls through to ~default *)
   let result =
-    Monster.test buf m
+    Monster.test
+      buf
+      m
       ~none:42
       ~monster:(fun _ -> failwith "should not read monster")
       ~default:(fun _ -> failwith "should not hit default")
@@ -496,10 +521,13 @@ let check_union_default_tag () =
   Alcotest.(check int) "union None branch taken" 42 result;
   (* when ~none is not provided, ~default receives the None tag *)
   let result2 =
-    Monster.test buf m
+    Monster.test
+      buf
+      m
       ~monster:(fun _ -> failwith "should not read monster")
-      ~default:(fun t -> Alcotest.(check char) "default tag is None"
-        (Any.none :> char) (t :> char); 99)
+      ~default:(fun t ->
+        Alcotest.(check char) "default tag is None" (Any.none :> char) (t :> char);
+        99)
   in
   Alcotest.(check int) "union default fallback" 99 result2
 ;;
@@ -510,7 +538,7 @@ let check_key_lookup_stat () =
   let b = Rt.Builder.create () in
   (* Build 3 Stat tables with sorted counts: 10, 20, 30 *)
   let stats =
-    [| (10, 100L); (20, 200L); (30, 300L) |]
+    [| 10, 100L; 20, 200L; 30, 300L |]
     |> Array.map (fun (count, value) ->
       let id = Rt.String.create b (Printf.sprintf "stat_%d" count) in
       Stat.Builder.(start b |> add_id id |> add_count count |> add_val_ value |> finish))
@@ -560,9 +588,18 @@ let check_key_lookup_not_found () =
   let (Rt.Root (buf, m)) = Monster.root Flatbuffers.Primitives.Bytes buf in
   let vec = Rt.Option.get (Monster.scalar_key_sorted_tables buf m) in
   (* Lookup non-existing key *)
-  Alcotest.(check bool) "not found 15" true (Rt.Option.is_none (Stat.lookup_by_key buf vec 15));
-  Alcotest.(check bool) "not found 0" true (Rt.Option.is_none (Stat.lookup_by_key buf vec 0));
-  Alcotest.(check bool) "not found 99" true (Rt.Option.is_none (Stat.lookup_by_key buf vec 99))
+  Alcotest.(check bool)
+    "not found 15"
+    true
+    (Rt.Option.is_none (Stat.lookup_by_key buf vec 15));
+  Alcotest.(check bool)
+    "not found 0"
+    true
+    (Rt.Option.is_none (Stat.lookup_by_key buf vec 0));
+  Alcotest.(check bool)
+    "not found 99"
+    true
+    (Rt.Option.is_none (Stat.lookup_by_key buf vec 99))
 ;;
 
 let check_key_lookup_struct () =
@@ -570,7 +607,7 @@ let check_key_lookup_struct () =
   let open MyGame.Example in
   let b = Rt.Builder.create () in
   (* Ability struct: (id:uint, distance:uint), sorted by id *)
-  let abilities = Ability.Vector.create b [| (1l, 10l); (3l, 30l); (5l, 50l) |] in
+  let abilities = Ability.Vector.create b [| 1l, 10l; 3l, 30l; 5l, 50l |] in
   let name = Rt.String.create b "AbilityLookup" in
   let wip =
     Monster.Builder.(
@@ -586,11 +623,23 @@ let check_key_lookup_struct () =
   Alcotest.(check int32) "id" 3l (Ability.id buf found);
   Alcotest.(check int32) "distance" 30l (Ability.distance buf found);
   (* Lookup first and last *)
-  Alcotest.(check bool) "found id=1" true (Rt.Option.is_some (Ability.lookup_by_key buf vec 1l));
-  Alcotest.(check bool) "found id=5" true (Rt.Option.is_some (Ability.lookup_by_key buf vec 5l));
+  Alcotest.(check bool)
+    "found id=1"
+    true
+    (Rt.Option.is_some (Ability.lookup_by_key buf vec 1l));
+  Alcotest.(check bool)
+    "found id=5"
+    true
+    (Rt.Option.is_some (Ability.lookup_by_key buf vec 5l));
   (* Not found *)
-  Alcotest.(check bool) "not found id=2" true (Rt.Option.is_none (Ability.lookup_by_key buf vec 2l));
-  Alcotest.(check bool) "not found id=0" true (Rt.Option.is_none (Ability.lookup_by_key buf vec 0l))
+  Alcotest.(check bool)
+    "not found id=2"
+    true
+    (Rt.Option.is_none (Ability.lookup_by_key buf vec 2l));
+  Alcotest.(check bool)
+    "not found id=0"
+    true
+    (Rt.Option.is_none (Ability.lookup_by_key buf vec 0l))
 ;;
 
 let check_key_lookup_single_element () =
@@ -598,7 +647,10 @@ let check_key_lookup_single_element () =
   let open MyGame.Example in
   let b = Rt.Builder.create () in
   let stats =
-    [| Stat.Builder.(let id = Rt.String.create b "only" in start b |> add_id id |> add_count 42 |> finish) |]
+    [| Stat.Builder.(
+         let id = Rt.String.create b "only" in
+         start b |> add_id id |> add_count 42 |> finish)
+    |]
   in
   let stats_vec = Stat.Vector.create b stats in
   let name = Rt.String.create b "Single" in
@@ -609,8 +661,14 @@ let check_key_lookup_single_element () =
   let buf = Monster.finish_buf Flatbuffers.Primitives.Bytes b wip in
   let (Rt.Root (buf, m)) = Monster.root Flatbuffers.Primitives.Bytes buf in
   let vec = Rt.Option.get (Monster.scalar_key_sorted_tables buf m) in
-  Alcotest.(check bool) "found single" true (Rt.Option.is_some (Stat.lookup_by_key buf vec 42));
-  Alcotest.(check bool) "not found other" true (Rt.Option.is_none (Stat.lookup_by_key buf vec 41))
+  Alcotest.(check bool)
+    "found single"
+    true
+    (Rt.Option.is_some (Stat.lookup_by_key buf vec 42));
+  Alcotest.(check bool)
+    "not found other"
+    true
+    (Rt.Option.is_none (Stat.lookup_by_key buf vec 41))
 ;;
 
 let check_extension_ident () =

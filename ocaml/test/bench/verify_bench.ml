@@ -7,7 +7,6 @@
 
 open Generated.Monster_test
 open MyGame.Example
-
 module P = Flatbuffers.Primitives
 
 let small_monster () =
@@ -67,11 +66,12 @@ let rec read_monster buf m =
   let sum = ref 0 in
   sum := !sum + Monster.hp buf m + Monster.mana buf m;
   sum := !sum + Rt.String.length buf (Monster.name buf m);
-  Rt.Option.iter (fun v -> sum := !sum + Rt.UByte.Vector.length buf v) (Monster.inventory buf m);
+  Rt.Option.iter
+    (fun v -> sum := !sum + Rt.UByte.Vector.length buf v)
+    (Monster.inventory buf m);
   Rt.Option.iter (fun v -> sum := !sum + Test.Vector.length buf v) (Monster.test4 buf m);
   Rt.Option.iter
-    (fun v ->
-      Rt.String.Vector.iter buf (fun s -> sum := !sum + Rt.String.length buf s) v)
+    (fun v -> Rt.String.Vector.iter buf (fun s -> sum := !sum + Rt.String.length buf s) v)
     (Monster.testarrayofstring buf m);
   Rt.Option.iter
     (fun v -> sum := !sum + Rt.Long.Vector.length buf v)
@@ -79,7 +79,9 @@ let rec read_monster buf m =
   Rt.Option.iter
     (fun v -> sum := !sum + Rt.Double.Vector.length buf v)
     (Monster.vector_of_doubles buf m);
-  sum := !sum + Monster.test buf m ~monster:(fun m -> read_monster buf m) ~default:(fun _ -> 0);
+  sum
+  := !sum
+     + Monster.test buf m ~monster:(fun m -> read_monster buf m) ~default:(fun _ -> 0);
   Rt.Option.iter (fun e -> sum := !sum + read_monster buf e) (Monster.enemy buf m);
   !sum
 ;;
@@ -123,7 +125,10 @@ let bench name buf =
     (Benchmark.latencyN
        ~repeat
        iter
-       [ "read", read buf, (); "verify", verify buf, (); "verify+read", verify_then_read buf, () ]);
+       [ "read", read buf, ()
+       ; "verify", verify buf, ()
+       ; "verify+read", verify_then_read buf, ()
+       ]);
   Printf.printf
     "Allocated bytes per call: read %.1f, verify %.1f, verify+read %.1f\n%!"
     (allocated_per_call ~iter:10_000 (read buf))
