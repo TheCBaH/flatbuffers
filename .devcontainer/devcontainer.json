@@ -12,7 +12,7 @@
             "userGid": "1000",
             "upgradePackages": "false"
         },
-        "./features/ocaml": {
+        "ghcr.io/thecbah/ocaml-features/ocaml:1": {
             "version": "${localEnv:OCAML_VERSION}",
             "base-packages": "dune ocaml-lsp-server",
             "packages": "alcotest benchmark bigstringaf cppo js_of_ocaml js_of_ocaml-compiler js_of_ocaml-ppx memtrace",
