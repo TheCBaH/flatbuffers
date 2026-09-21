@@ -12,9 +12,9 @@ bug-reports: "https://github.com/TheCBaH/flatbuffers/issues"
 dev-repo: "git+https://github.com/TheCBaH/flatbuffers.git"
 extra-source "flatbuffers.tar.gz" {
   src:
-    "https://github.com/google/flatbuffers/archive/5761d6e67af841d15ee21bc1ce9a78ffa9cf939e.tar.gz"
+    "https://github.com/google/flatbuffers/archive/b8431fbcd7a5c71817f314e18b332c0648554efa.tar.gz"
   checksum: [
-    "sha256=96f209eec2bd4d730729ec67f03b4f94e3febb977324543cd698d78f4250d2cf"
+    "sha256=760de2b282abe5e7c79472a173530b5662038dd053b0779cd0dd5f78f24f1a0b"
   ]
 }
 depexts: [
