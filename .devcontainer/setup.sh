@@ -8,6 +8,9 @@
 #      options exported as environment variables, as the devcontainer CLI does
 #   3. every postCreateCommand
 #
+# The host is not a fresh container, so a feature's environment (OPAMROOT)
+# is also linked into place for shells that never read /etc/profile.d.
+#
 # Keeping devcontainer.json the single source of truth means a new package or
 # option there reaches this environment without editing this script.
 #
@@ -174,6 +177,13 @@ done
 set +u
 for f in /etc/profile.d/*.sh; do [ -r "$f" ] && . "$f"; done
 set -u
+
+# Those rc files only reach login and interactive shells. Non-login shells,
+# such as an agent's tool shell or a make recipe, fall back to opam's default
+# root, so point that at the installed one.
+if [ -n "${OPAMROOT:-}" ] && [ "$OPAMROOT" != "$HOME/.opam" ] && [ ! -e "$HOME/.opam" ]; then
+    ln -s "$OPAMROOT" "$HOME/.opam"
+fi
 
 # --- 3. postCreateCommand ---------------------------------------------------
 log "postCreateCommand"
